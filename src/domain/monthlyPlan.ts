@@ -41,6 +41,22 @@ function isAfter(a: DateParts, b: DateParts): boolean {
   return a.day > b.day
 }
 
+function formatDate({ year, month, day }: DateParts): CalendarDate {
+  const pad = (value: number, length: number) => String(value).padStart(length, '0')
+  return `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}`
+}
+
+/**
+ * Returns the calendar date `months` whole months after `date`, using the
+ * same month-end rule as the opportunity count (31 Jan + 1 month = 28 Feb,
+ * or 29 Feb in a leap year). `months` must be a non-negative whole number.
+ * Counting `months` opportunities from `date` to the result always gives
+ * exactly `months`, and the day before the result gives one fewer.
+ */
+export function addMonthsToDate(date: CalendarDate, months: number): CalendarDate {
+  return formatDate(addMonths(parseDate(date), months))
+}
+
 /**
  * Monthly Plan rule: the number of whole months that fit between today and
  * the deadline. This is the number of monthly contribution opportunities.

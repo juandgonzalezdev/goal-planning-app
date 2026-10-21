@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countMonthlyOpportunities } from './monthlyPlan'
+import { addMonthsToDate, countMonthlyOpportunities } from './monthlyPlan'
 
 describe('countMonthlyOpportunities', () => {
   it('counts exactly 12 months for a deadline one year ahead', () => {
@@ -37,5 +37,38 @@ describe('countMonthlyOpportunities', () => {
 
   it('handles a long-term deadline across several years', () => {
     expect(countMonthlyOpportunities('2026-10-06', '2036-10-06')).toBe(120)
+  })
+})
+
+describe('addMonthsToDate', () => {
+  it('returns the same date for 0 months', () => {
+    expect(addMonthsToDate('2026-10-21', 0)).toBe('2026-10-21')
+  })
+
+  it('adds months across a year boundary', () => {
+    expect(addMonthsToDate('2026-10-21', 3)).toBe('2027-01-21')
+    expect(addMonthsToDate('2026-10-21', 63)).toBe('2032-01-21')
+  })
+
+  it('moves to the last day of a shorter month', () => {
+    expect(addMonthsToDate('2026-12-31', 2)).toBe('2027-02-28')
+    expect(addMonthsToDate('2027-12-31', 2)).toBe('2028-02-29')
+    expect(addMonthsToDate('2026-01-31', 3)).toBe('2026-04-30')
+  })
+
+  it('counts from the start date each time, not month by month', () => {
+    expect(addMonthsToDate('2026-01-31', 2)).toBe('2026-03-31')
+  })
+
+  it('handles a 50-year span', () => {
+    expect(addMonthsToDate('2028-02-29', 600)).toBe('2078-02-28')
+  })
+
+  it('produces a date with exactly that many monthly opportunities', () => {
+    for (const start of ['2026-01-31', '2026-02-28', '2027-12-31', '2028-02-29', '2026-10-21']) {
+      for (let months = 0; months <= 30; months++) {
+        expect(countMonthlyOpportunities(start, addMonthsToDate(start, months))).toBe(months)
+      }
+    }
   })
 })

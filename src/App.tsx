@@ -1,56 +1,31 @@
 import { useState, type FormEvent } from 'react'
-import { evaluateGoalPlan, type GoalPlanResult } from './domain/evaluateGoalPlan'
+import { evaluateGoalPlan, type GoalPlanInput, type GoalPlanResult } from './domain/evaluateGoalPlan'
+import { exploreAlternatives, type AlternativeKind } from './domain/exploreAlternatives'
+import type { CalendarDate } from './domain/goalTime'
+import { addMonthsToDate } from './domain/monthlyPlan'
+import { ExploreAlternatives } from './ExploreAlternatives'
+import { formatDate, formatMoney as money } from './ui/format'
+import { fieldsToInput, fromGrosze, sameFields, todayString, type Fields } from './ui/planFields'
 import './App.css'
 
-type Fields = {
-  targetAmount: string
-  alreadySaved: string
-  targetDate: string
-  comfortableContribution: string
+type Evaluation = { input: GoalPlanInput; result: GoalPlanResult }
+
+/** A confirmed alternative, kept so the plan before it can be restored exactly. */
+type AppliedChange = {
+  previousFields: Fields
+  previousEvaluation: Evaluation
+  /** The form values the change produced; restoring is only offered while the form still matches them. */
+  appliedFields: Fields
+  summary: string
 }
 
-const todayString = () => {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
+const makePresets = (today: CalendarDate): Record<string, Fields> => ({
+  'Home deposit': { targetAmount: '25000', alreadySaved: '5700', targetDate: addMonthsToDate(today, 60), comfortableContribution: '310' },
+  'Short deadline': { targetAmount: '300', alreadySaved: '0', targetDate: addMonthsToDate(today, 0), comfortableContribution: '300' },
+  'Already funded': { targetAmount: '5000', alreadySaved: '5000', targetDate: addMonthsToDate(today, 6), comfortableContribution: '200' },
+})
 
-const addMonths = (date: string, count: number) => {
-  const [year, month, day] = date.split('-').map(Number)
-  const first = new Date(year, month - 1 + count, 1)
-  const lastDay = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()
-  return `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
-}
-
-// Input amounts are PLN; the domain engine receives integers in grosze.
-function toGrosze(value: string): number | null {
-  const normalized = value.trim().replace(',', '.')
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null
-  const [whole, fraction = ''] = normalized.split('.')
-  const number = Number(whole) * 100 + Number(fraction.padEnd(2, '0'))
-  return Number.isSafeInteger(number) ? number : null
-}
-
-function isValidCalendarDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const parsed = new Date(Date.UTC(year, month - 1, day))
-  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day
-}
-
-const money = (grosze: number) => new Intl.NumberFormat('en-GB', {
-  style: 'currency', currency: 'PLN', minimumFractionDigits: 2, maximumFractionDigits: 2,
-}).format(grosze / 100)
-
-const presets: Record<string, Fields> = {
-  'Home deposit': { targetAmount: '25000', alreadySaved: '5700', targetDate: addMonths(todayString(), 60), comfortableContribution: '310' },
-  'Short deadline': { targetAmount: '300', alreadySaved: '0', targetDate: addMonths(todayString(), 0), comfortableContribution: '300' },
-  'Already funded': { targetAmount: '5000', alreadySaved: '5000', targetDate: addMonths(todayString(), 6), comfortableContribution: '200' },
-}
-
-function ResultView({ result, target }: { result: GoalPlanResult; target: number }) {
+function ResultView({ result, target, exploring, onToggleExplore }: { result: GoalPlanResult; target: number; exploring: boolean; onToggleExplore: () => void }) {
   const labels: Record<GoalPlanResult['status'], string> = {
     funded: 'Goal already funded',
     'invalid-target-date': 'Review your target date',
@@ -80,6 +55,7 @@ function ResultView({ result, target }: { result: GoalPlanResult; target: number
       </div>
       {result.status === 'needs-adjustment' && <div className="detail warning">Monthly shortfall <strong>{money(result.monthlyShortfall)}</strong></div>}
       {result.status === 'supported' && <div className="detail positive">Monthly surplus <strong>{money(result.monthlySurplus)}</strong></div>}
+      {result.status === 'needs-adjustment' && <button type="button" className="explore-button" aria-expanded={exploring} aria-controls="alternatives-panel" onClick={onToggleExplore}>{exploring ? 'Hide alternatives' : 'Explore alternatives'}</button>}
       <div className="progress-head"><span>Goal progress</span><span>{ratio.toFixed(1)}%</span></div>
       <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={ratio} aria-label="Goal progress"><div style={{ width: `${ratio}%` }}/></div>
       <p className="disclaimer">Based only on the amounts and dates you entered. This is not an assessment of your full financial situation. You decide what to do next.</p>
@@ -87,27 +63,79 @@ function ResultView({ result, target }: { result: GoalPlanResult; target: number
   )
 }
 
-function App() {
-  const [fields, setFields] = useState<Fields>({ targetAmount: '30000', alreadySaved: '24200', targetDate: addMonths(todayString(), 4), comfortableContribution: '800' })
-  const [evaluation, setEvaluation] = useState<{ result: GoalPlanResult; target: number } | null>(null)
+/** `getToday` is injectable so tests can fix the date. */
+function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
+  const [fields, setFields] = useState<Fields>(() => ({ targetAmount: '30000', alreadySaved: '24200', targetDate: addMonthsToDate(getToday(), 4), comfortableContribution: '800' }))
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [error, setError] = useState('')
   const [dirty, setDirty] = useState(false)
-  const setField = (name: keyof Fields, value: string) => { setFields(old => ({ ...old, [name]: value })); setDirty(true) }
+  const [exploring, setExploring] = useState(false)
+  const [pending, setPending] = useState<AlternativeKind | null>(null)
+  const [applied, setApplied] = useState<AppliedChange | null>(null)
+  const [restorePending, setRestorePending] = useState(false)
+  const [notice, setNotice] = useState('')
+
+  const canRestore = applied !== null && sameFields(fields, applied.appliedFields)
+  const closeAlternatives = () => { setExploring(false); setPending(null) }
+  const changeFields = (next: Fields) => { setFields(next); setDirty(true); setNotice('') }
+  const setField = (name: keyof Fields, value: string) => changeFields({ ...fields, [name]: value })
 
   function onEvaluate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const target = toGrosze(fields.targetAmount)
-    const saved = toGrosze(fields.alreadySaved)
-    const contribution = toGrosze(fields.comfortableContribution)
-    if (target === null || target <= 0 || saved === null || contribution === null || !isValidCalendarDate(fields.targetDate)) {
+    closeAlternatives()
+    setNotice('')
+    setDirty(false)
+    const input = fieldsToInput(fields, getToday())
+    if (input === null) {
       setError('Enter a positive target, non-negative amounts with up to two decimals, and a valid date.')
       setEvaluation(null)
-      setDirty(false)
       return
     }
     setError('')
-    setEvaluation({ target, result: evaluateGoalPlan({ today: todayString(), targetDate: fields.targetDate, targetAmount: target, alreadySaved: saved, comfortableContribution: contribution }) })
+    setEvaluation({ input, result: evaluateGoalPlan(input) })
+    // Re-evaluating different inputs replaces the plan a restore would return from.
+    if (applied && !sameFields(fields, applied.appliedFields)) {
+      setApplied(null)
+      setRestorePending(false)
+    }
+  }
+
+  function onConfirmAlternative(kind: AlternativeKind) {
+    // Applies only the alternative built from the evaluation on screen, and
+    // never over inputs edited since then.
+    if (!evaluation || dirty) return
+    const alternatives = exploreAlternatives(evaluation.input)
+    if (alternatives.status !== 'available') return
+    const alternative = kind === 'increase-contribution' ? alternatives.increaseContribution : alternatives.extendDate
+    if (alternative.status !== 'available') return
+
+    const { proposedInput } = alternative
+    const nextFields = kind === 'increase-contribution'
+      ? { ...fields, comfortableContribution: fromGrosze(proposedInput.comfortableContribution) }
+      : { ...fields, targetDate: proposedInput.targetDate }
+    const summary = kind === 'increase-contribution'
+      ? `Monthly contribution changed from ${money(evaluation.input.comfortableContribution)} to ${money(proposedInput.comfortableContribution)}.`
+      : `Target date changed from ${formatDate(evaluation.input.targetDate)} to ${formatDate(proposedInput.targetDate)}.`
+
+    setApplied({ previousFields: fields, previousEvaluation: evaluation, appliedFields: nextFields, summary })
+    setFields(nextFields)
+    setEvaluation({ input: proposedInput, result: alternative.result })
     setDirty(false)
+    setRestorePending(false)
+    setNotice('')
+    closeAlternatives()
+  }
+
+  function onConfirmRestore() {
+    if (!applied || !canRestore) return
+    setFields(applied.previousFields)
+    setEvaluation(applied.previousEvaluation)
+    setApplied(null)
+    setRestorePending(false)
+    setDirty(false)
+    setError('')
+    setNotice('Previous plan restored.')
+    closeAlternatives()
   }
 
   return (
@@ -125,13 +153,34 @@ function App() {
               <label htmlFor="date">Target date</label><input id="date" type="date" value={fields.targetDate} onChange={e => setField('targetDate', e.target.value)} />
               <label htmlFor="monthly">Comfortable monthly contribution (PLN)</label><input id="monthly" inputMode="decimal" value={fields.comfortableContribution} onChange={e => setField('comfortableContribution', e.target.value)} />
               <div className="scenario-label">Try a scenario</div>
-              <div className="scenario-row">{Object.entries(presets).map(([name, preset]) => <button type="button" className="scenario-button" key={name} onClick={() => { setFields(preset); setError(''); setDirty(true) }}>{name}</button>)}</div>
+              <div className="scenario-row">{Object.entries(makePresets(getToday())).map(([name, preset]) => <button type="button" className="scenario-button" key={name} onClick={() => { changeFields(preset); setError('') }}>{name}</button>)}</div>
               {error && <p className="input-error" role="alert">{error}</p>}
               <button type="submit" className="primary-button">Evaluate goal <span aria-hidden="true">→</span></button>
             </form>
+            {applied && (
+              <div className="restore-box" role="region" aria-label="Applied alternative">
+                <p role="status">Alternative applied. {applied.summary}</p>
+                {!canRestore && <p className="restore-note">You have edited the inputs since this change, so the previous plan cannot be restored automatically.</p>}
+                {restorePending && canRestore ? (
+                  <div className="confirm-box" role="group" aria-label="Confirm restore">
+                    <p>Restore the inputs you had before this change? Your current inputs will be replaced.</p>
+                    <div className="confirm-actions">
+                      <button type="button" className="confirm-button" onClick={onConfirmRestore}>Confirm restore</button>
+                      <button type="button" className="secondary-button" onClick={() => setRestorePending(false)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : <button type="button" className="secondary-button" disabled={!canRestore} onClick={() => setRestorePending(true)}>Restore previous plan</button>}
+              </div>
+            )}
+            {notice && <p className="notice" role="status">{notice}</p>}
           </section>
-          {evaluation ? <div className="result-wrapper">{dirty && <div className="stale-note">Inputs changed. Select “Evaluate goal” to refresh your analysis.</div>}<ResultView result={evaluation.result} target={evaluation.target}/></div> : <section className="panel empty-panel"><div className="empty-mark">↗</div><h2>Your plan analysis</h2><p>Complete the four fields and select “Evaluate goal” to see your result.</p></section>}
+          {evaluation ? <div className="result-wrapper">{dirty && <div className="stale-note">Inputs changed. Select “Evaluate goal” to refresh your analysis.</div>}<ResultView result={evaluation.result} target={evaluation.input.targetAmount} exploring={exploring} onToggleExplore={() => exploring ? closeAlternatives() : setExploring(true)}/></div> : <section className="panel empty-panel"><div className="empty-mark">↗</div><h2>Your plan analysis</h2><p>Complete the four fields and select “Evaluate goal” to see your result.</p></section>}
         </div>
+        {evaluation && exploring && (
+          <div id="alternatives-panel">
+            <ExploreAlternatives input={evaluation.input} canApply={!dirty} pending={pending} onSelect={setPending} onCancel={() => setPending(null)} onConfirm={onConfirmAlternative} onClose={closeAlternatives} />
+          </div>
+        )}
         <footer className="footer-note">Goal Planning App · Prototype 0.1 · Planning information only · No account or bank connection</footer>
       </main>
     </div>

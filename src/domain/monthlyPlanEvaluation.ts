@@ -38,7 +38,7 @@ export type MonthlyPlanEvaluation =
  * floating-point rounding error: paying the result `parts` times always
  * reaches `amount`, and paying one unit less never does.
  */
-function divideRoundingUp(amount: MoneyAmount, parts: number): MoneyAmount {
+export function divideRoundingUp(amount: MoneyAmount, parts: number): MoneyAmount {
   const remainder = amount % parts
   const roundedDownQuotient = (amount - remainder) / parts
   return remainder === 0 ? roundedDownQuotient : roundedDownQuotient + 1
