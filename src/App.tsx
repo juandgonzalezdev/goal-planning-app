@@ -1,14 +1,26 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { evaluateGoalPlan, type GoalPlanInput, type GoalPlanResult } from './domain/evaluateGoalPlan'
 import { exploreAlternatives, type AlternativeKind } from './domain/exploreAlternatives'
+import {
+  characterCount, confirmGoal, evaluateConfirmedGoal, GOAL_DESCRIPTION_MAX_LENGTH, GOAL_NAME_MAX_LENGTH,
+  isConfirmable, validateGoalDetails, type ConfirmedGoal,
+} from './domain/goal'
 import type { CalendarDate } from './domain/goalTime'
 import { addMonthsToDate } from './domain/monthlyPlan'
 import { ExploreAlternatives } from './ExploreAlternatives'
+import { GoalOverview } from './GoalOverview'
+import { GoalReview } from './GoalReview'
 import { formatDate, formatMoney as money } from './ui/format'
 import { fieldsToInput, fromGrosze, sameFields, todayString, type Fields } from './ui/planFields'
+import { progressPercent, STATUS_LABELS } from './ui/planStatus'
 import './App.css'
 
 type Evaluation = { input: GoalPlanInput; result: GoalPlanResult }
+
+/** The goal's name and description exactly as typed; kept apart from the four plan fields. */
+type DetailFields = { name: string; description: string }
+
+type View = 'plan' | 'review' | 'overview'
 
 /** A confirmed alternative, kept so the plan before it can be restored exactly. */
 type AppliedChange = {
@@ -26,13 +38,6 @@ const makePresets = (today: CalendarDate): Record<string, Fields> => ({
 })
 
 function ResultView({ result, target, exploring, onToggleExplore }: { result: GoalPlanResult; target: number; exploring: boolean; onToggleExplore: () => void }) {
-  const labels: Record<GoalPlanResult['status'], string> = {
-    funded: 'Goal already funded',
-    'invalid-target-date': 'Review your target date',
-    'not-applicable': 'Monthly plan not applicable',
-    supported: 'Plan is supported',
-    'needs-adjustment': 'Plan needs adjustment',
-  }
   const explanations: Record<GoalPlanResult['status'], string> = {
     funded: 'Your recorded savings already meet this target. You can choose what to do next.',
     'invalid-target-date': 'The date is today or in the past, and there is still an amount remaining.',
@@ -41,11 +46,11 @@ function ResultView({ result, target, exploring, onToggleExplore }: { result: Go
     'needs-adjustment': 'Your chosen monthly contribution is below the calculated requirement. You can explore another amount or date.',
   }
   const isMonthly = result.status === 'supported' || result.status === 'needs-adjustment'
-  const ratio = target > 0 ? Math.max(0, Math.min(100, ((target - result.remainingAmount) / target) * 100)) : 0
+  const ratio = progressPercent(target, result.remainingAmount)
   return (
     <section className="panel result-panel" aria-live="polite">
       <div className="eyebrow">YOUR PLAN ANALYSIS</div>
-      <h2 className={`result-title status-${result.status}`}>{labels[result.status]}</h2>
+      <h2 className={`result-title status-${result.status}`}>{STATUS_LABELS[result.status]}</h2>
       <p className="result-description">{explanations[result.status]}</p>
       <div className="metrics">
         <div className="metric"><span>Remaining amount</span><strong>{money(result.remainingAmount)}</strong></div>
@@ -74,11 +79,34 @@ function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
   const [applied, setApplied] = useState<AppliedChange | null>(null)
   const [restorePending, setRestorePending] = useState(false)
   const [notice, setNotice] = useState('')
+  const [details, setDetails] = useState<DetailFields>({ name: '', description: '' })
+  const [view, setView] = useState<View>('plan')
+  // Kept in memory only: it is lost when the page is refreshed or closed.
+  const [confirmedGoal, setConfirmedGoal] = useState<ConfirmedGoal | null>(null)
 
   const canRestore = applied !== null && sameFields(fields, applied.appliedFields)
   const closeAlternatives = () => { setExploring(false); setPending(null) }
   const changeFields = (next: Fields) => { setFields(next); setDirty(true); setNotice('') }
   const setField = (name: keyof Fields, value: string) => changeFields({ ...fields, [name]: value })
+  // Name and description never touch `dirty`: they do not change the financial evaluation.
+  const setDetail = (name: keyof DetailFields, value: string) => setDetails({ ...details, [name]: value })
+
+  const detailsCheck = validateGoalDetails(details.name, details.description)
+  const reviewBlockers = [
+    ...(detailsCheck.status === 'invalid' ? detailsCheck.errors.map(error => ({
+      'name-required': 'Add a goal name.',
+      'name-too-long': `Shorten the goal name to ${GOAL_NAME_MAX_LENGTH} characters or fewer.`,
+      'description-too-long': `Shorten the description to ${GOAL_DESCRIPTION_MAX_LENGTH} characters or fewer.`,
+    })[error]) : []),
+    ...(!evaluation ? ['Evaluate the plan.']
+      : dirty ? ['Evaluate your changed inputs.']
+      : !isConfirmable(evaluation.result) ? [evaluation.result.status === 'invalid-target-date'
+        ? 'Choose a target date after today.'
+        : 'Choose a target date at least one full month away.']
+      : []),
+  ]
+  const canReview = reviewBlockers.length === 0
+  const editing = confirmedGoal !== null
 
   function onEvaluate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -138,52 +166,147 @@ function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
     closeAlternatives()
   }
 
+  /** Clears everything that belongs to a draft: alternatives, restore and messages. */
+  function resetDraftExtras() {
+    closeAlternatives()
+    setApplied(null)
+    setRestorePending(false)
+    setNotice('')
+    setError('')
+  }
+
+  function onOpenReview() {
+    if (!canReview) return
+    // A half-finished alternative confirmation is closed, never applied.
+    closeAlternatives()
+    setView('review')
+  }
+
+  function onConfirmGoal() {
+    if (!evaluation || dirty) return
+    const outcome = confirmGoal(details.name, details.description, evaluation.input, getToday())
+    if (outcome.status !== 'confirmed') return
+    setConfirmedGoal(outcome.goal)
+    resetDraftExtras()
+    setView('overview')
+  }
+
+  function onEditGoal() {
+    if (!confirmedGoal) return
+    // The draft starts from the confirmed goal; the goal itself is not touched while editing.
+    const { input } = confirmedGoal
+    const today = getToday()
+    setFields({
+      targetAmount: fromGrosze(input.targetAmount),
+      alreadySaved: fromGrosze(input.alreadySaved),
+      targetDate: input.targetDate,
+      comfortableContribution: fromGrosze(input.comfortableContribution),
+    })
+    setDetails({ ...confirmedGoal.details })
+    setEvaluation({ input: { ...input, today }, result: evaluateConfirmedGoal(confirmedGoal, today) })
+    setDirty(false)
+    resetDraftExtras()
+    setView('plan')
+  }
+
+  function onCancelEditing() {
+    // Discards the whole draft, including any alternative applied during the edit.
+    resetDraftExtras()
+    setView('overview')
+  }
+
+  if (view === 'review' && evaluation && detailsCheck.status === 'valid') {
+    return (
+      <Shell>
+        <GoalReview details={detailsCheck.details} input={evaluation.input} result={evaluation.result} replacing={confirmedGoal} onBack={() => setView('plan')} onConfirm={onConfirmGoal} />
+      </Shell>
+    )
+  }
+
+  if (view === 'overview' && confirmedGoal) {
+    return (
+      <Shell>
+        <GoalOverview goal={confirmedGoal} today={getToday()} onEdit={onEditGoal} />
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell>
+      <div className="intro"><span className="eyebrow">MAKE YOUR NEXT MOVE WITH CLARITY</span><h1>Plan with clearer numbers.</h1><p>Set a goal, choose your monthly contribution and explore what the numbers say.<br/>Calculations run entirely on this device.</p></div>
+      <div className="workspace">
+        <section className="panel input-panel">
+          <h2>{editing ? 'Edit your personal goal' : 'Create a personal goal'}</h2>
+          <p className="section-subtitle">Name your goal and enter four planning inputs. Nothing is saved or shared.</p>
+          {editing && (
+            <div className="editing-banner" role="region" aria-label="Editing confirmed goal">
+              <p>You are editing “{confirmedGoal.details.name}”. Changes apply only when you review and confirm again. Until then, your confirmed goal stays as it is.</p>
+              <button type="button" className="secondary-button" onClick={onCancelEditing}>Cancel editing</button>
+            </div>
+          )}
+          <form onSubmit={onEvaluate} noValidate>
+            <label htmlFor="goal-name">Goal name</label>
+            <input id="goal-name" value={details.name} aria-describedby="goal-name-count" onChange={e => setDetail('name', e.target.value)} />
+            <span id="goal-name-count" className="char-count">{characterCount(details.name.trim())}/{GOAL_NAME_MAX_LENGTH}</span>
+            <label htmlFor="goal-description">Description (optional)</label>
+            <textarea id="goal-description" rows={2} value={details.description} aria-describedby="goal-description-count" onChange={e => setDetail('description', e.target.value)} />
+            <span id="goal-description-count" className="char-count">{characterCount(details.description.trim())}/{GOAL_DESCRIPTION_MAX_LENGTH}</span>
+            <label htmlFor="target">Target amount (PLN)</label><input id="target" inputMode="decimal" value={fields.targetAmount} onChange={e => setField('targetAmount', e.target.value)} />
+            <label htmlFor="saved">Already saved (PLN)</label><input id="saved" inputMode="decimal" value={fields.alreadySaved} onChange={e => setField('alreadySaved', e.target.value)} />
+            <label htmlFor="date">Target date</label><input id="date" type="date" value={fields.targetDate} onChange={e => setField('targetDate', e.target.value)} />
+            <label htmlFor="monthly">Comfortable monthly contribution (PLN)</label><input id="monthly" inputMode="decimal" value={fields.comfortableContribution} onChange={e => setField('comfortableContribution', e.target.value)} />
+            <div className="scenario-label">Try a scenario</div>
+            <div className="scenario-row">{Object.entries(makePresets(getToday())).map(([name, preset]) => <button type="button" className="scenario-button" key={name} onClick={() => { changeFields(preset); setError('') }}>{name}</button>)}</div>
+            {error && <p className="input-error" role="alert">{error}</p>}
+            <button type="submit" className="primary-button">Evaluate goal <span aria-hidden="true">→</span></button>
+          </form>
+          {applied && (
+            <div className="restore-box" role="region" aria-label="Applied alternative">
+              <p role="status">Alternative applied. {applied.summary}</p>
+              {!canRestore && <p className="restore-note">You have edited the inputs since this change, so the previous plan cannot be restored automatically.</p>}
+              {restorePending && canRestore ? (
+                <div className="confirm-box" role="group" aria-label="Confirm restore">
+                  <p>Restore the inputs you had before this change? Your current inputs will be replaced.</p>
+                  <div className="confirm-actions">
+                    <button type="button" className="confirm-button" onClick={onConfirmRestore}>Confirm restore</button>
+                    <button type="button" className="secondary-button" onClick={() => setRestorePending(false)}>Cancel</button>
+                  </div>
+                </div>
+              ) : <button type="button" className="secondary-button" disabled={!canRestore} onClick={() => setRestorePending(true)}>Restore previous plan</button>}
+            </div>
+          )}
+          {notice && <p className="notice" role="status">{notice}</p>}
+          <div className="review-box">
+            <button type="button" className="primary-button review-button" disabled={!canReview} aria-describedby={canReview ? undefined : 'review-blockers'} onClick={onOpenReview}>{editing ? 'Review changes' : 'Review goal'}</button>
+            {!canReview && (
+              <div id="review-blockers" className="review-blockers">
+                <p>Before reviewing:</p>
+                <ul>{reviewBlockers.map(text => <li key={text}>{text}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        </section>
+        {evaluation ? <div className="result-wrapper">{dirty && <div className="stale-note">Inputs changed. Select “Evaluate goal” to refresh your analysis.</div>}<ResultView result={evaluation.result} target={evaluation.input.targetAmount} exploring={exploring} onToggleExplore={() => exploring ? closeAlternatives() : setExploring(true)}/></div> : <section className="panel empty-panel"><div className="empty-mark">↗</div><h2>Your plan analysis</h2><p>Complete the four fields and select “Evaluate goal” to see your result.</p></section>}
+      </div>
+      {evaluation && exploring && (
+        <div id="alternatives-panel">
+          <ExploreAlternatives input={evaluation.input} canApply={!dirty} pending={pending} onSelect={setPending} onCancel={() => setPending(null)} onConfirm={onConfirmAlternative} onClose={closeAlternatives} />
+        </div>
+      )}
+    </Shell>
+  )
+}
+
+function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <header className="app-header"><div className="brand"><span className="brand-symbol">◎</span><span>goal planning</span></div><span className="header-caption">PERSONAL · PROTOTYPE 0.1</span></header>
       <main className="main-content">
-        <div className="intro"><span className="eyebrow">MAKE YOUR NEXT MOVE WITH CLARITY</span><h1>Plan with clearer numbers.</h1><p>Set a goal, choose your monthly contribution and explore what the numbers say.<br/>Calculations run entirely on this device.</p></div>
-        <div className="workspace">
-          <section className="panel input-panel">
-            <h2>Create a personal goal</h2>
-            <p className="section-subtitle">Enter four planning inputs. Nothing is saved or shared.</p>
-            <form onSubmit={onEvaluate} noValidate>
-              <label htmlFor="target">Target amount (PLN)</label><input id="target" inputMode="decimal" value={fields.targetAmount} onChange={e => setField('targetAmount', e.target.value)} />
-              <label htmlFor="saved">Already saved (PLN)</label><input id="saved" inputMode="decimal" value={fields.alreadySaved} onChange={e => setField('alreadySaved', e.target.value)} />
-              <label htmlFor="date">Target date</label><input id="date" type="date" value={fields.targetDate} onChange={e => setField('targetDate', e.target.value)} />
-              <label htmlFor="monthly">Comfortable monthly contribution (PLN)</label><input id="monthly" inputMode="decimal" value={fields.comfortableContribution} onChange={e => setField('comfortableContribution', e.target.value)} />
-              <div className="scenario-label">Try a scenario</div>
-              <div className="scenario-row">{Object.entries(makePresets(getToday())).map(([name, preset]) => <button type="button" className="scenario-button" key={name} onClick={() => { changeFields(preset); setError('') }}>{name}</button>)}</div>
-              {error && <p className="input-error" role="alert">{error}</p>}
-              <button type="submit" className="primary-button">Evaluate goal <span aria-hidden="true">→</span></button>
-            </form>
-            {applied && (
-              <div className="restore-box" role="region" aria-label="Applied alternative">
-                <p role="status">Alternative applied. {applied.summary}</p>
-                {!canRestore && <p className="restore-note">You have edited the inputs since this change, so the previous plan cannot be restored automatically.</p>}
-                {restorePending && canRestore ? (
-                  <div className="confirm-box" role="group" aria-label="Confirm restore">
-                    <p>Restore the inputs you had before this change? Your current inputs will be replaced.</p>
-                    <div className="confirm-actions">
-                      <button type="button" className="confirm-button" onClick={onConfirmRestore}>Confirm restore</button>
-                      <button type="button" className="secondary-button" onClick={() => setRestorePending(false)}>Cancel</button>
-                    </div>
-                  </div>
-                ) : <button type="button" className="secondary-button" disabled={!canRestore} onClick={() => setRestorePending(true)}>Restore previous plan</button>}
-              </div>
-            )}
-            {notice && <p className="notice" role="status">{notice}</p>}
-          </section>
-          {evaluation ? <div className="result-wrapper">{dirty && <div className="stale-note">Inputs changed. Select “Evaluate goal” to refresh your analysis.</div>}<ResultView result={evaluation.result} target={evaluation.input.targetAmount} exploring={exploring} onToggleExplore={() => exploring ? closeAlternatives() : setExploring(true)}/></div> : <section className="panel empty-panel"><div className="empty-mark">↗</div><h2>Your plan analysis</h2><p>Complete the four fields and select “Evaluate goal” to see your result.</p></section>}
-        </div>
-        {evaluation && exploring && (
-          <div id="alternatives-panel">
-            <ExploreAlternatives input={evaluation.input} canApply={!dirty} pending={pending} onSelect={setPending} onCancel={() => setPending(null)} onConfirm={onConfirmAlternative} onClose={closeAlternatives} />
-          </div>
-        )}
+        {children}
         <footer className="footer-note">Goal Planning App · Prototype 0.1 · Planning information only · No account or bank connection</footer>
       </main>
     </div>
   )
 }
+
 export default App
