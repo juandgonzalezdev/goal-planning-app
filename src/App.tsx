@@ -13,6 +13,7 @@ import { GoalReview } from './GoalReview'
 import { formatDate, formatMoney as money } from './ui/format'
 import { fieldsToInput, fromGrosze, sameFields, todayString, type Fields } from './ui/planFields'
 import { progressPercent, STATUS_LABELS } from './ui/planStatus'
+import { MyMoney } from './MyMoney'
 import './App.css'
 
 type Evaluation = { input: GoalPlanInput; result: GoalPlanResult }
@@ -81,6 +82,7 @@ function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
   const [notice, setNotice] = useState('')
   const [details, setDetails] = useState<DetailFields>({ name: '', description: '' })
   const [view, setView] = useState<View>('plan')
+  const [area, setArea] = useState<'goals' | 'money'>('goals')
   // Kept in memory only: it is lost when the page is refreshed or closed.
   const [confirmedGoal, setConfirmedGoal] = useState<ConfirmedGoal | null>(null)
 
@@ -215,6 +217,8 @@ function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
     setView('overview')
   }
 
+  if (area === 'money') return <Shell><MyMoney onBack={() => setArea('goals')} /></Shell>
+
   if (view === 'review' && evaluation && detailsCheck.status === 'valid') {
     return (
       <Shell>
@@ -233,6 +237,7 @@ function App({ getToday = todayString }: { getToday?: () => CalendarDate }) {
 
   return (
     <Shell>
+      <button type="button" className="secondary-button" onClick={() => setArea('money')}>My Money & Calculator →</button>
       <div className="intro"><span className="eyebrow">MAKE YOUR NEXT MOVE WITH CLARITY</span><h1>Plan with clearer numbers.</h1><p>Set a goal, choose your monthly contribution and explore what the numbers say.<br/>Calculations run entirely on this device.</p></div>
       <div className="workspace">
         <section className="panel input-panel">
