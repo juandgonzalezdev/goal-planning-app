@@ -1,0 +1,37 @@
+/*
+ * Design values taken from the approved prototype. Every screen reads its
+ * colours, corners, spacing and motion from here.
+ */
+:root {
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2f4f7;
+  --color-surface-hover: #e9ecf1;
+  --color-border: #e2e5ea;
+  --color-border-strong: #cdd2d9;
+  --color-text: #15171c;
+  --color-text-strong: #0b0c0f;
+  --color-text-muted: #5d6470;
+  --color-primary: #111216;
+  --color-primary-hover: #2c2e35;
+  --color-on-primary: #ffffff;
+  --color-accent: #2563b8;
+  --color-accent-soft: #e8f0fb;
+  --color-focus: #6f9fe0;
+  /* Meaning colours stay green (on track) and amber (needs attention). */
+  --color-positive: #128062;
+  --color-positive-soft: #eaf7f1;
+
+  --radius-card: 18px;
+  --radius-control: 999px;
+  --radius-small: 10px;
+  --shadow-card: 0 1px 2px rgba(17, 18, 22, .04);
+
+  --space-gutter: 16px;
+  --column-narrow: 560px;
+  --column-wide: 980px;
+
+  --motion-screen: 220ms;
+  --motion-quick: 150ms;
+  --motion-ease: cubic-bezier(.2, .7, .2, 1);
+}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import App from './App'
+import { GoalPlanner } from './GoalPlanner'
 
 // Invented example values, fixed date. With these inputs:
 // target 12,000, saved 3,000, target date 21 Oct 2027 (12 months), 600 a month.
@@ -28,7 +28,7 @@ const confirmedSection = () => screen.getByRole('region', { name: 'What you conf
 const projectionSection = () => screen.getByRole('region', { name: 'Today’s projection' })
 
 function start(fields: Partial<Record<FieldKey, string>> = {}, getToday = () => TODAY) {
-  const view = render(<App getToday={getToday} />)
+  const view = render(<GoalPlanner getToday={getToday} />)
   fill({ ...PLAN, ...fields })
   fireEvent.click(button('Evaluate goal'))
   return view
@@ -58,7 +58,7 @@ describe('Goal review: eligibility', () => {
   })
 
   it('is unavailable before the plan is evaluated', () => {
-    render(<App getToday={() => TODAY} />)
+    render(<GoalPlanner getToday={() => TODAY} />)
     fill({ ...PLAN, name: 'Holiday fund' })
     expect(button('Review goal').disabled).toBe(true)
     expect(screen.getByText('Evaluate the plan.')).toBeTruthy()
@@ -225,7 +225,7 @@ describe('Goal confirmation', () => {
     fireEvent.click(button('Confirm goal'))
 
     today = '2027-04-21'
-    rerender(<App getToday={getToday} />)
+    rerender(<GoalPlanner getToday={getToday} />)
     const projection = text(projectionSection())
     expect(projection).toContain('Calculated on 21 Apr 2027')
     expect(projection).toContain('Monthly opportunities6')

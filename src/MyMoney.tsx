@@ -37,7 +37,7 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="money-app">
-      <div className="money-top"><button type="button" className="money-link" onClick={onBack}>← My Goals</button><span className="money-eyebrow">PRIVATE PREVIEW · NOT SAVED</span></div>
+      <div className="money-top"><button type="button" className="money-link" onClick={onBack}>← My Space</button><span className="money-eyebrow">PRIVATE PREVIEW · NOT SAVED</span></div>
       <h1>My Money</h1>
       <p className="money-muted">See what you earn, spend, save, and still need to pay.</p>
       <section className="money-panel">
