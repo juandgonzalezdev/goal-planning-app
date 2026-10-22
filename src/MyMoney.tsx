@@ -1,45 +1,20 @@
 import { useState } from 'react'
+import { compareExtraPayments, PAYOFF_LIMIT_MONTHS, type ExtraPaymentComparison } from './domain/loanPayoff'
+import { parseDecimalInput } from './ui/decimalInput'
 import './MyMoney.css'
 
 type DebtType = 'Personal Loan' | 'Car Loan' | 'Credit Card' | 'Other'
 type Debt = { id: number; type: DebtType; name: string; balance: string; interest: string; payment: string }
 
-// Accept 12345.67, 12.345,67, 12,345.67, and 9,49. Never silently accept malformed amounts.
-function asNumber(raw: string): number {
-  const text = raw.trim().replace(/\s/g, '').replace(/\u00a0/g, '')
-  if (!text || !/^[0-9.,]+$/.test(text)) return NaN
-  const comma = text.lastIndexOf(',')
-  const dot = text.lastIndexOf('.')
-  const separator = Math.max(comma, dot)
-  if (separator < 0) return /^\d+$/.test(text) ? Number(text) : NaN
-  const fractional = text.slice(separator + 1)
-  const integer = text.slice(0, separator)
-  const decimalChar = text[separator]
-  const groupingChar = decimalChar === ',' ? '.' : ','
-  if (!/^\d{1,2}$/.test(fractional)) return NaN
-  if (!(new RegExp(`^\\d+$`).test(integer) || new RegExp(`^\\d{1,3}(\\${groupingChar}\\d{3})+$`).test(integer))) return NaN
-  const normalized = integer.replaceAll(groupingChar, '') + '.' + fractional
-  return Number(normalized)
-}
 const fmt = (n: number) => Number.isFinite(n)
   ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN'
   : '—'
 
-/** Informational monthly estimate only, with interest based on the outstanding balance. */
-function calculatePayoff(balance: number, yearlyRate: number, payment: number) {
-  if (![balance, yearlyRate, payment].every(Number.isFinite) || balance < 0 || yearlyRate < 0 || payment < 0) return null
-  if (balance === 0) return { months: 0, interest: 0 }
-  const r = yearlyRate / 1200
-  if (payment <= balance * r || payment === 0) return null
-  let outstanding = balance, interest = 0, months = 0
-  while (outstanding > 0.005 && months < 600) {
-    const charge = outstanding * r
-    const paid = Math.min(outstanding + charge, payment)
-    interest += charge
-    outstanding = Math.max(0, outstanding + charge - paid)
-    months++
-  }
-  return outstanding <= 0.005 ? { months, interest } : null
+const PAYOFF_MESSAGES: Record<Exclude<ExtraPaymentComparison['status'], 'compared'>, string> = {
+  'invalid-input': 'Add a valid remaining balance, yearly interest rate, and monthly payment.',
+  'one-off-above-balance': 'The one-time extra payment can\'t be more than the remaining balance.',
+  'payment-too-low': 'Your regular payment must cover the interest.',
+  'longer-than-limit': `With this monthly payment, paying this off would take more than ${PAYOFF_LIMIT_MONTHS} months (${PAYOFF_LIMIT_MONTHS / 12} years).`,
 }
 
 export function MyMoney({ onBack }: { onBack: () => void }) {
@@ -56,9 +31,9 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
     setOpenId(id)
   }
   const editDebt = (id: number, change: Partial<Debt>) => setDebts(ds => ds.map(d => d.id === id ? { ...d, ...change } : d))
-  const totalDebt = debts.reduce((sum, d) => sum + (Number.isFinite(asNumber(d.balance)) ? asNumber(d.balance) : 0), 0)
-  const monthlyDebt = debts.reduce((sum, d) => sum + (Number.isFinite(asNumber(d.payment)) ? asNumber(d.payment) : 0), 0)
-  const moneyLeft = asNumber(income) - asNumber(expenses) - monthlyDebt
+  const totalDebt = debts.reduce((sum, d) => sum + (Number.isFinite(parseDecimalInput(d.balance)) ? parseDecimalInput(d.balance) : 0), 0)
+  const monthlyDebt = debts.reduce((sum, d) => sum + (Number.isFinite(parseDecimalInput(d.payment)) ? parseDecimalInput(d.payment) : 0), 0)
+  const moneyLeft = parseDecimalInput(income) - parseDecimalInput(expenses) - monthlyDebt
 
   return (
     <div className="money-app">
@@ -79,16 +54,14 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
         <div className="money-section-head"><h2>My Loans & Cards</h2><button type="button" className="money-cta secondary" onClick={addDebt}>+ Add</button></div>
         {debts.length === 0 && <p className="money-muted">No loans or cards added yet.</p>}
         {debts.map(d => {
-          const balance = asNumber(d.balance)
-          const interestRate = asNumber(d.interest)
-          const regular = asNumber(d.payment)
+          const balance = parseDecimalInput(d.balance)
+          const interestRate = parseDecimalInput(d.interest)
+          const regular = parseDecimalInput(d.payment)
           const extraText = extraById[d.id] ?? '0'
           const oneOffText = oneOffById[d.id] ?? '0'
-          const extra = asNumber(extraText)
-          const oneOff = asNumber(oneOffText)
-          const valid = [balance, interestRate, regular, extra, oneOff].every(Number.isFinite) && oneOff <= balance
-          const baseline = valid ? calculatePayoff(balance, interestRate, regular) : null
-          const scenario = valid ? calculatePayoff(balance - oneOff, interestRate, regular + extra) : null
+          const extra = parseDecimalInput(extraText)
+          const oneOff = parseDecimalInput(oneOffText)
+          const comparison = compareExtraPayments({ balance, yearlyRate: interestRate, regularPayment: regular, extraMonthly: extra, oneOffPayment: oneOff })
           const isOpen = openId === d.id
           return <div className="money-debt" key={d.id}>
             <div className="money-section-head"><strong>{d.name.trim() || d.type}</strong><button type="button" className="money-link" onClick={() => {setDebts(ds => ds.filter(x => x.id !== d.id)); if (openId === d.id) setOpenId(null)}}>Remove</button></div>
@@ -108,12 +81,12 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
                 <label>One-Time Extra Payment (PLN)<input inputMode="decimal" value={oneOffText} onChange={e => setOneOffById(p => ({...p,[d.id]:e.target.value}))} placeholder="0" /></label>
               </div>
               <div className="money-presets">{[0,100,200,500,1000].map(n => <button type="button" key={n} onClick={() => setExtraById(p => ({...p,[d.id]:String(n)}))}>{n === 0 ? 'No extra' : `+${n} PLN`}</button>)}</div>
-              {valid && baseline && scenario ? <div className="money-metrics" aria-live="polite">
-                <div><span>Without Extra</span><strong>{baseline.months} months</strong><small>Interest: {fmt(baseline.interest)}</small></div>
-                <div><span>With Extra</span><strong>{scenario.months} months</strong><small>Interest: {fmt(scenario.interest)}</small></div>
-                <div><span>Months Saved</span><strong>{Math.max(0, baseline.months - scenario.months)}</strong></div>
-                <div><span>Interest Saved</span><strong>{fmt(Math.max(0, baseline.interest - scenario.interest))}</strong></div>
-              </div> : <p className="money-muted" role="status">Add a valid balance, yearly interest rate, and monthly payment. Your regular payment must cover the interest.</p>}
+              {comparison.status === 'compared' ? <div className="money-metrics" aria-live="polite">
+                <div><span>Without Extra</span><strong>{comparison.withoutExtra.months} months</strong><small>Interest: {fmt(comparison.withoutExtra.interest)}</small></div>
+                <div><span>With Extra</span><strong>{comparison.withExtra.months} months</strong><small>Interest: {fmt(comparison.withExtra.interest)}</small></div>
+                <div><span>Months Saved</span><strong>{comparison.monthsSaved}</strong></div>
+                <div><span>Interest Saved</span><strong>{fmt(comparison.interestSaved)}</strong></div>
+              </div> : <p className="money-muted" role="status">{PAYOFF_MESSAGES[comparison.status]}</p>}
               <p className="money-muted money-small">Estimate only. Assumes the same interest rate, monthly payments, no new borrowing, and extra payments that shorten the loan rather than lower your regular payment. Your bank may calculate differently.</p>
               {d.type === 'Credit Card' && <p className="money-muted money-small">Credit card minimum payments may change each month. Use the amount you plan to pay, not the minimum shown after a past payment.</p>}
             </div>}
@@ -123,7 +96,7 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
       <section className="money-panel"><h2>Your Overview</h2><div className="money-metrics">
         <div><span>Remaining Balance</span><strong>{fmt(totalDebt)}</strong></div>
         <div><span>Loan & Card Payments</span><strong>{fmt(monthlyDebt)}</strong></div>
-        <div><span>Money Saved</span><strong>{savings.trim() && Number.isFinite(asNumber(savings)) ? fmt(asNumber(savings)) : 'Not added'}</strong></div>
+        <div><span>Money Saved</span><strong>{savings.trim() && Number.isFinite(parseDecimalInput(savings)) ? fmt(parseDecimalInput(savings)) : 'Not added'}</strong></div>
         <div><span>Money Left Each Month</span><strong>{income.trim() && expenses.trim() && Number.isFinite(moneyLeft) ? fmt(moneyLeft) : 'Add income & expenses'}</strong></div>
       </div><p className="money-muted money-small">These are numbers you entered, not confirmed bank balances. No goals are created from this information.</p></section>
       <p className="money-foot">This preview keeps data in your current browser session only. Refreshing the page clears it. Nothing is saved or sent to a bank.</p>
