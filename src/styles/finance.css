@@ -1,0 +1,161 @@
+/* Phase 4 screens in the Demo v5.9 style: tab bar, Home overview, Monthly Bills, setup, Settings, Data. */
+
+.shell-header { justify-content: space-between; gap: 12px; min-height: 64px; background: var(--color-surface); backdrop-filter: none; }
+.shell-brand-mark { background: var(--color-accent-soft); color: var(--color-accent); width: 40px; height: 40px; border-radius: var(--radius-control); }
+.icon-button {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-control);
+  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer;
+}
+.icon-button:hover { background: var(--color-surface-hover); }
+:is(.icon-button, .bottom-nav button, .month-switch button, .stat, .day-head, .paid-toggle, .text-button, .button-small, .button-danger):focus-visible {
+  outline: 2px solid var(--color-focus); outline-offset: 2px;
+}
+
+/* Demo and save notices */
+.demo-banner, .save-warning {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 8px max(var(--space-gutter), calc((100vw - var(--column-wide)) / 2 + var(--space-gutter)));
+  font-size: 13px; background: var(--color-accent-soft); color: var(--color-text);
+}
+.save-warning { background: var(--color-warning-soft); color: var(--color-warning-text); }
+
+/* Tab bar: fixed at the bottom on phones, a row under the header on wide screens (as in v5.9). */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; gap: 4px; padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.bottom-nav button {
+  flex: 1; min-width: 0; min-height: 48px; padding: 6px 2px; border: 0; border-radius: var(--radius-control);
+  background: transparent; color: var(--color-text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.bottom-nav button:hover { background: var(--color-surface-hover); }
+.bottom-nav button.is-selected { background: var(--color-accent-soft); color: var(--color-selected-text); font-weight: 700; }
+.shell.has-nav .shell-footer { padding-bottom: calc(var(--nav-height) + 20px + env(safe-area-inset-bottom)); }
+@media (min-width: 740px) {
+  .bottom-nav {
+    position: sticky; top: 64px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border);
+    padding: 8px max(var(--space-gutter), calc((100vw - var(--column-wide)) / 2 + var(--space-gutter)));
+  }
+  .bottom-nav button { font-size: 15px; }
+  .shell.has-nav .shell-footer { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+
+/* Tab screens share v5.9's single column */
+.tab-screen { max-width: var(--column-wide); margin: 0 auto; display: grid; gap: 14px; }
+.tab-title { font-size: 1.25rem; margin: 0; color: var(--color-text-strong); }
+.tab-title:focus, .section-title:focus { outline: none; }
+.section-title { font-size: 1rem; margin: 6px 0 0; color: var(--color-text-strong); }
+.muted-note { font-size: 13px; line-height: 1.5; color: var(--color-text-muted); margin: 0; }
+.tab-screen .back-link { margin-bottom: 0; }
+
+.month-switch { display: flex; gap: 8px; }
+.month-switch button {
+  flex: 1; min-height: 44px; padding: 10px 8px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text);
+}
+.month-switch button.is-active { background: var(--color-selected); border-color: var(--color-selected-border); color: var(--color-selected-text); font-weight: 650; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat {
+  display: grid; gap: 7px; align-content: start; padding: 15px; text-align: left;
+  border: 0; border-radius: 12px; background: var(--color-surface-muted); color: var(--color-text);
+}
+button.stat { cursor: pointer; }
+button.stat:hover { background: var(--color-surface-hover); }
+.stat small { font-size: 12px; color: var(--color-text-muted); }
+.stat b { font-size: 1.07rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+/* Monthly Bills: payment dates */
+.bill-days { display: grid; }
+.bill-day { border-bottom: 1px solid var(--color-border); }
+.day-head {
+  display: flex; width: 100%; align-items: center; gap: 10px; padding: 8px 0; min-height: 64px;
+  border: 0; background: transparent; color: var(--color-text); text-align: left; cursor: pointer;
+}
+.day-tile { width: 62px; flex-shrink: 0; padding: 7px; border-radius: 10px; background: var(--color-surface-muted); display: grid; justify-items: center; }
+.day-tile b { font-size: 1.4rem; line-height: 1.1; }
+.day-tile small, .day-text small, .day-amount small { font-size: 12px; color: var(--color-text-muted); }
+.day-text { flex: 1; display: grid; gap: 7px; min-width: 0; }
+.day-amount { display: grid; gap: 4px; text-align: right; font-variant-numeric: tabular-nums; }
+.day-head > .icon { color: var(--color-text-muted); flex-shrink: 0; }
+.day-bills { display: grid; gap: 8px; padding: 0 0 12px 12px; }
+.bill-item { padding: 13px; border: 1px solid var(--color-border); border-radius: 11px; display: grid; gap: 9px; background: var(--color-surface); }
+.bill-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.bill-line b { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.bill-line small { font-size: 12px; color: var(--color-text-muted); }
+.bill-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.owner-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.paid-toggle {
+  flex-shrink: 0; min-height: 36px; padding: 6px 12px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-muted);
+}
+.paid-toggle.is-paid { background: var(--color-positive-soft); border-color: var(--color-positive); color: var(--color-positive); font-weight: 650; }
+.text-button { justify-self: start; border: 0; padding: 6px 0; min-height: 36px; background: transparent; color: var(--color-accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+.amount-editor { display: grid; gap: 8px; padding-top: 4px; }
+
+/* Forms */
+.form-stack { display: grid; gap: 12px; }
+.form-field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.form-field input, .form-field select {
+  width: 100%; min-width: 0; min-height: 44px; padding: 10px; font-size: 16px; font-weight: 400;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-small); background: var(--color-surface); color: var(--color-text);
+}
+.form-field input:disabled { background: var(--color-surface-muted); cursor: not-allowed; }
+.form-field input:focus-visible, .form-field select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.form-field-spaced { margin-top: 16px; }
+.field-help { font-size: 13px; line-height: 1.5; color: var(--color-text-muted); margin: 0; }
+.field-error { font-size: 13px; color: #b42318; margin: 6px 0 0; }
+:root[data-theme="dark"] .field-error { color: #ff8a80; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .field-error { color: #ff8a80; } }
+.step-count { font-size: 13px; color: var(--color-text-muted); margin: 0 0 6px; }
+
+.inline-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.button-small {
+  min-height: 40px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text);
+}
+.button-small:hover { background: var(--color-surface-hover); }
+.button-small-primary { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.button-small-primary:hover { background: var(--color-primary-hover); }
+.button-small-danger, .button-danger { background: #b42318; border-color: #b42318; color: #fff; }
+.button-danger { justify-self: start; min-height: 44px; padding: 10px 16px; border-radius: var(--radius-control); border: 1px solid #b42318; font-weight: 650; cursor: pointer; }
+
+.callout { padding: 13px 14px; border-radius: 11px; background: var(--color-surface-muted); font-size: 14px; line-height: 1.5; display: grid; gap: 8px; margin-top: 16px; }
+.callout p, .callout ul { margin: 0; }
+.callout ul { padding-left: 18px; }
+.callout-warning { background: var(--color-warning-soft); color: var(--color-warning-text); }
+.empty-block { padding: 25px; text-align: center; background: var(--color-surface-muted); border-radius: 12px; color: var(--color-text-muted); font-size: 14px; line-height: 1.5; }
+.empty-block p { margin: 0 0 6px; }
+.empty-block p:last-child { margin: 0; }
+.block { display: grid; gap: 10px; padding: 15px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.block .section-title { margin: 0; }
+.block > .button-secondary { justify-self: start; }
+
+.fact-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; }
+.fact-rows { margin: 0; display: grid; gap: 8px; }
+.fact-rows > div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.fact-rows dt { color: var(--color-text-muted); }
+.fact-rows dd { margin: 0; text-align: right; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.member-chip { display: inline-flex; align-items: center; }
+
+/* Home: the Phase 2 goal card and section cards in the v5.9 column */
+.tab-screen .space-goal { margin: 0; }
+.tab-screen .section-grid { grid-template-columns: 1fr; }
+@media (min-width: 640px) {
+  .tab-screen .section-grid { grid-template-columns: 1fr 1fr; }
+  .tab-screen .section-grid > :last-child { grid-column: auto; }
+}
+@media (min-width: 1024px) {
+  .tab-screen .section-card { grid-template-columns: auto 1fr; min-height: 88px; }
+  .tab-screen .section-card-text { grid-column: 2; }
+}
+.screen-section .money-app h1 { font-size: 1.1rem; letter-spacing: 0; margin: 8px 0 4px; }
+
+/* Buttons from Phase 2 in the v5.9 shape */
+.button-primary, .button-secondary, .button-quiet { border-radius: var(--radius-control); }
+.button-primary:disabled, .button-secondary:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Goal Planner colours that must stay readable in dark mode too. */
+.alt-row.changed dd, .changed-tag, .status-supported, .status-funded { color: var(--color-positive); }

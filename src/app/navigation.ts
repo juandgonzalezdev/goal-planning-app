@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 
-/** Every screen the app can show. My Space ('home') is the home screen. */
-export const SCREENS = ['welcome', 'choose-space', 'home', 'goals', 'money'] as const
+/**
+ * Every screen the app can show. The first four come before a space is
+ * open; the five tabs, Goals and Settings belong to an open space.
+ */
+export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'cards', 'history', 'data', 'goals', 'settings'] as const
 export type Screen = (typeof SCREENS)[number]
+
+/** The five main tabs, in the approved order. */
+export const TABS = ['home', 'bills', 'cards', 'history', 'data'] as const satisfies readonly Screen[]
+export type Tab = (typeof TABS)[number]
+
+/** Screens that only make sense inside an open space (own or demo). */
+export const isSpaceScreen = (screen: Screen) => (TABS as readonly Screen[]).includes(screen) || screen === 'goals' || screen === 'settings'
+export const isTab = (screen: Screen): screen is Tab => (TABS as readonly Screen[]).includes(screen)
 
 /** Which way the user moved, so a transition can slide the matching way. */
 export type Direction = 'forward' | 'back'
@@ -10,10 +21,10 @@ export type Direction = 'forward' | 'back'
 export const isScreen = (value: unknown): value is Screen =>
   typeof value === 'string' && (SCREENS as readonly string[]).includes(value)
 
-/** Reads the screen stored in a browser history entry; anything unknown means Welcome. */
-export function screenFromHistoryState(state: unknown): Screen {
+/** Reads the screen stored in a browser history entry; anything unknown means `fallback`. */
+export function screenFromHistoryState(state: unknown, fallback: Screen = 'welcome'): Screen {
   const screen = (state as { screen?: unknown } | null)?.screen
-  return isScreen(screen) ? screen : 'welcome'
+  return isScreen(screen) ? screen : fallback
 }
 
 /**
@@ -21,19 +32,20 @@ export function screenFromHistoryState(state: unknown): Screen {
  * button and the phone back gesture move between screens. Only the screen
  * name goes into the history: never anything the user typed.
  */
-export function useNavigation() {
-  const [screen, setScreen] = useState<Screen>('welcome')
+export function useNavigation(initial: Screen = 'welcome') {
+  const [screen, setScreen] = useState<Screen>(initial)
   const [direction, setDirection] = useState<Direction>('forward')
 
   useEffect(() => {
-    // Every page load starts at Welcome, because nothing is kept after a refresh.
-    window.history.replaceState({ screen: 'welcome' }, '')
+    window.history.replaceState({ screen: initial }, '')
     const onPopState = (event: PopStateEvent) => {
       setDirection('back')
-      setScreen(screenFromHistoryState(event.state))
+      setScreen(screenFromHistoryState(event.state, initial))
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
+    // The first screen is only read once, when the app starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const go = useCallback((next: Screen) => {
@@ -42,8 +54,15 @@ export function useNavigation() {
     setScreen(next)
   }, [])
 
+  /** Moves without adding a history step, e.g. after finishing setup, so Back does not return into it. */
+  const replace = useCallback((next: Screen) => {
+    window.history.replaceState({ screen: next }, '')
+    setDirection('forward')
+    setScreen(next)
+  }, [])
+
   /** The same as the browser back button. */
   const back = useCallback(() => window.history.back(), [])
 
-  return { screen, direction, go, back }
+  return { screen, direction, go, replace, back }
 }

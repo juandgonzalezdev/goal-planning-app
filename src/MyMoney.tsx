@@ -17,7 +17,8 @@ const PAYOFF_MESSAGES: Record<Exclude<ExtraPaymentComparison['status'], 'compare
   'longer-than-limit': `With this monthly payment, paying this off would take more than ${PAYOFF_LIMIT_MONTHS} months (${PAYOFF_LIMIT_MONTHS / 12} years).`,
 }
 
-export function MyMoney({ onBack }: { onBack: () => void }) {
+/** `onBack` adds a back link; inside the Cards tab there is none, because the tab bar is there. */
+export function MyMoney({ onBack }: { onBack?: () => void }) {
   const [income, setIncome] = useState('')
   const [expenses, setExpenses] = useState('')
   const [savings, setSavings] = useState('')
@@ -37,7 +38,7 @@ export function MyMoney({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="money-app">
-      <div className="money-top"><button type="button" className="money-link" onClick={onBack}>← My Space</button><span className="money-eyebrow">PRIVATE PREVIEW · NOT SAVED</span></div>
+      <div className="money-top">{onBack && <button type="button" className="money-link" onClick={onBack}>← Back</button>}<span className="money-eyebrow">PRIVATE PREVIEW · NOT SAVED</span></div>
       <h1>My Money</h1>
       <p className="money-muted">See what you earn, spend, save, and still need to pay.</p>
       <section className="money-panel">
