@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 
 /**
  * Every screen the app can show. The first four come before a space is
- * open; the five tabs, Goals and Settings belong to an open space.
+ * open; the five tabs, the goal screens, the Goal Planner and Settings
+ * belong to an open space. Goals open from Home: they are not a tab.
  */
-export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'cards', 'history', 'data', 'goals', 'settings'] as const
+export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'cards', 'history', 'data', 'goals', 'goal', 'new-goal', 'planner', 'settings'] as const
 export type Screen = (typeof SCREENS)[number]
 
 /** The five main tabs, in the approved order. */
@@ -12,7 +13,8 @@ export const TABS = ['home', 'bills', 'cards', 'history', 'data'] as const satis
 export type Tab = (typeof TABS)[number]
 
 /** Screens that only make sense inside an open space (own or demo). */
-export const isSpaceScreen = (screen: Screen) => (TABS as readonly Screen[]).includes(screen) || screen === 'goals' || screen === 'settings'
+const SPACE_ONLY: readonly Screen[] = ['goals', 'goal', 'new-goal', 'planner', 'settings']
+export const isSpaceScreen = (screen: Screen) => (TABS as readonly Screen[]).includes(screen) || SPACE_ONLY.includes(screen)
 export const isTab = (screen: Screen): screen is Tab => (TABS as readonly Screen[]).includes(screen)
 
 /** Which way the user moved, so a transition can slide the matching way. */

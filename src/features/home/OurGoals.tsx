@@ -4,7 +4,7 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { summarizeGoals } from '../../domain/finance/goals'
 import { activeGoalRows } from '../../domain/finance/home'
 import { ownerColor } from '../../domain/finance/space'
-import type { FinanceData } from '../../domain/finance/types'
+import type { FinanceData, Id } from '../../domain/finance/types'
 import { formatAmount } from '../../ui/format'
 import { progressPercent } from '../../ui/planStatus'
 
@@ -14,6 +14,8 @@ type Props = {
   today: CalendarDate
   /** The goal confirmed in the Goal Planner (kept in memory, as in Phase 2). */
   confirmedGoal: ConfirmedGoal | null
+  onViewAll: () => void
+  onOpenGoal: (id: Id) => void
   onOpenPlanner: () => void
 }
 
@@ -26,10 +28,11 @@ function ProgressBar({ percent, color, label }: { percent: number; color: string
 }
 
 /**
- * Our Goals: what is saved in the pots, one row per active goal. It also
- * keeps the way into the Goal Planner and shows the Assistant as coming soon.
+ * Our Goals: what is saved in the pots, one row per active goal (each opens
+ * the goal; View All opens every goal). It also keeps the way into the Goal
+ * Planner and shows the Assistant as coming soon.
  */
-export function OurGoals({ data, title, today, confirmedGoal, onOpenPlanner }: Props) {
+export function OurGoals({ data, title, today, confirmedGoal, onViewAll, onOpenGoal, onOpenPlanner }: Props) {
   const rows = activeGoalRows(data, today)
   const summary = summarizeGoals(data)
   const planned = confirmedGoal
@@ -40,7 +43,7 @@ export function OurGoals({ data, title, today, confirmedGoal, onOpenPlanner }: P
     <section className="block home-section" aria-labelledby="home-goals">
       <div className="section-head">
         <h2 id="home-goals" className="section-title">{title}</h2>
-        <button type="button" className="button-small" onClick={onOpenPlanner}>Goal Planner <Icon name="arrowRight" size={16} /></button>
+        <button type="button" className="button-small" onClick={onViewAll}>View All <Icon name="arrowRight" size={16} /></button>
       </div>
       {rows.length === 0
         ? <p className="muted-note">No goals yet.</p>
@@ -51,10 +54,12 @@ export function OurGoals({ data, title, today, confirmedGoal, onOpenPlanner }: P
           </div>
           <ul className="goal-rows">
             {rows.map(({ goal, progress }) => (
-              <li key={goal.id} className="goal-row">
-                <span>{goal.name}</span>
-                <span>{Math.round(progress.percent)}%</span>
-                <ProgressBar percent={progress.percent} color={ownerColor(data.space, goal.owner)} label={`${goal.name} progress`} />
+              <li key={goal.id}>
+                <button type="button" className="goal-row" onClick={() => onOpenGoal(goal.id)}>
+                  <span>{goal.name}</span>
+                  <span>{Math.round(progress.percent)}%</span>
+                  <ProgressBar percent={progress.percent} color={ownerColor(data.space, goal.owner)} label={`${goal.name} progress`} />
+                </button>
               </li>
             ))}
           </ul>
@@ -66,6 +71,12 @@ export function OurGoals({ data, title, today, confirmedGoal, onOpenPlanner }: P
           <ProgressBar percent={planned} color="var(--color-accent)" label={`${confirmedGoal.details.name} progress`} />
         </button>
       )}
+      <button type="button" className="tool-row" onClick={onOpenPlanner}>
+        <Icon name="target" />
+        <span className="assistant-title">Goal Planner</span>
+        <span className="assistant-text">{confirmedGoal ? 'See or edit your planned goal' : 'Plan a goal step by step'}</span>
+        <Icon name="arrowRight" size={18} />
+      </button>
       <div className="assistant-row">
         <Icon name="assistant" />
         <span className="assistant-title">Assistant<span className="badge">Coming soon</span></span>

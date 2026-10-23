@@ -5,11 +5,17 @@ import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { browserStorage } from './data/localStore'
 import { addMonthsToYearMonth, yearMonthOf, type YearMonth } from './domain/calendar'
+import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
+import type { Id } from './domain/finance/types'
 import type { ConfirmedGoal } from './domain/goal'
 import type { CalendarDate } from './domain/goalTime'
 import { BillsScreen } from './features/BillsScreen'
 import { DataScreen } from './features/DataScreen'
+import { GoalDetailScreen } from './features/goals/GoalDetailScreen'
+import { EMPTY_NEW_GOAL, type NewGoalState } from './features/goals/goalDraft'
+import { GoalsScreen } from './features/goals/GoalsScreen'
+import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HomeScreen } from './features/HomeScreen'
 import { CardsScreen, ComingLater } from './features/PlaceholderScreens'
 import { SettingsScreen } from './features/SettingsScreen'
@@ -24,6 +30,9 @@ import './styles/app.css'
 import './styles/finance.css'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
+
+/** A new id for a goal or a goal movement. */
+const newId = () => globalThis.crypto.randomUUID()
 
 type Props = {
   getToday?: () => CalendarDate
@@ -46,6 +55,9 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // A copy for Home to show. The goal itself is owned by GoalPlanner.
   const [confirmedGoal, setConfirmedGoal] = useState<ConfirmedGoal | null>(null)
+  // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
+  const [goalId, setGoalId] = useState<Id | null>(null)
+  const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
   // The months follow "today", which differs between the demo and the own
   // space. A month chosen for another "today" is not reused.
   const thisMonth = yearMonthOf(space.today)
@@ -85,12 +97,17 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
-  const exitDemo = () => { space.closeDemo(); setConfirmedGoal(null); replace('welcome') }
+  const resetGoals = () => { setConfirmedGoal(null); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL) }
+  const exitDemo = () => { space.closeDemo(); resetGoals(); replace('welcome') }
   const erase = () => {
     const erased = space.eraseOwnSpace()
-    if (erased) { setSetupDraft(EMPTY_SETUP); setConfirmedGoal(null); replace('welcome') }
+    if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); replace('welcome') }
     return erased
   }
+  const openGoal = (id: Id) => { setGoalId(id); go('goal') }
+  const selectedGoal = open?.data.goals.find(goal => goal.id === goalId && goal.status === 'active') ?? null
+  // New goals belong to the one person in an Individual space, and are shared in a Duo.
+  const newGoalOwner = open?.data.space.mode === 'individual' ? open.data.space.members[0].id : 'shared'
   const selectTab = (tab: Tab) => { if (tab !== screen) go(tab) }
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
@@ -129,10 +146,31 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
 
         {open && <>
           {shows('home') && <div className="screen" data-screen="home">
-            <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} confirmedGoal={confirmedGoal} today={getToday()} onOpen={go} />
+            <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} confirmedGoal={confirmedGoal} today={space.today}
+              onOpen={go} onOpenGoal={openGoal} />
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
             <BillsScreen data={open.data} months={months} month={month} onMonthChange={setMonth} onChange={space.update} />
+          </div>}
+          {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
+            <GoalsScreen data={open.data} today={space.today} onBack={back} onNew={() => go('new-goal')} onOpenGoal={openGoal} />
+          </div>}
+          {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
+            <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} newId={newId} onBack={back}
+              onChange={data => space.update(() => data)}
+              onDeleted={data => { space.update(() => data); setGoalId(null); back() }} />
+          </div>}
+          {shows('new-goal') && <div className="screen" data-screen="new-goal">
+            <NewGoalScreen data={open.data} today={space.today} owner={newGoalOwner} state={newGoal} onStateChange={setNewGoal} onCancel={back}
+              onCreate={fields => {
+                const id = newId()
+                const created = createGoal(open.data, id, fields, space.today)
+                if (created.status !== 'valid') return
+                space.update(() => created.data)
+                setNewGoal(EMPTY_NEW_GOAL)
+                setGoalId(id)
+                replace('goal')
+              }} />
           </div>}
           {shows('history') && <div className="screen" data-screen="history">
             <ComingLater title="Financial History"><p>Your income, bills, balances and goal activity over time will appear here in a later version.</p></ComingLater>
@@ -150,7 +188,7 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
           <div className="screen screen-section" data-screen="cards" hidden={!shows('cards')}>
             <CardsScreen />
           </div>
-          <div className="screen screen-section" data-screen="goals" hidden={!shows('goals')}>
+          <div className="screen screen-section" data-screen="planner" hidden={!shows('planner')}>
             <button type="button" className="back-link" onClick={back}><Icon name="arrowLeft" size={18} /> Home</button>
             <GoalPlanner getToday={getToday} onConfirmedGoalChange={setConfirmedGoal} />
           </div>

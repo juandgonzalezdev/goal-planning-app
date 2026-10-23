@@ -2,7 +2,7 @@ import type { YearMonth } from '../domain/calendar'
 import type { ConfirmedGoal } from '../domain/goal'
 import type { CalendarDate } from '../domain/goalTime'
 import { monthlyOverview } from '../domain/finance/overview'
-import type { FinanceData } from '../domain/finance/types'
+import type { FinanceData, Id } from '../domain/finance/types'
 import { formatAmount } from '../ui/format'
 import { BillsByCategory } from './home/BillsByCategory'
 import { OurGoals } from './home/OurGoals'
@@ -18,7 +18,8 @@ type Props = {
   onMonthChange: (month: YearMonth) => void
   confirmedGoal: ConfirmedGoal | null
   today: CalendarDate
-  onOpen: (screen: 'bills' | 'cards' | 'data' | 'goals') => void
+  onOpen: (screen: 'bills' | 'cards' | 'data' | 'goals' | 'planner') => void
+  onOpenGoal: (id: Id) => void
 }
 
 /**
@@ -27,7 +28,7 @@ type Props = {
  * Yearly Net Income. Every number is worked out from the space's data on
  * each render, so it follows any change made in another tab.
  */
-export function HomeScreen({ data, months, month, onMonthChange, confirmedGoal, today, onOpen }: Props) {
+export function HomeScreen({ data, months, month, onMonthChange, confirmedGoal, today, onOpen, onOpenGoal }: Props) {
   const overview = monthlyOverview(data, month)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const hasIncome = data.income.some(entry => entry.month === month)
@@ -48,7 +49,8 @@ export function HomeScreen({ data, months, month, onMonthChange, confirmedGoal, 
       <OutstandingDebt data={data} />
       <BillsByCategory data={data} month={month} />
       <OurMoney data={data} title={individual ? 'My Money' : 'Our Money'} />
-      <OurGoals data={data} title={individual ? 'My Goals' : 'Our Goals'} today={today} confirmedGoal={confirmedGoal} onOpenPlanner={() => onOpen('goals')} />
+      <OurGoals data={data} title={individual ? 'My Goals' : 'Our Goals'} today={today} confirmedGoal={confirmedGoal}
+        onViewAll={() => onOpen('goals')} onOpenGoal={onOpenGoal} onOpenPlanner={() => onOpen('planner')} />
       <YearlyNetIncome data={data} year={Number(today.slice(0, 4))} />
     </div>
   )

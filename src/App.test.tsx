@@ -14,7 +14,7 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const heading = (name: string | RegExp) => screen.getByRole('heading', { name })
 const field = (label: string | RegExp) => screen.getByLabelText(label) as HTMLInputElement
 const type = (label: string | RegExp, value: string) => fireEvent.change(field(label), { target: { value } })
-const section = (name: 'goals' | 'cards') => document.querySelector<HTMLElement>(`[data-screen="${name}"]`)
+const section = (name: 'planner' | 'cards') => document.querySelector<HTMLElement>(`[data-screen="${name}"]`)
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 // Intl writes amounts with no-break spaces; compare them as plain spaces.
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
@@ -66,7 +66,7 @@ describe('Welcome', () => {
   it('shows no tabs, planner or calculator before a space is open', () => {
     start()
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
-    expect(section('goals')).toBeNull()
+    expect(section('planner')).toBeNull()
     expect(section('cards')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull()
   })
@@ -295,7 +295,7 @@ describe('Home', () => {
     expect(within(goals).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('0')
     expect(within(goals).getByText('Coming soon')).toBeTruthy()
     fireEvent.click(within(goals).getByRole('button', { name: /Goal Planner/ }))
-    expect(section('goals')!.hidden).toBe(false)
+    expect(section('planner')!.hidden).toBe(false)
   })
 
   it('starts Yearly Net Income closed, with the household total', () => {
@@ -370,6 +370,244 @@ describe('Home', () => {
     expect(text(income)).toContain('0 / 12 months')
     fireEvent.click(within(income).getByRole('button', { name: /Details/ }))
     expect(within(income).queryByRole('group', { name: 'Show income for' })).toBeNull()
+  })
+})
+
+describe('Goals & Savings Pots', () => {
+  const region = (name: string) => screen.getByRole('region', { name })
+  const goalNames = () => [...document.querySelectorAll('[data-screen="goals"] .goal-card .line b')].map(b => b.textContent)
+  const openGoals = () => { fireEvent.click(within(region('Our Goals')).getByRole('button', { name: /View All/ })) }
+  const openDemoGoal = (name: string) => { openDemo(); openGoals(); fireEvent.click(button(new RegExp(`^${name}`))) }
+  const saveMovement = (kind: 'Add' | 'Withdraw', amount: string, note = '') => {
+    fireEvent.click(within(screen.getByRole('group', { name: 'Type of change' })).getByRole('button', { name: kind }))
+    type(/^Amount/, amount)
+    if (note) type('Note (optional)', note)
+    fireEvent.click(button(kind === 'Add' ? 'Save Contribution' : 'Save Withdrawal'))
+  }
+
+  it('opens from View All on Home, without a sixth tab', () => {
+    openDemo()
+    openGoals()
+    expect(heading('Our Goals')).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    expect(stat('Saved in Goals')).toContain('0,00 zł')
+    expect(stat('Total Targets')).toContain('20 500,00 zł')
+    expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift'])
+    expect(text(button(/^Trip to Japan/))).toContain('No deadline')
+    expect(text(button(/^Christmas Gift/))).toContain('25 Dec 2026')
+    expect(text(button(/^Christmas Gift/))).toContain('500,00 zł to go')
+  })
+
+  it('filters All, Flexible and With Date', () => {
+    openDemo()
+    openGoals()
+    const filters = screen.getByRole('group', { name: 'Show goals' })
+    fireEvent.click(within(filters).getByRole('button', { name: 'Flexible' }))
+    expect(goalNames()).toEqual(['Trip to Japan'])
+    fireEvent.click(within(filters).getByRole('button', { name: 'With Date' }))
+    expect(goalNames()).toEqual(['Christmas Gift'])
+    expect(within(filters).getByRole('button', { name: 'With Date' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(within(filters).getByRole('button', { name: 'All' }))
+    expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift'])
+  })
+
+  it('opens a goal straight from its row on Home', () => {
+    openDemo()
+    fireEvent.click(within(region('Our Goals')).getByRole('button', { name: /^Christmas Gift/ }))
+    expect(heading('Christmas Gift')).toBeTruthy()
+  })
+
+  it('creates a flexible goal only after the confirmation, starting at 0', async () => {
+    openDemo()
+    openGoals()
+    fireEvent.click(button(/New Goal/))
+    expect(heading('Create a Goal')).toBeTruthy()
+    fireEvent.click(button('Review Goal'))
+    expect(screen.getByText('Enter a name for your goal.')).toBeTruthy()
+    expect(screen.getByText('Enter an amount above 0, such as 500 or 1250.50.')).toBeTruthy()
+
+    type('What are you saving for?', 'New Bike')
+    type(/^Target Amount/, '1200')
+    expect(screen.queryByLabelText('Target Date')).toBeNull()
+    fireEvent.click(button('Review Goal'))
+    expect(heading('Check Your Goal')).toBeTruthy()
+    expect(text(document.querySelector('[data-screen="new-goal"] .fact-rows'))).toContain('No deadline (Flexible)')
+    expect(screen.queryByRole('heading', { name: 'To Reach Your Goal' })).toBeNull()
+
+    // Edit keeps what was typed.
+    fireEvent.click(within(document.querySelector<HTMLElement>('.inline-actions')!).getByRole('button', { name: 'Edit' }))
+    expect(field('What are you saving for?').value).toBe('New Bike')
+    fireEvent.click(button('Review Goal'))
+    fireEvent.click(button('Create Goal'))
+
+    expect(heading('New Bike')).toBeTruthy()
+    expect(text(region('Progress'))).toContain('0,00 zł')
+    expect(text(region('Progress'))).toContain('1200,00 zł still needed')
+    expect(screen.getByText('No contributions yet.')).toBeTruthy()
+
+    await browserBack()
+    await waitFor(() => expect(heading('Our Goals')).toBeTruthy())
+    expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift', 'New Bike'])
+  })
+
+  it('creates a goal with a date after today, and shows the suggested pace before saving', () => {
+    openDemo()
+    openGoals()
+    fireEvent.click(button(/New Goal/))
+    type('What are you saving for?', 'Concert')
+    type(/^Target Amount/, '300')
+    fireEvent.change(field('Deadline'), { target: { value: 'dated' } })
+    fireEvent.click(button('Review Goal'))
+    expect(screen.getByText('Choose a target date.')).toBeTruthy()
+    type('Target Date', '2026-10-23')
+    fireEvent.click(button('Review Goal'))
+    expect(screen.getByText('Choose a date after today.')).toBeTruthy()
+    type('Target Date', '2026-12-23')
+    fireEvent.click(button('Review Goal'))
+    expect(heading('To Reach Your Goal')).toBeTruthy()
+    expect(screen.getByText('Suggestions, not payments. Nothing is paid automatically.')).toBeTruthy()
+    fireEvent.click(button('Create Goal'))
+    expect(screen.getByText(/Target date: 23 Dec 2026 · 61 days left/)).toBeTruthy()
+  })
+
+  it('saves nothing when the form is left, and keeps the draft for later', async () => {
+    openDemo()
+    openGoals()
+    fireEvent.click(button(/New Goal/))
+    type('What are you saving for?', 'Half done')
+    fireEvent.click(button(/All Goals/))
+    await waitFor(() => expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift']))
+    fireEvent.click(button(/New Goal/))
+    expect(field('What are you saving for?').value).toBe('Half done')
+  })
+
+  it('suggests a weekly or monthly amount for a goal with a date, and nothing for a flexible one', async () => {
+    openDemoGoal('Christmas Gift')
+    expect(screen.getByText('Target date: 25 Dec 2026 · 63 days left')).toBeTruthy()
+    const pace = region('To Reach Your Goal')
+    expect(text(pace)).toContain('55,56 zł per week for 9 weeks')
+    expect(text(pace)).toContain('250,00 zł per month for 2 months')
+    expect(text(pace)).toContain('Suggestions, not payments')
+
+    fireEvent.click(button(/All Goals/))
+    await waitFor(() => expect(heading('Our Goals')).toBeTruthy())
+    fireEvent.click(button(/^Trip to Japan/))
+    expect(screen.getByText('No deadline · Flexible')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'To Reach Your Goal' })).toBeNull()
+  })
+
+  it('adds a contribution with a note, without changing Our Money', async () => {
+    openDemo()
+    const moneyBefore = text(region('Our Money'))
+    openGoals()
+    fireEvent.click(button(/^Trip to Japan/))
+    saveMovement('Add', '100', 'First savings')
+    expect(text(screen.getByRole('status'))).toBe('Contribution of 100,00 zł saved.')
+    expect(text(region('Progress'))).toContain('100,00 zł')
+    expect(text(region('Progress'))).toContain('19 900,00 zł still needed')
+    expect(text(region('Savings Activity'))).toBe('Savings Activity23 Oct 2026 · First savings+100,00 zł')
+
+    fireEvent.click(button(/All Goals/))
+    await waitFor(() => expect(stat('Saved in Goals')).toContain('100,00 zł'))
+    fireEvent.click(button(/Home/))
+    await waitFor(() => expect(text(region('Our Money'))).toBe(moneyBefore))
+    expect(text(region('Our Goals'))).toContain('100,00 zł')
+  })
+
+  it('never withdraws more than is saved, and lists the newest change first', () => {
+    openDemoGoal('Trip to Japan')
+    saveMovement('Add', '100')
+    saveMovement('Withdraw', '150')
+    expect(screen.getByText('You can withdraw up to 100,00 zł, what is saved in this goal.', { normalizer: s => s.replace(/\u00a0|\u202f/g, ' ') })).toBeTruthy()
+    expect(text(region('Progress'))).toContain('100,00 zł')
+    saveMovement('Withdraw', '40', 'Train tickets')
+    expect(text(region('Progress'))).toContain('60,00 zł')
+    const rows = [...region('Savings Activity').querySelectorAll('li')].map(li => text(li))
+    expect(rows).toEqual(['23 Oct 2026 · Train tickets−40,00 zł', '23 Oct 2026+100,00 zł'])
+  })
+
+  it('checks the amount and the date of a change', () => {
+    openDemoGoal('Trip to Japan')
+    fireEvent.click(button('Save Contribution'))
+    expect(screen.getByText('Enter an amount above 0, such as 100 or 25.50.')).toBeTruthy()
+    type(/^Amount/, '10')
+    type('Date', '2026-10-24')
+    fireEvent.click(button('Save Contribution'))
+    expect(screen.getByText('The date can’t be after today.')).toBeTruthy()
+    type('Date', '2026-10-01')
+    fireEvent.click(button('Save Contribution'))
+    expect(text(region('Savings Activity'))).toContain('1 Oct 2026+10,00 zł')
+  })
+
+  it('edits the name, target and date, and Cancel changes nothing', () => {
+    openDemoGoal('Trip to Japan')
+    fireEvent.click(button('Change Name, Target or Date'))
+    type('What are you saving for?', 'Changed')
+    fireEvent.click(button('Cancel'))
+    expect(heading('Trip to Japan')).toBeTruthy()
+
+    fireEvent.click(button('Change Name, Target or Date'))
+    type('What are you saving for?', 'Japan Trip')
+    type(/^Target Amount/, '18000')
+    fireEvent.change(field('Deadline'), { target: { value: 'dated' } })
+    type('Target Date', '2027-10-01')
+    fireEvent.click(button('Save Changes'))
+    expect(heading('Japan Trip')).toBeTruthy()
+    expect(screen.getByText(/Target date: 1 Oct 2027/)).toBeTruthy()
+    expect(text(region('Progress'))).toContain('18 000,00 zł still needed')
+    expect(heading('To Reach Your Goal')).toBeTruthy()
+
+    // The date stays optional: it can be removed again.
+    fireEvent.click(button('Change Name, Target or Date'))
+    fireEvent.change(field('Deadline'), { target: { value: 'flexible' } })
+    fireEvent.click(button('Save Changes'))
+    expect(screen.getByText('No deadline · Flexible')).toBeTruthy()
+  })
+
+  it('deletes a goal and its history only after confirming', async () => {
+    openDemoGoal('Christmas Gift')
+    saveMovement('Add', '50')
+    fireEvent.click(button('Delete Goal'))
+    expect(screen.getByRole('alert').textContent).toContain('Delete “Christmas Gift” and its 1 entry?')
+    fireEvent.click(button('Keep Goal'))
+    expect(screen.queryByRole('alert')).toBeNull()
+
+    fireEvent.click(button('Delete Goal'))
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Delete Goal' }))
+    await waitFor(() => expect(heading('Our Goals')).toBeTruthy())
+    expect(goalNames()).toEqual(['Trip to Japan'])
+    expect(stat('Saved in Goals')).toContain('0,00 zł')
+    fireEvent.click(button(/Home/))
+    await waitFor(() => expect(text(region('Our Goals'))).toContain('Saved toward 1 goal'))
+  })
+
+  it('starts empty in your own space, and keeps a new goal after reopening the app', () => {
+    const storage = memoryStorage()
+    createIndividualSpace(storage)
+    expect(text(region('My Goals'))).toContain('No goals yet.')
+    fireEvent.click(within(region('My Goals')).getByRole('button', { name: /View All/ }))
+    expect(screen.getByText('No goals yet.')).toBeTruthy()
+    fireEvent.click(button(/New Goal/))
+    type('What are you saving for?', 'Laptop')
+    type(/^Target Amount/, '4000')
+    fireEvent.click(button('Review Goal'))
+    fireEvent.click(button('Create Goal'))
+    saveMovement('Add', '250')
+    expect(saved(storage).goals).toMatchObject([{ name: 'Laptop', target: 400_000, deadline: null, owner: 'member-1', status: 'active' }])
+    expect(saved(storage).goalMovements).toMatchObject([{ amount: 25_000, date: TODAY }])
+
+    cleanup()
+    start(storage)
+    expect(text(region('My Goals'))).toContain('250,00 zł')
+    expect(text(region('My Goals'))).toContain('Saved toward 1 goal')
+  })
+
+  it('never saves demo goals', () => {
+    const { storage } = openDemo()
+    openGoals()
+    fireEvent.click(button(/^Trip to Japan/))
+    saveMovement('Add', '100')
+    expect(storage.length).toBe(0)
   })
 })
 
@@ -557,7 +795,7 @@ describe('Keeping information between screens', () => {
     const goal = within(goals).getByRole('button', { name: /Planned goal.*Holiday fund/ })
     expect(within(goal).getByRole('progressbar', { name: 'Holiday fund progress' })).toBeTruthy()
     fireEvent.click(goal)
-    await waitFor(() => expect(section('goals')!.hidden).toBe(false))
+    await waitFor(() => expect(section('planner')!.hidden).toBe(false))
   })
 
   it('shows the Assistant as coming soon, with nothing to press', () => {
@@ -573,7 +811,7 @@ describe('Hidden sections', () => {
     fireEvent.click(tab('Cards'))
     fireEvent.click(button('+ Add'))
     // The goal planner is on the page but hidden: none of its controls are exposed.
-    expect(section('goals')!.hidden).toBe(true)
+    expect(section('planner')!.hidden).toBe(true)
     expect(screen.queryByRole('button', { name: 'Evaluate goal' })).toBeNull()
     expect(screen.queryByRole('textbox', { name: 'Goal name' })).toBeNull()
   })
