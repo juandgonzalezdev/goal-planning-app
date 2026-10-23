@@ -168,3 +168,21 @@ export function updateGoal(data: FinanceData, id: Id, fields: GoalFields) {
 /** Removes a goal from the active list but keeps it and its movements, so no history is lost. */
 export const archiveGoal = (data: FinanceData, id: Id): FinanceData =>
   ({ ...data, goals: data.goals.map(goal => (goal.id === id ? { ...goal, status: 'archived' } : goal)) })
+
+/**
+ * Deletes a goal and its movements, when the user asks for it. Nothing
+ * else changes: no account, bill or other goal. (Archiving, above, is the
+ * way to hide a goal and keep its history.)
+ */
+export const deleteGoal = (data: FinanceData, id: Id): FinanceData => ({
+  ...data,
+  goals: data.goals.filter(goal => goal.id !== id),
+  goalMovements: data.goalMovements.filter(movement => movement.goalId !== id),
+})
+
+export type GoalFilter = 'all' | 'flexible' | 'dated'
+
+/** The goals list filters: All, Flexible (no deadline) and With Date. Archived goals are never listed. */
+export const filterGoals = (goals: readonly Goal[], filter: GoalFilter): Goal[] =>
+  goals.filter(goal => goal.status === 'active'
+    && (filter === 'all' || (filter === 'flexible' ? goal.deadline === null : goal.deadline !== null)))

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createDemoHousehold, DEMO_TODAY } from '../../data/fixtures/demoHousehold'
 import { summarizeDebts } from './debts'
-import { addGoalMovement, archiveGoal, createGoal, goalMovementsOf, goalProgress, goalSaved, summarizeGoals, updateGoal, type MovementRequest } from './goals'
+import { addGoalMovement, archiveGoal, createGoal, deleteGoal, filterGoals, goalMovementsOf, goalProgress, goalSaved, summarizeGoals, updateGoal, type MovementRequest } from './goals'
 import { summarizeMoney } from './moneyAccounts'
 import type { FinanceData } from './types'
 
@@ -124,5 +124,29 @@ describe('creating, editing and archiving goals', () => {
     expect(summarizeGoals(data)).toEqual({ saved: 0, target: 50_000, activeCount: 1 })
     expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', kind: 'contribution', amount: 1, date: DEMO_TODAY, note: '' }))
       .toEqual({ status: 'rejected', error: 'goal-archived' })
+  })
+})
+
+describe('deleting and filtering goals', () => {
+  it('deletes a goal and only its own movements', () => {
+    let data = createDemoHousehold()
+    for (const goalId of ['trip-to-japan', 'christmas-gift']) {
+      const added = addGoalMovement(data, { id: `m-${goalId}`, goalId, kind: 'contribution', amount: 10_000, date: DEMO_TODAY, note: '' })
+      if (added.status !== 'ok') throw new Error('rejected')
+      data = added.data
+    }
+    const after = deleteGoal(data, 'trip-to-japan')
+    expect(after.goals.map(g => g.id)).toEqual(['christmas-gift'])
+    expect(after.goalMovements.map(m => m.goalId)).toEqual(['christmas-gift'])
+    expect({ ...after, goals: data.goals, goalMovements: data.goalMovements }).toEqual(data)
+  })
+
+  it('filters flexible goals and goals with a date, never listing archived ones', () => {
+    const data = archiveGoal(createDemoHousehold(), 'christmas-gift')
+    const goals = createDemoHousehold().goals
+    expect(filterGoals(goals, 'all').map(g => g.name)).toEqual(['Trip to Japan', 'Christmas Gift'])
+    expect(filterGoals(goals, 'flexible').map(g => g.name)).toEqual(['Trip to Japan'])
+    expect(filterGoals(goals, 'dated').map(g => g.name)).toEqual(['Christmas Gift'])
+    expect(filterGoals(data.goals, 'dated')).toEqual([])
   })
 })
