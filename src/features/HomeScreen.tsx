@@ -1,11 +1,14 @@
-import { Icon, type IconName } from '../components/Icon'
 import type { YearMonth } from '../domain/calendar'
-import { evaluateConfirmedGoal, type ConfirmedGoal } from '../domain/goal'
+import type { ConfirmedGoal } from '../domain/goal'
 import type { CalendarDate } from '../domain/goalTime'
 import { monthlyOverview } from '../domain/finance/overview'
 import type { FinanceData } from '../domain/finance/types'
 import { formatAmount } from '../ui/format'
-import { progressPercent } from '../ui/planStatus'
+import { BillsByCategory } from './home/BillsByCategory'
+import { OurGoals } from './home/OurGoals'
+import { OurMoney } from './home/OurMoney'
+import { OutstandingDebt } from './home/OutstandingDebt'
+import { YearlyNetIncome } from './home/YearlyNetIncome'
 import { MonthSwitch } from './MonthSwitch'
 
 type Props = {
@@ -18,59 +21,35 @@ type Props = {
   onOpen: (screen: 'bills' | 'cards' | 'data' | 'goals') => void
 }
 
-function SectionCard({ icon, title, text, onOpen, badge }: { icon: IconName; title: string; text: string; onOpen?: () => void; badge?: string }) {
-  const body = <>
-    <Icon name={icon} />
-    <span className="section-card-title">{title}{badge && <span className="badge">{badge}</span>}</span>
-    <span className="section-card-text">{text}</span>
-  </>
-  // A card without an action is plain content, so it is never focusable or announced as a button.
-  return onOpen
-    ? <button type="button" className="section-card" onClick={onOpen}>{body}</button>
-    : <div className="section-card is-unavailable">{body}</div>
-}
-
 /**
- * Home, for now: v5.9's Monthly Overview (its first section) plus what My
- * Space offered in Phase 2, until the full v5.9 Home replaces it.
+ * Home, as in Demo v5.9 and in its order: Monthly Overview, Outstanding
+ * Debt, Monthly Bills · By Category, Our Money, Our Goals and, last,
+ * Yearly Net Income. Every number is worked out from the space's data on
+ * each render, so it follows any change made in another tab.
  */
 export function HomeScreen({ data, months, month, onMonthChange, confirmedGoal, today, onOpen }: Props) {
   const overview = monthlyOverview(data, month)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const hasIncome = data.income.some(entry => entry.month === month)
-  const incomeLabel = data.space.mode === 'individual' ? 'Income' : 'Household Income'
-  const progress = confirmedGoal
-    ? progressPercent(confirmedGoal.input.targetAmount, evaluateConfirmedGoal(confirmedGoal, today).remainingAmount)
-    : 0
+  const individual = data.space.mode === 'individual'
 
   return (
     <div className="tab-screen">
       <h1 className="visually-hidden">Home</h1>
       <MonthSwitch months={months} value={month} onChange={onMonthChange} />
       <section className="stat-grid" aria-label="Monthly Overview">
-        <button type="button" className="stat" onClick={() => onOpen('data')}><small>{incomeLabel}</small><b>{hasIncome ? money(overview.householdIncome) : '—'}</b></button>
+        <button type="button" className="stat" onClick={() => onOpen('data')}><small>{individual ? 'Income' : 'Household Income'}</small><b>{hasIncome ? money(overview.householdIncome) : '—'}</b></button>
         <button type="button" className="stat" onClick={() => onOpen('bills')}><small>Monthly Commitments</small><b>{money(overview.monthlyCommitments)}</b></button>
         <button type="button" className="stat" onClick={() => onOpen('bills')}>
           <small>Monthly Left to Pay</small><b>{money(overview.leftToPay)}</b>{overview.unknownBillCount > 0 && <small>+ unknown amount</small>}
         </button>
         <button type="button" className="stat" onClick={() => onOpen('cards')}><small>Total Debt</small><b>{money(overview.totalDebt)}</b></button>
       </section>
-
-      {confirmedGoal && (
-        <section className="space-goal" aria-labelledby="space-goal-name">
-          <span className="eyebrow-label">Planned goal</span>
-          <h2 id="space-goal-name">{confirmedGoal.details.name}</h2>
-          <div className="space-progress-head"><span>Progress</span><span>{progress.toFixed(1)}%</span></div>
-          <div className="space-progress" role="progressbar" aria-label={`${confirmedGoal.details.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div style={{ width: `${progress}%` }} /></div>
-          <button type="button" className="button-secondary" onClick={() => onOpen('goals')}>View goal <Icon name="arrowRight" size={18} /></button>
-        </section>
-      )}
-
-      <div className="section-grid">
-        <SectionCard icon="target" title="Goal Planner" text={confirmedGoal ? 'See or edit your planned goal' : 'Plan a goal step by step'} onOpen={() => onOpen('goals')} />
-        <SectionCard icon="assistant" title="Assistant" text="Will explain your numbers in simple words. You always decide." badge="Coming soon" />
-      </div>
-      <p className="muted-note">More of Home (bills by category, your money, goals and yearly income) arrives in the next version.</p>
+      <OutstandingDebt data={data} />
+      <BillsByCategory data={data} month={month} />
+      <OurMoney data={data} title={individual ? 'My Money' : 'Our Money'} />
+      <OurGoals data={data} title={individual ? 'My Goals' : 'Our Goals'} today={today} confirmedGoal={confirmedGoal} onOpenPlanner={() => onOpen('goals')} />
+      <YearlyNetIncome data={data} year={Number(today.slice(0, 4))} />
     </div>
   )
 }

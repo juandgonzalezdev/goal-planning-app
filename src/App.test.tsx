@@ -231,6 +231,148 @@ describe('Demo', () => {
   })
 })
 
+describe('Home', () => {
+  const region = (name: string) => screen.getByRole('region', { name })
+  const pressed = (element: HTMLElement) => element.getAttribute('aria-pressed')
+  const donutText = (name: string) => text(region(name).querySelector('.donut-core'))
+  // Accessible names keep Intl's no-break spaces; match them as plain spaces.
+  const named = (expected: string) => (name: string) => name.replace(/\u00a0|\u202f/g, ' ') === expected
+
+  it('shows the six approved sections in order, with Yearly Net Income last', () => {
+    openDemo()
+    const main = document.querySelector('main')!
+    const order = [...main.querySelectorAll('[data-screen="home"] section')].map(s => s.getAttribute('aria-label') ?? s.querySelector('h2')?.textContent)
+    expect(order).toEqual(['Monthly Overview', 'Outstanding Debt', 'Monthly Bills · By Category', 'Our Money', 'Our Goals', 'Yearly Net Income'])
+  })
+
+  it('lists what is still owed on each card and loan', () => {
+    openDemo()
+    const debt = text(region('Outstanding Debt'))
+    expect(debt).toContain('Credit Card3250,40 zł')
+    expect(debt).toContain('Car Loan42 000,00 zł')
+    expect(debt).toContain('Furniture Loan1350,00 zł')
+  })
+
+  it('shows bills by category, and the bills of a chosen category', () => {
+    openDemo()
+    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5571,43 zł')
+    const housing = within(region('Monthly Bills · By Category')).getByRole('button', { name: /Housing/ })
+    expect(text(housing)).toContain('3000,00 zł')
+    fireEvent.click(housing)
+    expect(pressed(housing)).toBe('true')
+    expect(donutText('Monthly Bills · By Category')).toBe('Housing3000,00 zł')
+    expect(text(screen.getByRole('list', { name: 'Housing bills' }))).toBe('Building Fees600,00 zł' + 'Rent2400,00 zł')
+    fireEvent.click(housing)
+    expect(pressed(housing)).toBe('false')
+    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5571,43 zł')
+  })
+
+  it('follows the month and says when an amount is not known', () => {
+    openDemo()
+    fireEvent.click(button('November 2026'))
+    const categories = region('Monthly Bills · By Category')
+    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5450,98 zł')
+    expect(within(categories).queryByRole('button', { name: /Utilities/ })).toBeNull()
+    expect(within(categories).getByText('One bill has no recorded amount for this month.')).toBeTruthy()
+  })
+
+  it('shows Our Money by kind, with Investment chosen first as in v5.9', () => {
+    openDemo()
+    const money = region('Our Money')
+    expect(pressed(within(money).getByRole('button', { name: /Investment/ }))).toBe('true')
+    expect(donutText('Our Money')).toBe('Investment980,65 zł')
+    fireEvent.click(within(money).getByRole('button', { name: /Daily Spending/ }))
+    expect(donutText('Our Money')).toBe('Daily Spending1200,35 zł')
+    expect(text(within(money).getByRole('button', { name: /Emergency Fund/ }))).toContain('300,00 zł')
+  })
+
+  it('shows the two example goals empty, the Goal Planner and the Assistant', () => {
+    openDemo()
+    const goals = region('Our Goals')
+    expect(text(goals)).toContain('0,00 zł')
+    expect(text(goals)).toContain('Saved toward 2 goals')
+    expect(within(goals).getByRole('progressbar', { name: 'Trip to Japan progress' }).getAttribute('aria-valuenow')).toBe('0')
+    expect(within(goals).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('0')
+    expect(within(goals).getByText('Coming soon')).toBeTruthy()
+    fireEvent.click(within(goals).getByRole('button', { name: /Goal Planner/ }))
+    expect(section('goals')!.hidden).toBe(false)
+  })
+
+  it('starts Yearly Net Income closed, with the household total', () => {
+    openDemo()
+    const income = region('Yearly Net Income')
+    const details = within(income).getByRole('button', { name: /Details/ })
+    expect(details.getAttribute('aria-expanded')).toBe('false')
+    expect(text(income)).toContain('117 003,00 zł')
+    expect(text(income)).toContain('Household · Net received')
+    expect(text(income)).toContain('10 / 12 months')
+    expect(within(income).queryByRole('button', { name: /July 2026/ })).toBeNull()
+  })
+
+  it('opens Details with each person and blue and green stacked bars for Household', () => {
+    openDemo()
+    const income = region('Yearly Net Income')
+    fireEvent.click(within(income).getByRole('button', { name: /Details/ }))
+    expect(within(income).getByRole('button', { name: /Less/ }).getAttribute('aria-expanded')).toBe('true')
+    const owners = within(income).getByRole('group', { name: 'Show income for' })
+    expect(within(owners).getAllByRole('button').map(b => text(b))).toEqual(['Alex53 002,00 zł', 'Jordan64 001,00 zł', 'Household117 003,00 zł'])
+    expect(pressed(within(owners).getByRole('button', { name: /Household/ }))).toBe('true')
+
+    const july = within(income).getByRole('button', { name: named('July 2026, 14 500,60 zł') })
+    const parts = [...july.querySelectorAll<HTMLElement>('.stack > span')]
+    expect(parts.map(p => [p.style.background, p.style.width])).toEqual([['rgb(59, 130, 246)', '37.24%'], ['rgb(16, 185, 129)', '62.76%']])
+    expect(within(income).getByRole('button', { name: named('November 2026, nothing recorded') })).toBeTruthy()
+
+    fireEvent.click(july)
+    expect(text(income)).toContain('Alex: 5400,50 zł')
+    expect(text(income)).toContain('Jordan: 9100,10 zł')
+  })
+
+  it('shows one person with a single bar, and closes back to Household', () => {
+    openDemo()
+    const income = region('Yearly Net Income')
+    fireEvent.click(within(income).getByRole('button', { name: /Details/ }))
+    fireEvent.click(within(income).getByRole('button', { name: /^Alex/ }))
+    expect(text(income)).toContain('Alex · Net received')
+    const july = within(income).getByRole('button', { name: named('July 2026, 5400,50 zł') })
+    expect([...july.querySelectorAll<HTMLElement>('.stack > span')].map(p => p.style.background)).toEqual(['rgb(59, 130, 246)'])
+
+    fireEvent.click(within(income).getByRole('button', { name: /Less/ }))
+    expect(text(income)).toContain('Household · Net received')
+    fireEvent.click(within(income).getByRole('button', { name: /Details/ }))
+    expect(pressed(within(income).getByRole('button', { name: /Household/ }))).toBe('true')
+  })
+
+  it('follows changes made in Bills', () => {
+    openDemo()
+    fireEvent.click(tab('Bills'))
+    fireEvent.click(button('November 2026'))
+    fireEvent.click(button(/Sunday 22 November/))
+    fireEvent.click(button('Change Amount for November 2026'))
+    type('Amount for November 2026 (PLN)', '90')
+    fireEvent.click(button('Save'))
+    fireEvent.click(tab('Home'))
+    const categories = region('Monthly Bills · By Category')
+    expect(text(within(categories).getByRole('button', { name: /Utilities/ }))).toContain('90,00 zł')
+    expect(within(categories).queryByText(/no recorded amount/)).toBeNull()
+    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5540,98 zł')
+  })
+
+  it('starts empty in your own space, with no invented numbers', () => {
+    createIndividualSpace()
+    expect(text(region('Outstanding Debt'))).toContain('No cards or loans yet.')
+    expect(text(region('Monthly Bills · By Category'))).toContain('No bills for October 2026.')
+    expect(text(region('My Money'))).toContain('No accounts yet.')
+    expect(text(region('My Goals'))).toContain('No goals yet.')
+    const income = region('Yearly Net Income')
+    expect(text(income)).toContain('0,00 zł')
+    expect(text(income)).toContain('Robin · Net received')
+    expect(text(income)).toContain('0 / 12 months')
+    fireEvent.click(within(income).getByRole('button', { name: /Details/ }))
+    expect(within(income).queryByRole('group', { name: 'Show income for' })).toBeNull()
+  })
+})
+
 describe('Tab bar', () => {
   it('has the five approved tabs in order, and marks the current one', () => {
     openDemo()
@@ -404,15 +546,18 @@ describe('Keeping information between screens', () => {
     // Leaving at Review creates nothing.
     fireEvent.click(button('Home'))
     await waitFor(() => expect(tab('Home')).toBeTruthy())
-    expect(screen.queryByRole('region', { name: 'Holiday fund' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Holiday fund/ })).toBeNull()
 
     fireEvent.click(button(/Goal Planner/))
     fireEvent.click(button('Confirm goal'))
     fireEvent.click(button('Home'))
     await waitFor(() => expect(tab('Home')).toBeTruthy())
-    const goal = screen.getByRole('region', { name: 'Holiday fund' })
-    expect(within(goal).getByRole('progressbar')).toBeTruthy()
-    expect(within(goal).getByRole('button', { name: /View goal/ })).toBeTruthy()
+    // It appears in Our Goals, and opens the Goal Planner again.
+    const goals = screen.getByRole('region', { name: 'My Goals' })
+    const goal = within(goals).getByRole('button', { name: /Planned goal.*Holiday fund/ })
+    expect(within(goal).getByRole('progressbar', { name: 'Holiday fund progress' })).toBeTruthy()
+    fireEvent.click(goal)
+    await waitFor(() => expect(section('goals')!.hidden).toBe(false))
   })
 
   it('shows the Assistant as coming soon, with nothing to press', () => {

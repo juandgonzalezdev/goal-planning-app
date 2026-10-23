@@ -43,7 +43,7 @@ button, input, select, textarea { font: inherit; }
 @keyframes screen-in-back { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .screen { animation: none; }
-  .choice-card, .section-card, .button-primary, .button-secondary, .space-progress > div { transition: none; }
+  .choice-card, .button-primary, .button-secondary { transition: none; }
 }
 
 /* Layout columns */
@@ -74,7 +74,7 @@ button, input, select, textarea { font: inherit; }
   border: 0; background: transparent; color: var(--color-text-muted); font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .back-link:hover { color: var(--color-text); }
-:is(.button-primary, .button-secondary, .button-quiet, .back-link, .section-card):focus-visible,
+:is(.button-primary, .button-secondary, .button-quiet, .back-link):focus-visible,
 .choice-card:has(input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 
 .badge {
@@ -113,56 +113,11 @@ button, input, select, textarea { font: inherit; }
 }
 .choice-card:has(input:checked) .choice-check { background: var(--color-accent); border-color: var(--color-accent); }
 
-/* My Space */
-.space-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 20px; }
-.space-head .screen-lead { margin-bottom: 0; }
-.space-label {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
-  background: var(--color-surface); border: 1px solid var(--color-border); font-size: 13px; font-weight: 600; color: var(--color-text-muted);
-}
-.space-empty, .space-goal {
-  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card); padding: 28px 20px; margin-bottom: 16px;
-}
-.space-empty { text-align: center; display: flex; flex-direction: column; align-items: center; }
-.space-empty > .icon { color: var(--color-text-muted); margin-bottom: 8px; }
-.space-empty h2, .space-goal h2 { font-size: 20px; letter-spacing: -.3px; margin: 0 0 6px; overflow-wrap: anywhere; }
-.space-empty p { color: var(--color-text-muted); margin: 0 0 20px; font-size: 15px; }
-.space-empty .button-primary { max-width: 420px; }
-.eyebrow-label { display: block; font-size: 12px; font-weight: 650; color: var(--color-text-muted); margin-bottom: 6px; }
-.space-progress-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--color-text-muted); margin: 14px 0 8px; }
-.space-progress { height: 8px; border-radius: 8px; background: var(--color-surface-muted); overflow: hidden; margin-bottom: 20px; }
-.space-progress > div { height: 100%; border-radius: 8px; background: var(--color-accent); transition: width .25s ease; }
-.section-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
-.section-card {
-  display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 4px; align-items: center;
-  text-align: left; padding: 18px; min-height: 88px;
-  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card); color: var(--color-text);
-  transition: border-color var(--motion-quick) ease, background-color var(--motion-quick) ease;
-}
-button.section-card { cursor: pointer; }
-button.section-card:hover { border-color: var(--color-border-strong); }
-.section-card .icon { color: var(--color-text); }
-.section-card-title { font-weight: 650; font-size: 16px; }
-.section-card-text { grid-column: 2; font-size: 13.5px; line-height: 1.45; color: var(--color-text-muted); }
-.section-card.is-unavailable .icon, .section-card.is-unavailable .section-card-title { color: var(--color-text-muted); }
-
 /* Existing sections inside the new shell keep their own layout. */
 .screen-section { display: flex; flex-direction: column; }
 .screen-section .money-top { margin-top: -8px; }
 
 @media (min-width: 640px) {
   .shell-main { padding-top: 40px; }
-  .section-grid { grid-template-columns: 1fr 1fr; }
-  .section-grid > :last-child { grid-column: 1 / -1; }
   .screen-actions .button-primary { min-height: 52px; }
-  .space-empty, .space-goal { padding: 36px 32px; }
-}
-@media (min-width: 1024px) {
-  .section-grid { grid-template-columns: repeat(3, 1fr); }
-  .section-grid > :last-child { grid-column: auto; }
-  .section-card { grid-template-columns: 1fr; align-content: start; min-height: 132px; }
-  .section-card-text { grid-column: 1; }
-  .section-card .icon { margin-bottom: 6px; }
 }
