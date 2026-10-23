@@ -20,9 +20,15 @@
 .save-warning { background: var(--color-warning-soft); color: var(--color-warning-text); }
 
 /* Tab bar: fixed at the bottom on phones, a row under the header on wide screens (as in v5.9). */
+/*
+ * On phones its height is exactly --nav-height plus the iPhone safe area,
+ * and the footer leaves that same space, so nothing ends up behind the tabs.
+ */
 .bottom-nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; gap: 4px; padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+  box-sizing: border-box; height: calc(var(--nav-height) + var(--safe-bottom));
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 max(8px, env(safe-area-inset-right)) var(--safe-bottom) max(8px, env(safe-area-inset-left));
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
 }
@@ -32,14 +38,14 @@
 }
 .bottom-nav button:hover { background: var(--color-surface-hover); }
 .bottom-nav button.is-selected { background: var(--color-accent-soft); color: var(--color-selected-text); font-weight: 700; }
-.shell.has-nav .shell-footer { padding-bottom: calc(var(--nav-height) + 20px + env(safe-area-inset-bottom)); }
+.shell.has-nav .shell-footer { padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 24px); }
 @media (min-width: 740px) {
   .bottom-nav {
-    position: sticky; top: 64px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border);
+    position: sticky; top: 64px; bottom: auto; height: auto; border-top: 0; border-bottom: 1px solid var(--color-border);
     padding: 8px max(var(--space-gutter), calc((100vw - var(--column-wide)) / 2 + var(--space-gutter)));
   }
   .bottom-nav button { font-size: 15px; }
-  .shell.has-nav .shell-footer { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .shell.has-nav .shell-footer { padding-bottom: max(20px, var(--safe-bottom)); }
 }
 
 /* Tab screens share v5.9's single column */

@@ -47,6 +47,8 @@
   --column-narrow: 560px;
   --column-wide: 720px;
   --nav-height: 64px;
+  /* Space Safari keeps clear for the iPhone home indicator (0 elsewhere). */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   --motion-screen: 220ms;
   --motion-quick: 150ms;
