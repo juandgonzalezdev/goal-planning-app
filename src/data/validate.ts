@@ -24,7 +24,7 @@ const isOneOf = <T extends string>(list: readonly T[]) => (value: unknown): valu
   typeof value === 'string' && (list as readonly string[]).includes(value)
 
 const MEMBER_COUNT: Record<SpaceMode, (count: number) => boolean> = {
-  personal: count => count === 1,
+  individual: count => count === 1,
   duo: count => count === 2,
   group: count => count >= 3,
 }
@@ -57,7 +57,7 @@ export function validateFinanceData(input: unknown): ValidationResult {
         if (memberIds.has(member.id)) fail(`Member id "${member.id}" is used twice.`)
         memberIds.add(member.id)
       })
-      if (!isOneOf(['personal', 'duo', 'group'] as const)(space.mode)) fail('space.mode must be personal, duo or group.')
+      if (!isOneOf(['individual', 'duo', 'group'] as const)(space.mode)) fail('space.mode must be individual, duo or group.')
       else if (!MEMBER_COUNT[space.mode](space.members.length)) fail(`A ${space.mode} space cannot have ${space.members.length} member(s).`)
     }
   }

@@ -4,7 +4,7 @@ import type { CurrencyCode } from '../money'
 import type { YearMonth } from '../calendar'
 
 /**
- * The financial data of one space (Personal, Duo or Group), as the app
+ * The financial data of one space (Individual, Duo or Group), as the app
  * keeps it. Every amount is a whole number of minor units (grosze, cents)
  * with its currency next to it. Totals are never stored: they are always
  * calculated from these records, so they can never disagree with them.
@@ -13,8 +13,8 @@ import type { YearMonth } from '../calendar'
 /** Ids are stable text keys, so records can point at each other. */
 export type Id = string
 
-/** How many people share the space. It is not a price plan. */
-export type SpaceMode = 'personal' | 'duo' | 'group'
+/** How many people share the space (Individual, Duo or Group). It is not a price plan. */
+export type SpaceMode = 'individual' | 'duo' | 'group'
 
 export interface Member {
   id: Id
