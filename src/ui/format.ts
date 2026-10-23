@@ -1,5 +1,7 @@
 import type { MoneyAmount } from '../domain/goalAmounts'
 import type { CalendarDate } from '../domain/goalTime'
+import type { YearMonth } from '../domain/calendar'
+import type { CurrencyCode } from '../domain/money'
 
 const moneyFormat = new Intl.NumberFormat('en-GB', {
   style: 'currency', currency: 'PLN', minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -17,6 +19,38 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 export function formatDate(date: CalendarDate): string {
   const [year, month, day] = date.split('-').map(Number)
   return `${day} ${MONTH_NAMES[month - 1]} ${year}`
+}
+
+/**
+ * An amount in minor units shown the way the approved design shows money,
+ * e.g. 719_403 PLN -> '7194,03 zł'. Used by the new finance screens.
+ */
+export function formatAmount(minor: MoneyAmount, currency: CurrencyCode): string {
+  return amountFormat(currency).format(minor / 100)
+}
+
+const amountFormats = new Map<CurrencyCode, Intl.NumberFormat>()
+function amountFormat(currency: CurrencyCode) {
+  let format = amountFormats.get(currency)
+  if (!format) {
+    format = new Intl.NumberFormat('pl-PL', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    amountFormats.set(currency, format)
+  }
+  return format
+}
+
+const LONG_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** '2026-10' shown as 'October 2026'. */
+export function formatYearMonth(month: YearMonth): string {
+  return `${LONG_MONTH_NAMES[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`
+}
+
+/** The weekday of a date, e.g. 'Saturday'. Calculated in UTC, so the time zone can never change it. */
+export function weekdayOf(date: CalendarDate): string {
+  const [year, month, day] = date.split('-').map(Number)
+  return WEEKDAY_NAMES[new Date(Date.UTC(year, month - 1, day)).getUTCDay()]
 }
 
 export const formatMonths = (count: number) => `${count} ${count === 1 ? 'month' : 'months'}`
