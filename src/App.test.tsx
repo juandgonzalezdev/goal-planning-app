@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { STORAGE_KEY } from './data/localStore'
 import { memoryStorage } from './test/memoryStorage'
@@ -600,6 +600,46 @@ describe('Goals & Savings Pots', () => {
     start(storage)
     expect(text(region('My Goals'))).toContain('250,00 zł')
     expect(text(region('My Goals'))).toContain('Saved toward 1 goal')
+  })
+
+  // Regression (Safari on iPhone via http://<computer address>): that page is not
+  // secure, so it has no crypto.randomUUID. Saving used to fail with no message.
+  describe('on a page without crypto.randomUUID', () => {
+    afterEach(() => vi.unstubAllGlobals())
+    const insecureCrypto = () => vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) })
+
+    it('saves contributions and withdrawals, and Home follows', async () => {
+      insecureCrypto()
+      openDemoGoal('Christmas Gift')
+      saveMovement('Add', '100', 'First saving')
+      expect(text(screen.getByRole('status'))).toBe('Contribution of 100,00 zł saved.')
+      expect(text(region('Progress'))).toContain('100,00 zł')
+      expect(text(region('Progress'))).toContain('20.0%')
+      expect(text(region('Savings Activity'))).toContain('23 Oct 2026 · First saving+100,00 zł')
+      saveMovement('Withdraw', '40')
+      expect(text(region('Progress'))).toContain('60,00 zł')
+      expect(region('Savings Activity').querySelectorAll('li')).toHaveLength(2)
+
+      fireEvent.click(button(/All Goals/))
+      await waitFor(() => expect(stat('Saved in Goals')).toContain('60,00 zł'))
+      fireEvent.click(button(/Home/))
+      await waitFor(() => expect(text(region('Our Goals'))).toContain('60,00 zł'))
+      expect(within(region('Our Goals')).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('12')
+    })
+
+    it('creates a goal', () => {
+      insecureCrypto()
+      openDemo()
+      openGoals()
+      fireEvent.click(button(/New Goal/))
+      type('What are you saving for?', 'Bike')
+      type(/^Target Amount/, '900')
+      fireEvent.click(button('Review Goal'))
+      fireEvent.click(button('Create Goal'))
+      expect(heading('Bike')).toBeTruthy()
+      saveMovement('Add', '90')
+      expect(text(region('Progress'))).toContain('10.0%')
+    })
   })
 
   it('never saves demo goals', () => {

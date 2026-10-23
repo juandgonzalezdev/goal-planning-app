@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
+import { newId } from './app/newId'
 import { useSpace } from './app/useSpace'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
@@ -30,9 +31,6 @@ import './styles/app.css'
 import './styles/finance.css'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
-
-/** A new id for a goal or a goal movement. */
-const newId = () => globalThis.crypto.randomUUID()
 
 type Props = {
   getToday?: () => CalendarDate
