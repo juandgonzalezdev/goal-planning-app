@@ -1,37 +1,106 @@
 /*
- * Design values taken from the approved prototype. Every screen reads its
- * colours, corners, spacing and motion from here.
+ * Design values of the approved Demo v5.9. Every screen reads its colours,
+ * corners, spacing and motion from here.
+ *
+ * Appearance: <html data-theme="system | light | dark">. "system" follows
+ * the device; the other two are fixed.
  */
 :root {
-  --color-bg: #f6f7f9;
+  color-scheme: light;
+  --color-bg: #f4f5f9;
   --color-surface: #ffffff;
-  --color-surface-muted: #f2f4f7;
-  --color-surface-hover: #e9ecf1;
-  --color-border: #e2e5ea;
-  --color-border-strong: #cdd2d9;
-  --color-text: #15171c;
-  --color-text-strong: #0b0c0f;
-  --color-text-muted: #5d6470;
-  --color-primary: #111216;
-  --color-primary-hover: #2c2e35;
+  --color-surface-muted: #f4f4f8;
+  --color-surface-hover: #f5f3ff;
+  --color-border: #e6e6ed;
+  --color-border-strong: #dddfe8;
+  --color-text: #242332;
+  --color-text-strong: #1a1926;
+  /* v5.9 uses #7b7d8e; slightly darker here so small text meets WCAG AA contrast. */
+  --color-text-muted: #6f7080;
+  --color-primary: #7952b5;
+  --color-primary-hover: #6942a5;
   --color-on-primary: #ffffff;
-  --color-accent: #2563b8;
-  --color-accent-soft: #e8f0fb;
-  --color-focus: #6f9fe0;
+  --color-accent: #7a55b9;
+  --color-accent-soft: #eeeaf9;
+  --color-selected: #e9e4fb;
+  --color-selected-border: #8874ce;
+  --color-selected-text: #462795;
+  --color-focus: #8b5cf6;
+  --color-track: #ebebf0;
   /* Meaning colours stay green (on track) and amber (needs attention). */
   --color-positive: #128062;
   --color-positive-soft: #eaf7f1;
+  --color-warning-text: #7a4700;
+  --color-warning-soft: #fff5e8;
 
-  --radius-card: 18px;
-  --radius-control: 999px;
-  --radius-small: 10px;
-  --shadow-card: 0 1px 2px rgba(17, 18, 22, .04);
+  /* People and shared items in charts (approved). */
+  --color-member-1: #3b82f6;
+  --color-member-2: #10b981;
+  --color-shared: #8b5cf6;
 
-  --space-gutter: 16px;
+  --radius-card: 14px;
+  --radius-control: 11px;
+  --radius-small: 9px;
+  --shadow-card: none;
+
+  --space-gutter: 14px;
   --column-narrow: 560px;
-  --column-wide: 980px;
+  --column-wide: 720px;
+  --nav-height: 64px;
 
   --motion-screen: 220ms;
   --motion-quick: 150ms;
   --motion-ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* Dark values, from v5.9's dark mode. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #16151f;
+  --color-surface: #201e2b;
+  --color-surface-muted: #2c2939;
+  --color-surface-hover: #332f44;
+  --color-border: #403c50;
+  --color-border-strong: #49455c;
+  --color-text: #eeeef2;
+  --color-text-strong: #ffffff;
+  --color-text-muted: #ada9bf;
+  --color-primary: #8f6ad0;
+  --color-primary-hover: #a07ddc;
+  --color-accent: #b79cf0;
+  --color-accent-soft: #3a3150;
+  --color-selected: #4a3a65;
+  --color-selected-border: #8f6ad0;
+  --color-selected-text: #f1eaff;
+  --color-track: #464252;
+  --color-positive: #4fd1a5;
+  --color-positive-soft: #173a30;
+  --color-warning-text: #f3c77c;
+  --color-warning-soft: #3d2f17;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --color-bg: #16151f;
+    --color-surface: #201e2b;
+    --color-surface-muted: #2c2939;
+    --color-surface-hover: #332f44;
+    --color-border: #403c50;
+    --color-border-strong: #49455c;
+    --color-text: #eeeef2;
+    --color-text-strong: #ffffff;
+    --color-text-muted: #ada9bf;
+    --color-primary: #8f6ad0;
+    --color-primary-hover: #a07ddc;
+    --color-accent: #b79cf0;
+    --color-accent-soft: #3a3150;
+    --color-selected: #4a3a65;
+    --color-selected-border: #8f6ad0;
+    --color-selected-text: #f1eaff;
+    --color-track: #464252;
+    --color-positive: #4fd1a5;
+    --color-positive-soft: #173a30;
+    --color-warning-text: #f3c77c;
+    --color-warning-soft: #3d2f17;
+  }
 }
