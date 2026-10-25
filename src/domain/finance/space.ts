@@ -55,10 +55,10 @@ export function createSpaceData(setup: SpaceSetup): { status: 'created'; data: F
   return {
     status: 'created',
     data: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       space,
       preferences: { language: 'en', theme: setup.theme, displayCurrency: setup.currency },
-      income: [], bills: [], billMonths: [], debts: [], moneyAccounts: [], balances: [], goals: [], goalMovements: [],
+      incomeSources: [], income: [], bills: [], billMonths: [], debts: [], moneyAccounts: [], balances: [], goals: [], goalMovements: [],
     },
   }
 }

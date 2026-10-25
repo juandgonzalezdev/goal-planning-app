@@ -10,7 +10,7 @@ describe('bills by category', () => {
   it('adds up each category in the fixed order and matches the month total', () => {
     const october = billsByCategory(createDemoHousehold(), '2026-10')
     expect(october.categories.map(c => [c.category, c.total])).toEqual([
-      ['Housing', 300_000], ['Loans', 195_000], ['Education', 30_000], ['Subscriptions', 10_099], ['Utilities', 12_045], ['Other', 9_999],
+      ['Housing', 300_000], ['Utilities', 12_045], ['Subscriptions', 10_099], ['Loans', 195_000], ['Education', 30_000], ['Other', 9_999],
     ])
     expect(october.total).toBe(557_143)
     expect(october.categories.reduce((sum, c) => sum + c.total, 0)).toBe(october.total)
@@ -48,7 +48,7 @@ describe('goal rows', () => {
   })
 
   it('follows contributions and leaves archived goals out', () => {
-    const added = addGoalMovement(createDemoHousehold(), { id: 'm1', goalId: 'christmas-gift', kind: 'contribution', amount: 12_500, date: DEMO_TODAY, note: '' })
+    const added = addGoalMovement(createDemoHousehold(), { id: 'm1', goalId: 'christmas-gift', effect: 'assigned', amount: 12_500, date: DEMO_TODAY, note: '' })
     if (added.status !== 'ok') throw new Error('contribution rejected')
     const rows = activeGoalRows(archiveGoal(added.data, 'trip-to-japan'), DEMO_TODAY)
     expect(rows).toHaveLength(1)

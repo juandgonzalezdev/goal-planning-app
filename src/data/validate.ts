@@ -1,7 +1,7 @@
 import { isCalendarDate, isYearMonth } from '../domain/calendar'
 import { isCurrencyCode, isMinorAmount } from '../domain/money'
 import {
-  BILL_CATEGORIES, MONEY_ACCOUNT_KINDS,
+  BILL_CATEGORIES, MONEY_ACCOUNT_KINDS, MOVEMENT_EFFECTS,
   type FinanceData, type SpaceMode,
 } from '../domain/finance/types'
 
@@ -34,7 +34,7 @@ export function validateFinanceData(input: unknown): ValidationResult {
   const fail = (message: string) => { errors.push(message) }
   if (!isRecord(input)) return { status: 'invalid', errors: ['The data is not an object.'] }
 
-  if (input.schemaVersion !== 1) fail('schemaVersion must be 1.')
+  if (input.schemaVersion !== 2) fail('schemaVersion must be 2.')
 
   // Space and members
   const space = input.space
@@ -92,8 +92,19 @@ export function validateFinanceData(input: unknown): ValidationResult {
     return ids
   }
 
+  const sourceIds = checkList('incomeSources', (item, where) => {
+    if (!isText(item.memberId) || !memberIds.has(item.memberId)) fail(`${where}.memberId is not a member.`)
+    if (!isNonEmptyText(item.name)) fail(`${where}.name is missing.`)
+    if (!isMinorAmount(item.amount) || item.amount < 0) fail(`${where}.amount must be a whole, non-negative amount.`)
+    if (!isDay(item.payDay)) fail(`${where}.payDay must be 1 to 31.`)
+    if (!isYearMonth(item.startMonth)) fail(`${where}.startMonth must be YYYY-MM.`)
+    if (item.endMonth !== null && !isYearMonth(item.endMonth)) fail(`${where}.endMonth must be YYYY-MM or null.`)
+    if (!('currency' in item)) fail(`${where}.currency is missing.`)
+  })
+
   checkList('income', (item, where) => {
     if (!isText(item.memberId) || !memberIds.has(item.memberId)) fail(`${where}.memberId is not a member.`)
+    if (item.sourceId !== undefined && !(isText(item.sourceId) && sourceIds.has(item.sourceId))) fail(`${where}.sourceId is not an income source.`)
     if (!isYearMonth(item.month)) fail(`${where}.month must be YYYY-MM.`)
     if (!isCalendarDate(item.receivedOn)) fail(`${where}.receivedOn must be a real date.`)
     if (!isMinorAmount(item.amount) || item.amount < 0) fail(`${where}.amount must be a whole, non-negative amount.`)
@@ -108,7 +119,10 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (!isDay(item.dueDay)) fail(`${where}.dueDay must be 1 to 31.`)
     if (item.closingDay !== undefined && !isDay(item.closingDay)) fail(`${where}.closingDay must be 1 to 31.`)
     if (item.monthlyPayment !== undefined && (!isMinorAmount(item.monthlyPayment) || item.monthlyPayment < 0)) fail(`${where}.monthlyPayment must be a whole, non-negative amount.`)
+    if (item.minimumPayment !== undefined && (!isMinorAmount(item.minimumPayment) || item.minimumPayment < 0)) fail(`${where}.minimumPayment must be a whole, non-negative amount.`)
+    if (item.startMonth !== undefined && !isYearMonth(item.startMonth)) fail(`${where}.startMonth must be YYYY-MM.`)
     if (item.finalPaymentMonth !== undefined && !isYearMonth(item.finalPaymentMonth)) fail(`${where}.finalPaymentMonth must be YYYY-MM.`)
+    else if (isYearMonth(item.startMonth) && isYearMonth(item.finalPaymentMonth) && item.finalPaymentMonth < item.startMonth) fail(`${where} ends before it starts.`)
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
 
@@ -122,8 +136,30 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (item.endMonth !== null && !isYearMonth(item.endMonth)) fail(`${where}.endMonth must be YYYY-MM or null.`)
     else if (isYearMonth(item.startMonth) && isYearMonth(item.endMonth) && item.endMonth < item.startMonth) fail(`${where} ends before it starts.`)
     if (item.debtId !== undefined && !(isText(item.debtId) && debtIds.has(item.debtId))) fail(`${where}.debtId is not a debt.`)
+    if (item.note !== undefined && !isText(item.note)) fail(`${where}.note must be text.`)
+    if (item.amountChanges !== undefined) {
+      if (!Array.isArray(item.amountChanges)) fail(`${where}.amountChanges must be a list.`)
+      else {
+        let previous = isYearMonth(item.startMonth) ? item.startMonth : ''
+        item.amountChanges.forEach((change: unknown, index: number) => {
+          const at = `${where}.amountChanges[${index}]`
+          if (!isRecord(change) || !isYearMonth(change.from)) { fail(`${at}.from must be YYYY-MM.`); return }
+          if (change.amount !== null && (!isMinorAmount(change.amount) || change.amount < 0)) fail(`${at}.amount must be a whole, non-negative amount or null.`)
+          if (change.from <= previous) fail(`${at} must come after the start month and the change before it.`)
+          previous = change.from
+        })
+      }
+    }
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
+
+  // A debt's monthly payment lives in one place only: its bill, or the debt itself.
+  const bills = (input.bills as unknown[] | undefined) ?? []
+  for (const debt of ((input.debts as unknown[] | undefined) ?? []).filter(isRecord)) {
+    const linked = bills.filter(bill => isRecord(bill) && bill.debtId === debt.id)
+    if (linked.length > 1) fail(`Debt "${String(debt.name)}" is paid by more than one bill.`)
+    if (linked.length > 0 && debt.monthlyPayment !== undefined) fail(`Debt "${String(debt.name)}" has a monthly payment and a bill; keep only the bill.`)
+  }
 
   const billMonthKeys = new Set<string>()
   checkList('billMonths', (item, where) => {
@@ -131,6 +167,7 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (!isYearMonth(item.month)) fail(`${where}.month must be YYYY-MM.`)
     if (typeof item.paid !== 'boolean') fail(`${where}.paid must be true or false.`)
     if ('amount' in item && item.amount !== null && (!isMinorAmount(item.amount) || item.amount < 0)) fail(`${where}.amount must be a whole, non-negative amount or null.`)
+    if (item.paidOn !== undefined && !isCalendarDate(item.paidOn)) fail(`${where}.paidOn must be a real date.`)
     const key = `${String(item.billId)}:${String(item.month)}`
     if (billMonthKeys.has(key)) fail(`billMonths: ${key} is recorded twice.`)
     billMonthKeys.add(key)
@@ -143,18 +180,26 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
   for (const id of accountIds) if (debtIds.has(id)) fail(`Id "${id}" is used by a debt and a money account.`)
+  const savingsIds = new Set(((input.moneyAccounts as unknown[] | undefined) ?? [])
+    .filter(isRecord).filter(account => account.kind === 'savings').map(account => String(account.id)))
 
   checkList('balances', (item, where) => {
     if (!isText(item.accountId) || !(debtIds.has(item.accountId) || accountIds.has(item.accountId))) fail(`${where}.accountId is not a debt or money account.`)
     if (!isCalendarDate(item.asOf)) fail(`${where}.asOf must be a real date.`)
     if (!isMinorAmount(item.amount)) fail(`${where}.amount must be a whole amount.`)
+    if (!isOneOf(['entered', 'goal-movement'] as const)(item.source)) fail(`${where}.source must be entered or goal-movement.`)
+    if (item.movementId !== undefined && !isText(item.movementId)) fail(`${where}.movementId must be text.`)
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
 
+  let emergencyCount = 0
   const goalIds = checkList('goals', (item, where) => {
+    if (!isOneOf(['goal', 'emergency'] as const)(item.kind)) fail(`${where}.kind must be goal or emergency.`)
+    if (item.kind === 'emergency') emergencyCount++
     if (!isNonEmptyText(item.name)) fail(`${where}.name is missing.`)
     if (!isOwner(item.owner)) fail(`${where}.owner is not a member or "shared".`)
-    if (!isMinorAmount(item.target) || item.target <= 0) fail(`${where}.target must be a whole amount above 0.`)
+    if (item.kind === 'emergency' && item.target === null) { /* the emergency fund may have no target */ }
+    else if (!isMinorAmount(item.target) || item.target <= 0) fail(`${where}.target must be a whole amount above 0.`)
     if (item.deadline !== null && !isCalendarDate(item.deadline)) fail(`${where}.deadline must be a real date or null.`)
     if (!isMinorAmount(item.openingBalance) || item.openingBalance < 0) fail(`${where}.openingBalance must be a whole, non-negative amount.`)
     if (!isCalendarDate(item.createdOn)) fail(`${where}.createdOn must be a real date.`)
@@ -162,11 +207,21 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
 
+  if (emergencyCount > 1) fail('There can be only one emergency fund.')
+
   checkList('goalMovements', (item, where) => {
     if (!isText(item.goalId) || !goalIds.has(item.goalId)) fail(`${where}.goalId is not a goal.`)
     if (!isCalendarDate(item.date)) fail(`${where}.date must be a real date.`)
     if (!isMinorAmount(item.amount) || item.amount === 0) fail(`${where}.amount must be a whole amount other than 0.`)
     if (!isText(item.note)) fail(`${where}.note must be text.`)
+    if (!isOneOf(MOVEMENT_EFFECTS)(item.effect)) fail(`${where}.effect is not a known effect.`)
+    else {
+      const adds = item.effect === 'new-savings' || item.effect === 'assigned'
+      if (isMinorAmount(item.amount) && (item.amount > 0) !== adds) fail(`${where}.amount has the wrong sign for ${item.effect}.`)
+      const moves = item.effect === 'new-savings' || item.effect === 'taken-out'
+      if (moves && !(isText(item.accountId) && savingsIds.has(item.accountId))) fail(`${where}.accountId must be a savings account.`)
+      if (!moves && item.accountId !== undefined) fail(`${where}.accountId is only for new savings or money taken out.`)
+    }
   })
 
   // A pot can never go below zero at any point in its history.

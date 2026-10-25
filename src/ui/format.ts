@@ -54,3 +54,12 @@ export function weekdayOf(date: CalendarDate): string {
 }
 
 export const formatMonths = (count: number) => `${count} ${count === 1 ? 'month' : 'months'}`
+
+/** '2026-10' shown as just the month's name, 'October'. */
+export const monthName = (month: YearMonth) => LONG_MONTH_NAMES[Number(month.slice(5, 7)) - 1]
+
+/** A yearly rate in hundredths of a percent shown as e.g. '18.50%'. */
+export const formatRate = (basisPoints: number) => `${(basisPoints / 100).toFixed(2)}%`
+
+/** A due day shown as 'Day 22' (short months use their last day). */
+export const formatDueDay = (day: number) => `Day ${day}`

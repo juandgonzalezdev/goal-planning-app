@@ -6,7 +6,9 @@ import type { BillMonth, FinanceData, IncomeEntry } from '../../domain/finance/t
  * amount is not known yet, loans that end, a due day of 31, a card with an
  * older balance). The two goals are the approved example goals, empty.
  *
- * A real user's space never starts with this data; it is opt-in demo data.
+ * A real user's space never starts with this data. Since the Alex demo
+ * (see demoAlex.ts) the app opens the Individual demo; this Duo household
+ * stays as a test fixture for the Duo screens.
  */
 export const DEMO_TODAY = '2026-10-23'
 
@@ -23,7 +25,7 @@ const income: IncomeEntry[] = ALEX_INCOME.flatMap((alex, index) => {
 
 export function createDemoHousehold(): FinanceData {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     space: {
       id: 'demo-space',
       name: 'Demo Household',
@@ -35,6 +37,7 @@ export function createDemoHousehold(): FinanceData {
       ],
     },
     preferences: { language: 'en', theme: 'system', displayCurrency: 'PLN' },
+    incomeSources: [],
     income: structuredClone(income),
     bills: [
       { id: 'furniture-loan', name: 'Furniture Loan', category: 'Loans', owner: 'shared', amount: 15_000, currency: 'PLN', dueDay: 5, startMonth: '2026-10', endMonth: '2027-06', debtId: 'furniture' },
@@ -57,26 +60,26 @@ export function createDemoHousehold(): FinanceData {
     ],
     debts: [
       { id: 'card', kind: 'card', name: 'Credit Card', owner: 'shared', currency: 'PLN', yearlyInterestBasisPoints: 1800, dueDay: 15, closingDay: 22 },
-      { id: 'car', kind: 'loan', name: 'Car Loan', owner: 'shared', currency: 'PLN', yearlyInterestBasisPoints: 850, dueDay: 12, monthlyPayment: 180_000, finalPaymentMonth: '2028-10' },
-      { id: 'furniture', kind: 'loan', name: 'Furniture Loan', owner: 'shared', currency: 'PLN', yearlyInterestBasisPoints: 0, dueDay: 5, monthlyPayment: 15_000, finalPaymentMonth: '2027-06' },
+      { id: 'car', kind: 'loan', name: 'Car Loan', owner: 'shared', currency: 'PLN', yearlyInterestBasisPoints: 850, dueDay: 12, finalPaymentMonth: '2028-10' },
+      { id: 'furniture', kind: 'loan', name: 'Furniture Loan', owner: 'shared', currency: 'PLN', yearlyInterestBasisPoints: 0, dueDay: 5, finalPaymentMonth: '2027-06' },
     ],
     moneyAccounts: [
       { id: 'everyday', kind: 'daily-spending', name: 'Everyday Account', owner: 'shared', currency: 'PLN' },
       { id: 'investments', kind: 'investment', name: 'Investment Account', owner: 'jordan', currency: 'PLN' },
-      { id: 'emergency-cash', kind: 'emergency', name: 'Emergency Cash', owner: 'shared', currency: 'PLN' },
+      { id: 'emergency-cash', kind: 'savings', name: 'Emergency Cash', owner: 'shared', currency: 'PLN' },
     ],
     balances: [
-      { id: 'balance-card-2026-09', accountId: 'card', asOf: '2026-09-23', amount: 340_000, currency: 'PLN' },
-      { id: 'balance-card-2026-10', accountId: 'card', asOf: DEMO_TODAY, amount: 325_040, currency: 'PLN' },
-      { id: 'balance-car', accountId: 'car', asOf: DEMO_TODAY, amount: 4_200_000, currency: 'PLN' },
-      { id: 'balance-furniture', accountId: 'furniture', asOf: DEMO_TODAY, amount: 135_000, currency: 'PLN' },
-      { id: 'balance-everyday', accountId: 'everyday', asOf: DEMO_TODAY, amount: 120_035, currency: 'PLN' },
-      { id: 'balance-investments', accountId: 'investments', asOf: DEMO_TODAY, amount: 98_065, currency: 'PLN' },
-      { id: 'balance-emergency', accountId: 'emergency-cash', asOf: DEMO_TODAY, amount: 30_000, currency: 'PLN' },
+      { id: 'balance-card-2026-09', accountId: 'card', asOf: '2026-09-23', amount: 340_000, currency: 'PLN', source: 'entered' },
+      { id: 'balance-card-2026-10', accountId: 'card', asOf: DEMO_TODAY, amount: 325_040, currency: 'PLN', source: 'entered' },
+      { id: 'balance-car', accountId: 'car', asOf: DEMO_TODAY, amount: 4_200_000, currency: 'PLN', source: 'entered' },
+      { id: 'balance-furniture', accountId: 'furniture', asOf: DEMO_TODAY, amount: 135_000, currency: 'PLN', source: 'entered' },
+      { id: 'balance-everyday', accountId: 'everyday', asOf: DEMO_TODAY, amount: 120_035, currency: 'PLN', source: 'entered' },
+      { id: 'balance-investments', accountId: 'investments', asOf: DEMO_TODAY, amount: 98_065, currency: 'PLN', source: 'entered' },
+      { id: 'balance-emergency', accountId: 'emergency-cash', asOf: DEMO_TODAY, amount: 30_000, currency: 'PLN', source: 'entered' },
     ],
     goals: [
-      { id: 'trip-to-japan', name: 'Trip to Japan', owner: 'shared', target: 2_000_000, currency: 'PLN', deadline: null, openingBalance: 0, createdOn: DEMO_TODAY, status: 'active' },
-      { id: 'christmas-gift', name: 'Christmas Gift', owner: 'alex', target: 50_000, currency: 'PLN', deadline: '2026-12-25', openingBalance: 0, createdOn: DEMO_TODAY, status: 'active' },
+      { id: 'trip-to-japan', kind: 'goal', name: 'Trip to Japan', owner: 'shared', target: 2_000_000, currency: 'PLN', deadline: null, openingBalance: 0, createdOn: DEMO_TODAY, status: 'active' },
+      { id: 'christmas-gift', kind: 'goal', name: 'Christmas Gift', owner: 'alex', target: 50_000, currency: 'PLN', deadline: '2026-12-25', openingBalance: 0, createdOn: DEMO_TODAY, status: 'active' },
     ],
     goalMovements: [],
   }

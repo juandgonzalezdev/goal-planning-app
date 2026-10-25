@@ -6,7 +6,7 @@ import { summarizeMoney } from './moneyAccounts'
 import type { FinanceData } from './types'
 
 const add = (data: FinanceData, request: Partial<MovementRequest>) => {
-  const result = addGoalMovement(data, { id: 'm1', goalId: 'trip-to-japan', kind: 'contribution', amount: 10_000, date: DEMO_TODAY, note: '', ...request })
+  const result = addGoalMovement(data, { id: 'm1', goalId: 'trip-to-japan', effect: 'assigned', amount: 10_000, date: DEMO_TODAY, note: '', ...request })
   if (result.status !== 'ok') throw new Error(result.error)
   return result.data
 }
@@ -23,7 +23,7 @@ describe('example goals', () => {
 
   it('a goal with no date never gets a pace', () => {
     expect(goalProgress(goal(createDemoHousehold(), 'trip-to-japan'), [], DEMO_TODAY)).toEqual({
-      saved: 0, remaining: 2_000_000, percent: 0, daysToDeadline: null, pace: { status: 'no-deadline' },
+      saved: 0, remaining: 2_000_000, percent: 0, hasTarget: true, daysToDeadline: null, pace: { status: 'no-deadline' },
     })
   })
 
@@ -31,7 +31,7 @@ describe('example goals', () => {
     // 63 days: 9 whole weeks and 2 whole months (23 Nov and 23 Dec).
     // 500.00 / 9 = 55.555... rounds up to 55.56; 500.00 / 2 = 250.00.
     expect(goalProgress(goal(createDemoHousehold(), 'christmas-gift'), [], DEMO_TODAY)).toEqual({
-      saved: 0, remaining: 50_000, percent: 0, daysToDeadline: 63,
+      saved: 0, remaining: 50_000, percent: 0, hasTarget: true, daysToDeadline: 63,
       pace: { status: 'suggested', weekly: { opportunities: 9, amount: 5_556 }, monthly: { opportunities: 2, amount: 25_000 } },
     })
   })
@@ -56,7 +56,7 @@ describe('contributions and withdrawals', () => {
     expect(goalSaved(goal(after, 'trip-to-japan'), after.goalMovements)).toBe(10_000)
     expect(goalSaved(goal(after, 'christmas-gift'), after.goalMovements)).toBe(0)
     expect(summarizeGoals(after).saved).toBe(10_000)
-    expect(after.goalMovements).toEqual([{ id: 'm1', goalId: 'trip-to-japan', date: DEMO_TODAY, amount: 10_000, note: 'First step' }])
+    expect(after.goalMovements).toEqual([{ id: 'm1', goalId: 'trip-to-japan', date: DEMO_TODAY, amount: 10_000, note: 'First step', effect: 'assigned' }])
     expect(summarizeMoney(after)).toEqual(summarizeMoney(before))
     expect(summarizeDebts(after)).toEqual(summarizeDebts(before))
     expect(before.goalMovements).toEqual([])
@@ -64,13 +64,13 @@ describe('contributions and withdrawals', () => {
 
   it('refuses to withdraw 150 when 100 is saved', () => {
     const data = add(createDemoHousehold(), { amount: 10_000 })
-    expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', kind: 'withdrawal', amount: 15_000, date: DEMO_TODAY, note: '' }))
+    expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', effect: 'unassigned', amount: 15_000, date: DEMO_TODAY, note: '' }))
       .toEqual({ status: 'rejected', error: 'more-than-saved' })
   })
 
   it('allows withdrawing exactly what is saved, stored as a negative movement', () => {
     let data = add(createDemoHousehold(), { amount: 10_000 })
-    data = add(data, { id: 'm2', kind: 'withdrawal', amount: 10_000, date: '2026-10-24' })
+    data = add(data, { id: 'm2', effect: 'unassigned', amount: 10_000, date: '2026-10-24' })
     expect(goalSaved(goal(data, 'trip-to-japan'), data.goalMovements)).toBe(0)
     expect(goalMovementsOf(data.goalMovements, 'trip-to-japan').map(m => m.amount)).toEqual([10_000, -10_000])
   })
@@ -82,12 +82,12 @@ describe('contributions and withdrawals', () => {
     [{ date: '2026-02-30' }, 'invalid-date'],
     [{ goalId: 'missing' }, 'goal-not-found'],
   ] as const)('rejects %j', (change, error) => {
-    expect(addGoalMovement(createDemoHousehold(), { id: 'x', goalId: 'trip-to-japan', kind: 'contribution', amount: 100, date: DEMO_TODAY, note: '', ...change }))
+    expect(addGoalMovement(createDemoHousehold(), { id: 'x', goalId: 'trip-to-japan', effect: 'assigned', amount: 100, date: DEMO_TODAY, note: '', ...change }))
       .toEqual({ status: 'rejected', error })
   })
 
   it('progress caps at 100% when more than the target is saved', () => {
-    const data = add(createDemoHousehold(), { goalId: 'christmas-gift', amount: 60_000 })
+    const data = add(createDemoHousehold(), { goalId: 'christmas-gift', amount: 60_000, effect: 'new-savings', accountId: 'emergency-cash' })
     expect(goalProgress(goal(data, 'christmas-gift'), data.goalMovements, DEMO_TODAY)).toMatchObject({ saved: 60_000, remaining: 0, percent: 100, pace: { status: 'reached' } })
   })
 })
@@ -97,7 +97,7 @@ describe('creating, editing and archiving goals', () => {
     const result = createGoal(createDemoHousehold(), 'bike', { name: '  New Bike ', owner: 'jordan', target: 300_000, deadline: null }, DEMO_TODAY)
     if (result.status !== 'valid') throw new Error('expected valid')
     expect(goal(result.data, 'bike')).toEqual({
-      id: 'bike', name: 'New Bike', owner: 'jordan', target: 300_000, currency: 'PLN', deadline: null, openingBalance: 0, createdOn: DEMO_TODAY, status: 'active',
+      id: 'bike', kind: 'goal', name: 'New Bike', owner: 'jordan', target: 300_000, currency: 'PLN', deadline: null, openingBalance: 0, createdOn: DEMO_TODAY, status: 'active',
     })
     expect(result.data.goalMovements).toEqual([])
   })
@@ -122,7 +122,7 @@ describe('creating, editing and archiving goals', () => {
     expect(goal(data, 'trip-to-japan').status).toBe('archived')
     expect(data.goalMovements).toHaveLength(1)
     expect(summarizeGoals(data)).toEqual({ saved: 0, target: 50_000, activeCount: 1 })
-    expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', kind: 'contribution', amount: 1, date: DEMO_TODAY, note: '' }))
+    expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', effect: 'assigned', amount: 1, date: DEMO_TODAY, note: '' }))
       .toEqual({ status: 'rejected', error: 'goal-archived' })
   })
 })
@@ -131,7 +131,7 @@ describe('deleting and filtering goals', () => {
   it('deletes a goal and only its own movements', () => {
     let data = createDemoHousehold()
     for (const goalId of ['trip-to-japan', 'christmas-gift']) {
-      const added = addGoalMovement(data, { id: `m-${goalId}`, goalId, kind: 'contribution', amount: 10_000, date: DEMO_TODAY, note: '' })
+      const added = addGoalMovement(data, { id: `m-${goalId}`, goalId, effect: 'assigned', amount: 10_000, date: DEMO_TODAY, note: '' })
       if (added.status !== 'ok') throw new Error('rejected')
       data = added.data
     }

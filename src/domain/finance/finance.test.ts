@@ -104,7 +104,7 @@ describe('debts', () => {
     expect(latestBalance(data.balances, 'card')).toMatchObject({ amount: 325_040, asOf: DEMO_TODAY })
     expect(balanceHistory(data.balances, 'card').map(b => b.amount)).toEqual([340_000, 325_040])
     // Same date: the balance entered later wins.
-    const sameDay = [...data.balances, { id: 'fix', accountId: 'card', asOf: DEMO_TODAY, amount: 320_000, currency: 'PLN' as const }]
+    const sameDay = [...data.balances, { id: 'fix', accountId: 'card', asOf: DEMO_TODAY, amount: 320_000, currency: 'PLN' as const, source: 'entered' as const }]
     expect(latestBalance(sameDay, 'card')?.amount).toBe(320_000)
   })
 
@@ -131,7 +131,7 @@ describe('money accounts', () => {
     expect(money.byKind).toEqual([
       { kind: 'daily-spending', total: 120_035 },
       { kind: 'investment', total: 98_065 },
-      { kind: 'emergency', total: 30_000 },
+      { kind: 'savings', total: 30_000 },
       { kind: 'other', total: 0 },
     ])
     expect(money.total).toBe(248_100)
@@ -170,8 +170,10 @@ describe('income', () => {
 
 describe('monthly overview', () => {
   it('gives the four Home numbers for a month', () => {
-    expect(monthlyOverview(createDemoHousehold(), '2026-10')).toEqual({
+    expect(monthlyOverview(createDemoHousehold(), '2026-10')).toMatchObject({
       month: '2026-10', householdIncome: 1_170_035, monthlyCommitments: 557_143, unknownBillCount: 0, leftToPay: 0, totalDebt: 4_660_040,
+      // The household has no expected income, so what arrived is all there is.
+      income: { basis: 'received', received: 1_170_035, expected: 0, total: 1_170_035 }, incomeMinusBills: 1_170_035 - 557_143,
     })
     expect(monthlyOverview(createDemoHousehold(), '2026-11')).toMatchObject({ householdIncome: 0, monthlyCommitments: 545_098, unknownBillCount: 1, leftToPay: 545_098 })
   })

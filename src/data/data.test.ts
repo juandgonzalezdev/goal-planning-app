@@ -43,8 +43,8 @@ describe('validateFinanceData', () => {
   it('rejects a goal history that goes below zero', () => {
     expect(invalidErrors(d => {
       d.goalMovements = [
-        { id: 'a', goalId: 'trip-to-japan', date: '2026-10-24', amount: 10_000, note: '' },
-        { id: 'b', goalId: 'trip-to-japan', date: '2026-10-23', amount: -5_000, note: '' },
+        { id: 'a', goalId: 'trip-to-japan', date: '2026-10-24', amount: 10_000, note: '', effect: 'assigned' },
+        { id: 'b', goalId: 'trip-to-japan', date: '2026-10-23', amount: -5_000, note: '', effect: 'unassigned' },
       ]
     })).toEqual(['Goal "Trip to Japan" would go below 0 on 2026-10-23.'])
   })
@@ -53,12 +53,12 @@ describe('validateFinanceData', () => {
 describe('migrateToCurrent', () => {
   it('passes current data through unchanged', () => {
     const data = createDemoHousehold()
-    expect(migrateToCurrent(data)).toEqual({ status: 'migrated', data, fromVersion: 1 })
+    expect(migrateToCurrent(data)).toEqual({ status: 'migrated', data, fromVersion: 2 })
   })
 
   it('refuses data without a version, or from a newer app', () => {
     expect(migrateToCurrent({ goals: [] })).toEqual({ status: 'no-version' })
-    expect(migrateToCurrent({ schemaVersion: 2 })).toEqual({ status: 'newer-version', version: 2 })
+    expect(migrateToCurrent({ schemaVersion: 3 })).toEqual({ status: 'newer-version', version: 3 })
     expect(migrateToCurrent('text')).toEqual({ status: 'not-data' })
   })
 
@@ -80,7 +80,7 @@ describe('export and import', () => {
   it('round-trips paid months, month amounts, goal movements and preferences', () => {
     let data = setBillPaid(createDemoHousehold(), 'rent', '2026-11', true)
     data = setBillMonthAmount(data, 'phone', '2026-11', null)
-    const added = addGoalMovement(data, { id: 'm1', goalId: 'trip-to-japan', kind: 'contribution', amount: 10_000, date: DEMO_TODAY, note: 'Start' })
+    const added = addGoalMovement(data, { id: 'm1', goalId: 'trip-to-japan', effect: 'assigned', amount: 10_000, date: DEMO_TODAY, note: 'Start' })
     if (added.status !== 'ok') throw new Error(added.error)
     data = { ...added.data, preferences: { language: 'pl', theme: 'day-night', displayCurrency: 'EUR' } }
 

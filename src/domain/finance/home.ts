@@ -3,7 +3,7 @@ import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
 import { sumMinor } from '../money'
 import { billsForMonth, summarizeBills, type BillOccurrence } from './bills'
-import { goalProgress, type GoalProgress } from './goals'
+import { activeGoals, goalProgress, type GoalProgress } from './goals'
 import { BILL_CATEGORIES, type BillCategory, type FinanceData, type Goal } from './types'
 
 export interface CategoryBills {
@@ -22,7 +22,7 @@ export interface BillsByCategory {
   unknownCount: number
 }
 
-/** Monthly Bills · By Category on Home, for one month. */
+/** Monthly Bills by Category on Home, for one month. */
 export function billsByCategory(data: Pick<FinanceData, 'bills' | 'billMonths'>, month: YearMonth): BillsByCategory {
   const occurrences = billsForMonth(data, month)
   const summary = summarizeBills(occurrences)
@@ -38,9 +38,8 @@ export interface GoalRow {
   progress: GoalProgress
 }
 
-/** Our Goals on Home: the active pots in the order they were added. Archived pots are left out. */
+/** My Goals on Home: the active goals in the order they were added. Archived pots and the emergency fund are left out. */
 export function activeGoalRows(data: Pick<FinanceData, 'goals' | 'goalMovements'>, today: CalendarDate): GoalRow[] {
-  return data.goals
-    .filter(goal => goal.status === 'active')
+  return activeGoals(data.goals)
     .map(goal => ({ goal, progress: goalProgress(goal, data.goalMovements, today) }))
 }

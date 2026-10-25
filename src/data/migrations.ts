@@ -4,12 +4,48 @@
  * by an older version of the app still loads. Steps never delete what the
  * user entered.
  */
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 type Step = (data: Record<string, unknown>) => Record<string, unknown>
+type Rec = Record<string, unknown>
 
-/** STEPS[n] turns version n into version n + 1. There are none yet: version 1 is the first. */
-const STEPS: Record<number, Step> = {}
+const list = (value: unknown): Rec[] => (Array.isArray(value) ? value : []) as Rec[]
+
+/**
+ * Version 1 to 2 (the Savings model):
+ * - Expected income gets its own list, empty to start with.
+ * - An "emergency" money account becomes a Savings account. Its name and
+ *   balance stay: it is saved money, now shown inside Savings.
+ * - Every balance entered so far is marked as entered by the user.
+ * - Every pot is a goal. Its movements only moved money between purposes
+ *   (in version 1 goals were not part of any account), so they are
+ *   recorded as assigned or unassigned savings. No balance changes.
+ * - A loan whose installment is also a bill keeps the amount in the bill
+ *   only, so it can never be counted twice.
+ */
+export function migrateV1toV2(data: Rec): Rec {
+  const bills = list(data.bills)
+  const paidByBill = new Set(bills.map(bill => bill.debtId).filter((id): id is string => typeof id === 'string'))
+  return {
+    ...data,
+    incomeSources: [],
+    moneyAccounts: list(data.moneyAccounts).map(account => (account.kind === 'emergency' ? { ...account, kind: 'savings' } : account)),
+    balances: list(data.balances).map(balance => ({ ...balance, source: 'entered' })),
+    goals: list(data.goals).map(goal => ({ ...goal, kind: 'goal' })),
+    goalMovements: list(data.goalMovements).map(movement => ({
+      ...movement, effect: typeof movement.amount === 'number' && movement.amount < 0 ? 'unassigned' : 'assigned',
+    })),
+    debts: list(data.debts).map(debt => {
+      if (typeof debt.id !== 'string' || !paidByBill.has(debt.id)) return debt
+      const rest = { ...debt }
+      delete rest.monthlyPayment
+      return rest
+    }),
+  }
+}
+
+/** STEPS[n] turns version n into version n + 1. */
+const STEPS: Record<number, Step> = { 1: migrateV1toV2 }
 
 export type MigrationResult =
   | { status: 'migrated'; data: Record<string, unknown>; fromVersion: number }
