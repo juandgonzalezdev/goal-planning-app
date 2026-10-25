@@ -13,9 +13,11 @@ type Props = {
   onThemeChange: (theme: Theme) => void
   onErase: () => boolean
   onExitDemo: () => void
+  onResetDemo: () => void
 }
 
-export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo }: Props) {
+export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo, onResetDemo }: Props) {
+  const [resetDone, setResetDone] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [eraseFailed, setEraseFailed] = useState(false)
   return (
@@ -52,8 +54,12 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
       <section className="block">
         <h2 className="section-title">Privacy &amp; Security</h2>
         {isDemo ? <>
-          <p className="field-help">The demo uses invented information only. Changes are not saved and disappear when you exit.</p>
-          <button type="button" className="button-secondary" onClick={onExitDemo}>Exit Demo</button>
+          <p className="field-help">The demo uses invented information only. Changes are not saved and disappear when you exit. Reset Demo puts the original example back; your own space is never touched.</p>
+          <div className="inline-actions">
+            <button type="button" className="button-secondary" onClick={() => { onResetDemo(); setResetDone(true) }}>Reset Demo</button>
+            <button type="button" className="button-secondary" onClick={onExitDemo}>Exit Demo</button>
+          </div>
+          {resetDone && <p className="muted-note" role="status">The demo is back to the original example.</p>}
         </> : <>
           <PrivacyFacts />
           {!confirming && <button type="button" className="button-danger" onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}

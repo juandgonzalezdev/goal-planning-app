@@ -33,10 +33,13 @@ export function GoalFormFields({ idPrefix, draft, errors, currency, onChange }: 
       </div>
       <div className="form-field">
         <label htmlFor={id('dated')}>Deadline</label>
-        <select id={id('dated')} value={draft.dated ? 'dated' : 'flexible'} onChange={e => set({ dated: e.target.value === 'dated' })}>
-          <option value="flexible">No Deadline</option>
+        <select id={id('dated')} aria-describedby={id('dated-help')} value={draft.dated ? 'dated' : 'flexible'} onChange={e => set({ dated: e.target.value === 'dated' })}>
+          <option value="flexible">Flexible (no deadline)</option>
           <option value="dated">With Date</option>
         </select>
+        <p id={id('dated-help')} className="field-help">
+          {draft.dated ? 'With Date: a target date, and a suggested weekly or monthly amount to reach it.' : 'Flexible: no target date and no pace. Save at your own rhythm.'}
+        </p>
       </div>
       {draft.dated && (
         <div className="form-field">

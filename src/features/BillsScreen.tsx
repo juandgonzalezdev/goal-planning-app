@@ -3,17 +3,23 @@ import { Icon } from '../components/Icon'
 import type { YearMonth } from '../domain/calendar'
 import { billsForMonth, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills, type BillOccurrence } from '../domain/finance/bills'
 import { ownerColor, ownerName } from '../domain/finance/space'
-import type { FinanceData } from '../domain/finance/types'
+import type { FinanceData, Id } from '../domain/finance/types'
+import type { CalendarDate } from '../domain/goalTime'
 import { formatAmount, formatYearMonth, weekdayOf } from '../ui/format'
 import { parseMoneyInput } from '../ui/moneyInput'
+import type { SaveOutcome } from '../ui/saveOutcome'
+import { LeftToPayMessage } from './home/LeftToPay'
 import { MonthSwitch } from './MonthSwitch'
 
 type Props = {
   data: FinanceData
   months: YearMonth[]
   month: YearMonth
+  today: CalendarDate
   onMonthChange: (month: YearMonth) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => void
+  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onOpenBill: (id: Id) => void
+  onAddBill: () => void
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
@@ -23,7 +29,7 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
  * date starts closed and only one can be open at a time. Paid status and
  * amount changes apply to the chosen month only.
  */
-export function BillsScreen({ data, months, month, onMonthChange, onChange }: Props) {
+export function BillsScreen({ data, months, month, today, onMonthChange, onChange, onOpenBill, onAddBill }: Props) {
   const [openDate, setOpenDate] = useState<string | null>(null)
   const occurrences = billsForMonth(data, month)
   const summary = summarizeBills(occurrences)
@@ -34,12 +40,16 @@ export function BillsScreen({ data, months, month, onMonthChange, onChange }: Pr
 
   return (
     <div className="tab-screen">
-      <h1 className="tab-title">Monthly Bills</h1>
+      <div className="screen-top">
+        <h1 className="tab-title">Monthly Bills</h1>
+        <button type="button" className="button-small button-small-primary" onClick={onAddBill}><Icon name="plus" size={16} /> Add Bill</button>
+      </div>
       <MonthSwitch months={months} value={month} onChange={changeMonth} />
       <div className="stat-grid">
-        <div className="stat"><small>Monthly Total</small><b>{money(summary.knownTotal)}</b></div>
+        <div className="stat"><small>Monthly Total</small><b>{money(summary.knownTotal)}</b><small>Planned, paid or not</small></div>
         <div className="stat"><small>Left to Pay</small><b>{money(summary.leftToPay)}</b>{summary.unpaidUnknownCount > 0 && <small>+ unknown amount</small>}</div>
       </div>
+      <LeftToPayMessage bills={summary} month={month} />
       {summary.unknownCount > 0 && (
         <p className="muted-note" role="status">{summary.unknownCount === 1 ? '1 bill amount needs to be entered.' : `${summary.unknownCount} bill amounts need to be entered.`}</p>
       )}
@@ -48,7 +58,7 @@ export function BillsScreen({ data, months, month, onMonthChange, onChange }: Pr
       {days.length === 0 && (
         <div className="empty-block">
           <p>No bills for {formatYearMonth(month)}.</p>
-          <p>Adding bills comes in a later version. You can import a data file in Data.</p>
+          <p>Tap Add Bill to add one.</p>
         </div>
       )}
       <div className="bill-days">
@@ -78,7 +88,7 @@ export function BillsScreen({ data, months, month, onMonthChange, onChange }: Pr
               {isOpen && (
                 <div id={panelId} className="day-bills">
                   {day.occurrences.map(occurrence => (
-                    <BillItem key={occurrence.bill.id} data={data} occurrence={occurrence} onChange={onChange} />
+                    <BillItem key={occurrence.bill.id} data={data} occurrence={occurrence} today={today} onChange={onChange} onOpenBill={onOpenBill} />
                   ))}
                 </div>
               )}
@@ -90,7 +100,7 @@ export function BillsScreen({ data, months, month, onMonthChange, onChange }: Pr
   )
 }
 
-function BillItem({ data, occurrence, onChange }: { data: FinanceData; occurrence: BillOccurrence; onChange: Props['onChange'] }) {
+function BillItem({ data, occurrence, today, onChange, onOpenBill }: { data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; onChange: Props['onChange']; onOpenBill: (id: Id) => void }) {
   const { bill, month, amount, paid, amountChangedThisMonth } = occurrence
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
@@ -118,11 +128,16 @@ function BillItem({ data, occurrence, onChange }: { data: FinanceData; occurrenc
       <div className="bill-line">
         <small>{bill.category} · {ownerName(data.space, bill.owner)}{amountChangedThisMonth && ' · Changed for this month'}</small>
         <button type="button" className={`paid-toggle${paid ? ' is-paid' : ''}`} aria-pressed={paid} aria-label={`${bill.name} paid in ${monthName}`}
-          onClick={() => onChange(current => setBillPaid(current, bill.id, month, !paid))}>
+          onClick={() => onChange(current => setBillPaid(current, bill.id, month, !paid, today))}>
           {paid ? '✓ Paid' : '○ Pending'}
         </button>
       </div>
-      {!editing && <button type="button" className="text-button" onClick={startEditing}>Change Amount for {monthName}</button>}
+      {!editing && (
+        <div className="inline-actions">
+          <button type="button" className="text-button" onClick={startEditing}>Change Amount for {monthName}</button>
+          <button type="button" className="text-button" aria-label={`${bill.name} details`} onClick={() => onOpenBill(bill.id)}>Details</button>
+        </div>
+      )}
       {editing && (
         <div className="amount-editor">
           <label className="form-field">Amount for {monthName} ({data.space.currency})
@@ -135,7 +150,7 @@ function BillItem({ data, occurrence, onChange }: { data: FinanceData; occurrenc
             {amountChangedThisMonth && <button type="button" className="button-small" onClick={() => saveAmount(undefined)}>Use Usual Amount</button>}
             <button type="button" className="button-small" onClick={() => setEditing(false)}>Cancel</button>
           </div>
-          <p className="field-help">Only {monthName} changes. Paying a loan bill never changes the loan balance.</p>
+          <p className="field-help">Only {monthName} changes. To change the usual amount for the months ahead, open Details. Paying a loan bill never changes the loan balance.</p>
         </div>
       )}
     </div>

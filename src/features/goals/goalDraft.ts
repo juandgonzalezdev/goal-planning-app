@@ -27,7 +27,7 @@ export const EMPTY_NEW_GOAL: NewGoalState = { draft: EMPTY_GOAL_DRAFT, step: 'fo
 
 export const draftFromGoal = (goal: Goal): GoalDraft => ({
   name: goal.name,
-  target: (goal.target / 100).toFixed(2),
+  target: goal.target === null ? '' : (goal.target / 100).toFixed(2),
   dated: goal.deadline !== null,
   deadline: goal.deadline ?? '',
 })

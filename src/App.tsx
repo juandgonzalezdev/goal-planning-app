@@ -1,24 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
-import { useSpace } from './app/useSpace'
+import { alexDemo, useSpace, type DemoFixture } from './app/useSpace'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { browserStorage } from './data/localStore'
+import { readChartView, writeChartView, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
 import type { Id } from './domain/finance/types'
 import type { ConfirmedGoal } from './domain/goal'
 import type { CalendarDate } from './domain/goalTime'
+import { BillScreen } from './features/bills/BillScreen'
 import { BillsScreen } from './features/BillsScreen'
+import { CardsScreen } from './features/cards/CardsScreen'
+import { DebtScreen } from './features/cards/DebtScreen'
 import { DataScreen } from './features/DataScreen'
 import { GoalDetailScreen } from './features/goals/GoalDetailScreen'
 import { EMPTY_NEW_GOAL, type NewGoalState } from './features/goals/goalDraft'
 import { GoalsScreen } from './features/goals/GoalsScreen'
 import { NewGoalScreen } from './features/goals/NewGoalScreen'
+import { HistoryScreen } from './features/HistoryScreen'
 import { HomeScreen } from './features/HomeScreen'
-import { CardsScreen, ComingLater } from './features/PlaceholderScreens'
 import { SettingsScreen } from './features/SettingsScreen'
 import { GoalPlanner } from './GoalPlanner'
 import { AuthPreview } from './screens/AuthPreview'
@@ -36,19 +40,25 @@ type Props = {
   getToday?: () => CalendarDate
   /** Where the own space is saved. Tests pass their own; the app uses the browser's localStorage. */
   storage?: Storage | null
+  /** The invented data Explore the App opens: Alex's Individual demo. Tests may pass another. */
+  createDemo?: () => DemoFixture
 }
 
 /**
  * The app shell: header, the current screen, the tab bar and the moves
  * between screens.
  *
- * The Goal Planner and Cards stay on the page once a space is open and are
- * only hidden while another screen shows. Hidden content is not displayed,
+ * The Goal Planner stays on the page once a space is open and is only
+ * hidden while another screen shows. Hidden content is not displayed,
  * cannot be reached with the keyboard and is skipped by screen readers,
  * and everything typed in it is still there when the user comes back.
+ *
+ * Every screen reads the same records (the open space's data) and changes
+ * them through `space.update`, so Home, Bills, Cards, Data, History and
+ * the goals always agree.
  */
-function App({ getToday = todayString, storage = browserStorage() }: Props) {
-  const space = useSpace(storage, getToday)
+function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo }: Props) {
+  const space = useSpace(storage, getToday, createDemo)
   const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // A copy for Home to show. The goal itself is owned by GoalPlanner.
@@ -56,6 +66,13 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
   const [goalId, setGoalId] = useState<Id | null>(null)
   const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
+  // The card or loan, and the bill, shown on their own screens (null: adding a new one).
+  const [debtId, setDebtId] = useState<Id | null>(null)
+  const [billId, setBillId] = useState<Id | null>(null)
+  // The planned goal last saved as a goal, so it is not saved twice.
+  const [savedPlan, setSavedPlan] = useState<ConfirmedGoal | null>(null)
+  const [chartView, setChartView] = useState<BillsChartView>(() => readChartView(storage))
+  const [confirmReset, setConfirmReset] = useState(false)
   // The months follow "today", which differs between the demo and the own
   // space. A month chosen for another "today" is not reused.
   const thisMonth = yearMonthOf(space.today)
@@ -95,17 +112,32 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
-  const resetGoals = () => { setConfirmedGoal(null); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL) }
-  const exitDemo = () => { space.closeDemo(); resetGoals(); replace('welcome') }
+  const resetGoals = () => { setConfirmedGoal(null); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setSavedPlan(null) }
+  const exitDemo = () => { space.closeDemo(); resetGoals(); setConfirmReset(false); replace('welcome') }
+  const resetDemo = () => { space.resetDemo(); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setConfirmReset(false) }
   const erase = () => {
     const erased = space.eraseOwnSpace()
     if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); replace('welcome') }
     return erased
   }
   const openGoal = (id: Id) => { setGoalId(id); go('goal') }
+  const openDebt = (id: Id | null) => { setDebtId(id); go('debt') }
+  const openBill = (id: Id | null) => { setBillId(id); go('bill') }
   const selectedGoal = open?.data.goals.find(goal => goal.id === goalId && goal.status === 'active') ?? null
-  // New goals belong to the one person in an Individual space, and are shared in a Duo.
+  // New records belong to the one person in an Individual space, and are shared in a Duo.
   const newGoalOwner = open?.data.space.mode === 'individual' ? open.data.space.members[0].id : 'shared'
+  const changeChartView = (view: BillsChartView) => { setChartView(view); writeChartView(storage, view) }
+  const savePlannedGoal = () => {
+    if (!open || !confirmedGoal) return
+    const id = newId()
+    const created = createGoal(open.data, id, {
+      name: confirmedGoal.details.name, owner: newGoalOwner, target: confirmedGoal.input.targetAmount, deadline: confirmedGoal.input.targetDate,
+    }, space.today)
+    if (created.status !== 'valid') return
+    space.update(() => created.data)
+    setSavedPlan(confirmedGoal)
+    openGoal(id)
+  }
   const selectTab = (tab: Tab) => { if (tab !== screen) go(tab) }
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
@@ -124,8 +156,21 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
       </header>
       {open?.kind === 'demo' && (
         <div className="demo-banner" role="note">
-          <span><b>Demo</b> · All information is invented · Changes are not saved</span>
-          <button type="button" className="button-small" onClick={exitDemo}>Exit Demo</button>
+          {confirmReset
+            ? <>
+              <span>Put the original example back? Your changes in the demo are lost. Your own space is not touched.</span>
+              <span className="inline-actions">
+                <button type="button" className="button-small button-small-primary" onClick={resetDemo}>Restore Example</button>
+                <button type="button" className="button-small" onClick={() => setConfirmReset(false)}>Cancel</button>
+              </span>
+            </>
+            : <>
+              <span><b>Demo</b> · Alex is invented · All information is invented · Changes are not saved</span>
+              <span className="inline-actions">
+                <button type="button" className="button-small" onClick={() => setConfirmReset(true)}>Reset Demo</button>
+                <button type="button" className="button-small" onClick={exitDemo}>Exit Demo</button>
+              </span>
+            </>}
         </div>
       )}
       {space.saveFailed && <div className="save-warning" role="alert">This browser did not save your latest changes. They will be lost when you close the page.</div>}
@@ -145,10 +190,26 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
         {open && <>
           {shows('home') && <div className="screen" data-screen="home">
             <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} confirmedGoal={confirmedGoal} today={space.today}
-              onOpen={go} onOpenGoal={openGoal} />
+              plannedGoalSaved={!!confirmedGoal && savedPlan === confirmedGoal} chartView={chartView} onChartViewChange={changeChartView}
+              onChange={space.update} onOpen={go} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
+              onSavePlannedGoal={savePlannedGoal} />
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
-            <BillsScreen data={open.data} months={months} month={month} onMonthChange={setMonth} onChange={space.update} />
+            <BillsScreen data={open.data} months={months} month={month} today={space.today} onMonthChange={setMonth} onChange={space.update}
+              onOpenBill={openBill} onAddBill={() => openBill(null)} />
+          </div>}
+          {shows('cards') && <div className="screen" data-screen="cards">
+            <CardsScreen data={open.data} month={month} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
+          </div>}
+          {shows('debt') && <div className="screen" data-screen="debt">
+            <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} month={month} today={space.today} owner={newGoalOwner} newId={newId}
+              onBack={back} onChange={space.update} onOpenBill={openBill}
+              onCreated={id => { setDebtId(id); replace('debt') }} onDeleted={() => { setDebtId(null); back() }} />
+          </div>}
+          {shows('bill') && <div className="screen" data-screen="bill">
+            <BillScreen key={`${billId ?? 'new'}:${month}`} data={open.data} billId={billId} month={month} today={space.today} owner={newGoalOwner} newId={newId}
+              onBack={back} onChange={space.update} onOpenDebt={openDebt}
+              onCreated={id => { setBillId(id); replace('bill') }} onDeleted={() => { setBillId(null); back() }} />
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
             <GoalsScreen data={open.data} today={space.today} onBack={back} onNew={() => go('new-goal')} onOpenGoal={openGoal} />
@@ -171,21 +232,20 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
               }} />
           </div>}
           {shows('history') && <div className="screen" data-screen="history">
-            <ComingLater title="Financial History"><p>Your income, bills, balances and goal activity over time will appear here in a later version.</p></ComingLater>
+            <HistoryScreen data={open.data} />
           </div>}
           {shows('data') && <div className="screen" data-screen="data">
-            <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} onReplace={data => space.update(() => data)} />
+            <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today} owner={newGoalOwner} newId={newId}
+              onChange={space.update} onReplace={data => space.update(() => data)} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
+              onAddGoal={() => go('new-goal')} onResetDemo={resetDemo} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
-            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onErase={erase}
+            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onResetDemo={resetDemo} onErase={erase}
               onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} />
           </div>}
         </>}
         {/* Kept on the page while a space is open, so nothing typed in them is lost. */}
         {open && <>
-          <div className="screen screen-section" data-screen="cards" hidden={!shows('cards')}>
-            <CardsScreen />
-          </div>
           <div className="screen screen-section" data-screen="planner" hidden={!shows('planner')}>
             <button type="button" className="back-link" onClick={back}><Icon name="arrowLeft" size={18} /> Home</button>
             <GoalPlanner getToday={getToday} onConfirmedGoalChange={setConfirmedGoal} />
@@ -194,7 +254,7 @@ function App({ getToday = todayString, storage = browserStorage() }: Props) {
       </main>
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'
-          : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved'
+          : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved · No account, no bank connection'
           : 'Prototype · Saved on this device only · Not secure storage · No bank connection'}
       </footer>
     </div>

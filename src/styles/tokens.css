@@ -27,6 +27,7 @@
   --color-selected-text: #462795;
   --color-focus: #8b5cf6;
   --color-track: #ebebf0;
+  --color-track-strong: #c9cad6;
   /* Meaning colours stay green (on track) and amber (needs attention). */
   --color-positive: #128062;
   --color-positive-soft: #eaf7f1;
@@ -75,6 +76,7 @@
   --color-selected-border: #8f6ad0;
   --color-selected-text: #f1eaff;
   --color-track: #464252;
+  --color-track-strong: #6a6580;
   --color-positive: #4fd1a5;
   --color-positive-soft: #173a30;
   --color-warning-text: #f3c77c;
@@ -100,6 +102,7 @@
     --color-selected-border: #8f6ad0;
     --color-selected-text: #f1eaff;
     --color-track: #464252;
+  --color-track-strong: #6a6580;
     --color-positive: #4fd1a5;
     --color-positive-soft: #173a30;
     --color-warning-text: #f3c77c;

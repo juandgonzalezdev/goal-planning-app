@@ -248,3 +248,71 @@ button.monthly-row:hover { background: var(--color-surface-hover); }
 .amount-in { color: var(--color-positive); }
 .muted-note:empty { display: none; }
 :is(.goal-card, .tool-row):focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* Alex demo: Home questions, quick edits, savings by purpose, Cards and Data editing */
+.stat-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 420px) { .stat-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat-grid.three > :last-child { grid-column: 1 / -1; } }
+.left-to-pay { display: grid; gap: 6px; }
+.left-to-pay .year-total small { font-size: 13px; font-weight: 500; color: var(--color-text-muted); }
+.left-message { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; color: var(--color-text); }
+.left-message.is-done { color: var(--color-positive); font-weight: 600; }
+.segmented { display: inline-flex; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); overflow: hidden; flex-shrink: 0; }
+.segmented button { min-height: 36px; padding: 6px 12px; border: 0; background: var(--color-surface); color: var(--color-text); font-size: 13px; cursor: pointer; }
+.segmented button + button { border-left: 1px solid var(--color-border-strong); }
+.segmented button.is-active { background: var(--color-selected); color: var(--color-selected-text); font-weight: 650; }
+.category-bars { display: grid; gap: 6px; }
+.category-bars button {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; min-height: 44px; padding: 8px 10px; text-align: left; cursor: pointer;
+  font-size: 13px; color: var(--color-text); background: var(--color-surface-muted); border: 1px solid transparent; border-radius: var(--radius-control);
+}
+.category-bars button .bar { grid-column: 1 / -1; }
+.category-bars button b { font-variant-numeric: tabular-nums; }
+.category-bars button.is-active { background: var(--color-selected); border-color: var(--color-selected-border); color: var(--color-selected-text); }
+.total-line { margin: 0; padding-top: 8px; border-top: 1px solid var(--color-border); font-weight: 650; }
+.category-bills { padding-top: 4px; }
+.quick-bill { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border); }
+.quick-bill:last-child { border-bottom: 0; }
+.line small, .line-button small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); }
+.line-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.line-button > b { font-variant-numeric: tabular-nums; text-align: right; }
+.line-button > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.paid-tag { color: var(--color-positive) !important; }
+.quick-input { width: 100%; min-height: 44px; padding: 10px; font-size: 16px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-small); background: var(--color-surface); color: var(--color-text); }
+.inline-link { padding: 0; min-height: 0; font-size: inherit; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
+.line-button { width: 100%; min-height: 44px; padding: 6px 2px; border: 0; background: transparent; color: var(--color-text); text-align: left; cursor: pointer; border-radius: 8px; }
+.line-button:hover { background: var(--color-surface-hover); }
+.line-button > .icon { color: var(--color-text-muted); flex-shrink: 0; }
+.debt-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 4px 0; min-height: 48px;
+  border: 0; background: transparent; color: var(--color-text); text-align: left; cursor: pointer;
+}
+.debt-toggle > span:first-child { display: grid; gap: 4px; }
+.debt-toggle small { font-size: 12px; color: var(--color-text-muted); }
+.debt-toggle-label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--color-accent); }
+.debt-details { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+.savings-split { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--color-border); }
+.savings-split h3 { margin: 0; }
+.bar.stacked { display: flex; height: 12px; }
+.bar.stacked > span { border-radius: 0; }
+.goal-kind, .goal-row-amounts { display: block; font-size: 12px; color: var(--color-text-muted); }
+.goal-row-amounts { grid-column: 1 / -1; }
+.effect-list { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.effect-list legend, .choice-inline legend { font-size: 13px; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.effect-option {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface);
+}
+.effect-option:has(input:checked) { border-color: var(--color-selected-border); background: var(--color-selected); }
+.effect-option:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.effect-option input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+.effect-option span { display: grid; gap: 2px; font-size: 14px; }
+.effect-option small { font-size: 12.5px; color: var(--color-text-muted); line-height: 1.45; }
+.effect-option.is-disabled { opacity: .55; cursor: not-allowed; }
+.check-line { display: flex; gap: 10px; align-items: center; font-size: 14px; min-height: 44px; }
+.check-line input { width: 20px; height: 20px; }
+.choice-inline { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.choice-inline label { display: flex; gap: 8px; align-items: center; min-height: 36px; font-size: 14px; }
+.edit-box { padding: 12px; border-radius: 11px; background: var(--color-surface-muted); }
+.record { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--color-border); }
+.record:first-of-type { border-top: 0; }
+:is(.segmented button, .category-bars button, .line-button, .debt-toggle, .inline-link):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }

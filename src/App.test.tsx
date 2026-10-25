@@ -3,9 +3,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { STORAGE_KEY } from './data/localStore'
+import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { memoryStorage } from './test/memoryStorage'
 
-// Invented example values and a fixed date. The demo has its own date (23 Oct 2026).
+// Invented example values and a fixed date. The demos have their own date (23 Oct 2026).
+// These tests use the invented Duo household (Alex & Jordan) to keep covering the
+// Duo screens; the public Alex demo has its own tests in AlexDemo.test.tsx.
 const TODAY = '2026-10-21'
 
 afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme') })
@@ -20,8 +23,10 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const stat = (label: string) => text(screen.getByText(label).parentElement)
 
+const householdDemo = () => ({ data: createDemoHousehold(), today: DEMO_TODAY })
+
 function start(storage: Storage = memoryStorage()) {
-  return { storage, ...render(<App getToday={() => TODAY} storage={storage} />) }
+  return { storage, ...render(<App getToday={() => TODAY} storage={storage} createDemo={householdDemo} />) }
 }
 
 /** Welcome → Create Account → Welcome Setup → Home, as one person. */
@@ -136,7 +141,7 @@ describe('Welcome Setup', () => {
 
     expect(screen.getByText('Robin & Sasha · Duo')).toBeTruthy()
     expect(saved(storage).space).toMatchObject({ mode: 'duo', currency: 'EUR', members: [{ name: 'Robin' }, { name: 'Sasha' }] })
-    expect(stat('Household Income')).toContain('—')
+    expect(stat('Income')).toContain('—')
   })
 
   it('creates an empty Individual space: no income, bills, loans, accounts or goals', () => {
@@ -145,7 +150,7 @@ describe('Welcome Setup', () => {
     const data = saved(storage)
     for (const list of ['income', 'bills', 'billMonths', 'debts', 'moneyAccounts', 'balances', 'goals', 'goalMovements']) expect(data[list]).toEqual([])
     expect(stat('Income')).toContain('—')
-    expect(stat('Total Debt')).toContain('0,00 zł')
+    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('0,00 zł')
   })
 
   it('keeps what was typed when going back to Welcome and returning', async () => {
@@ -200,10 +205,11 @@ describe('Demo', () => {
     openDemo()
     expect(screen.getByRole('note').textContent).toContain('All information is invented')
     expect(screen.getByText('Demo · Invented data')).toBeTruthy()
-    expect(stat('Household Income')).toContain('11 700,35 zł')
-    expect(stat('Monthly Commitments')).toContain('5571,43 zł')
-    expect(stat('Monthly Left to Pay')).toContain('0,00 zł')
-    expect(stat('Total Debt')).toContain('46 600,40 zł')
+    expect(stat('Income')).toContain('11 700,35 zł')
+    expect(stat('Planned Bills')).toContain('5571,43 zł')
+    expect(text(screen.getByRole('region', { name: 'Left to Pay' }))).toContain('0,00 zł')
+    expect(text(screen.getByRole('region', { name: 'Left to Pay' }))).toContain('All your October bills are paid.')
+    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('46 600,40 zł')
   })
 
   it('never saves, and starts fresh after Exit Demo', async () => {
@@ -238,63 +244,67 @@ describe('Home', () => {
   // Accessible names keep Intl's no-break spaces; match them as plain spaces.
   const named = (expected: string) => (name: string) => name.replace(/\u00a0|\u202f/g, ' ') === expected
 
-  it('shows the six approved sections in order, with Yearly Net Income last', () => {
+  it('answers its questions in order, with Yearly Net Income last', () => {
     openDemo()
     const main = document.querySelector('main')!
     const order = [...main.querySelectorAll('[data-screen="home"] section')].map(s => s.getAttribute('aria-label') ?? s.querySelector('h2')?.textContent)
-    expect(order).toEqual(['Monthly Overview', 'Outstanding Debt', 'Monthly Bills · By Category', 'Our Money', 'Our Goals', 'Yearly Net Income'])
+    expect(order).toEqual(['This Month', 'Left to Pay', 'Monthly Bills by Category', 'Total Debt', 'Our Money', 'Our Goals', 'Plan Another Goal', 'Yearly Net Income'])
   })
 
-  it('lists what is still owed on each card and loan', () => {
+  it('lists what is still owed on each card and loan inside Total Debt', () => {
     openDemo()
-    const debt = text(region('Outstanding Debt'))
-    expect(debt).toContain('Credit Card3250,40 zł')
-    expect(debt).toContain('Car Loan42 000,00 zł')
-    expect(debt).toContain('Furniture Loan1350,00 zł')
+    fireEvent.click(within(region('Total Debt')).getByRole('button', { expanded: false }))
+    const debt = text(region('Total Debt'))
+    expect(debt).toContain('Credit CardAs of 23 Oct 20263250,40 zł')
+    expect(debt).toContain('Car LoanAs of 23 Oct 202642 000,00 zł')
+    expect(debt).toContain('Furniture LoanAs of 23 Oct 20261350,00 zł')
   })
 
   it('shows bills by category, and the bills of a chosen category', () => {
     openDemo()
-    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5571,43 zł')
-    const housing = within(region('Monthly Bills · By Category')).getByRole('button', { name: /Housing/ })
+    expect(donutText('Monthly Bills by Category')).toBe('TOTAL PLANNED5571,43 zł')
+    const housing = within(region('Monthly Bills by Category')).getByRole('button', { name: /Housing/ })
     expect(text(housing)).toContain('3000,00 zł')
     fireEvent.click(housing)
     expect(pressed(housing)).toBe('true')
-    expect(donutText('Monthly Bills · By Category')).toBe('Housing3000,00 zł')
-    expect(text(screen.getByRole('list', { name: 'Housing bills' }))).toBe('Building Fees600,00 zł' + 'Rent2400,00 zł')
+    expect(donutText('Monthly Bills by Category')).toBe('Housing3000,00 zł')
+    const housingBills = [...screen.getByRole('list', { name: 'Housing bills' }).querySelectorAll('li')].map(li => text(li.querySelector('.line')))
+    expect(housingBills).toEqual(['Building FeesPaid600,00 zł', 'RentPaid2400,00 zł'])
     fireEvent.click(housing)
     expect(pressed(housing)).toBe('false')
-    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5571,43 zł')
+    expect(donutText('Monthly Bills by Category')).toBe('TOTAL PLANNED5571,43 zł')
   })
 
   it('follows the month and says when an amount is not known', () => {
     openDemo()
     fireEvent.click(button('November 2026'))
-    const categories = region('Monthly Bills · By Category')
-    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5450,98 zł')
+    const categories = region('Monthly Bills by Category')
+    expect(donutText('Monthly Bills by Category')).toBe('TOTAL PLANNED5450,98 zł')
     expect(within(categories).queryByRole('button', { name: /Utilities/ })).toBeNull()
-    expect(within(categories).getByText('One bill has no recorded amount for this month.')).toBeTruthy()
+    expect(within(categories).getByText('One bill has no amount for this month yet, so it is not in the chart.')).toBeTruthy()
   })
 
-  it('shows Our Money by kind, with Investment chosen first as in v5.9', () => {
+  it('shows Our Money by kind, with Investments chosen first as in v5.9', () => {
     openDemo()
     const money = region('Our Money')
-    expect(pressed(within(money).getByRole('button', { name: /Investment/ }))).toBe('true')
-    expect(donutText('Our Money')).toBe('Investment980,65 zł')
+    expect(pressed(within(money).getByRole('button', { name: /Investments/ }))).toBe('true')
+    expect(donutText('Our Money')).toBe('Investments980,65 zł')
     fireEvent.click(within(money).getByRole('button', { name: /Daily Spending/ }))
     expect(donutText('Our Money')).toBe('Daily Spending1200,35 zł')
-    expect(text(within(money).getByRole('button', { name: /Emergency Fund/ }))).toContain('300,00 zł')
+    // The old emergency cash account is now saved money, inside Savings.
+    expect(text(within(money).getByRole('button', { name: /^Savings/ }))).toContain('300,00 zł')
   })
 
   it('shows the two example goals empty, the Goal Planner and the Assistant', () => {
     openDemo()
     const goals = region('Our Goals')
     expect(text(goals)).toContain('0,00 zł')
-    expect(text(goals)).toContain('Saved toward 2 goals')
+    expect(text(goals)).toContain('Saved for 2 goals')
     expect(within(goals).getByRole('progressbar', { name: 'Trip to Japan progress' }).getAttribute('aria-valuenow')).toBe('0')
     expect(within(goals).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('0')
-    expect(within(goals).getByText('Coming soon')).toBeTruthy()
-    fireEvent.click(within(goals).getByRole('button', { name: /Goal Planner/ }))
+    const planner = region('Plan Another Goal')
+    expect(within(planner).getByText('Coming soon')).toBeTruthy()
+    fireEvent.click(within(planner).getByRole('button', { name: /Goal Planner/ }))
     expect(section('planner')!.hidden).toBe(false)
   })
 
@@ -352,16 +362,16 @@ describe('Home', () => {
     type('Amount for November 2026 (PLN)', '90')
     fireEvent.click(button('Save'))
     fireEvent.click(tab('Home'))
-    const categories = region('Monthly Bills · By Category')
+    const categories = region('Monthly Bills by Category')
     expect(text(within(categories).getByRole('button', { name: /Utilities/ }))).toContain('90,00 zł')
-    expect(within(categories).queryByText(/no recorded amount/)).toBeNull()
-    expect(donutText('Monthly Bills · By Category')).toBe('TOTAL MONTHLY5540,98 zł')
+    expect(within(categories).queryByText(/no amount for this month/)).toBeNull()
+    expect(donutText('Monthly Bills by Category')).toBe('TOTAL PLANNED5540,98 zł')
   })
 
   it('starts empty in your own space, with no invented numbers', () => {
     createIndividualSpace()
-    expect(text(region('Outstanding Debt'))).toContain('No cards or loans yet.')
-    expect(text(region('Monthly Bills · By Category'))).toContain('No bills for October 2026.')
+    expect(text(region('Total Debt'))).toContain('No cards or loans yet')
+    expect(text(region('Monthly Bills by Category'))).toContain('No bills for October 2026.')
     expect(text(region('My Money'))).toContain('No accounts yet.')
     expect(text(region('My Goals'))).toContain('No goals yet.')
     const income = region('Yearly Net Income')
@@ -378,8 +388,9 @@ describe('Goals & Savings Pots', () => {
   const goalNames = () => [...document.querySelectorAll('[data-screen="goals"] .goal-card .line b')].map(b => b.textContent)
   const openGoals = () => { fireEvent.click(within(region('Our Goals')).getByRole('button', { name: /View All/ })) }
   const openDemoGoal = (name: string) => { openDemo(); openGoals(); fireEvent.click(button(new RegExp(`^${name}`))) }
-  const saveMovement = (kind: 'Add' | 'Withdraw', amount: string, note = '') => {
+  const saveMovement = (kind: 'Add' | 'Withdraw', amount: string, note = '', effect?: RegExp) => {
     fireEvent.click(within(screen.getByRole('group', { name: 'Type of change' })).getByRole('button', { name: kind }))
+    if (effect) fireEvent.click(screen.getByRole('radio', { name: effect }))
     type(/^Amount/, amount)
     if (note) type('Note (optional)', note)
     fireEvent.click(button(kind === 'Add' ? 'Save Contribution' : 'Save Withdrawal'))
@@ -420,7 +431,7 @@ describe('Goals & Savings Pots', () => {
   it('creates a flexible goal only after the confirmation, starting at 0', async () => {
     openDemo()
     openGoals()
-    fireEvent.click(button(/New Goal/))
+    fireEvent.click(button(/Add Goal/))
     expect(heading('Create a Goal')).toBeTruthy()
     fireEvent.click(button('Review Goal'))
     expect(screen.getByText('Enter a name for your goal.')).toBeTruthy()
@@ -435,7 +446,7 @@ describe('Goals & Savings Pots', () => {
     expect(screen.queryByRole('heading', { name: 'To Reach Your Goal' })).toBeNull()
 
     // Edit keeps what was typed.
-    fireEvent.click(within(document.querySelector<HTMLElement>('.inline-actions')!).getByRole('button', { name: 'Edit' }))
+    fireEvent.click(within(document.querySelector<HTMLElement>('[data-screen="new-goal"] .inline-actions')!).getByRole('button', { name: 'Edit' }))
     expect(field('What are you saving for?').value).toBe('New Bike')
     fireEvent.click(button('Review Goal'))
     fireEvent.click(button('Create Goal'))
@@ -453,7 +464,7 @@ describe('Goals & Savings Pots', () => {
   it('creates a goal with a date after today, and shows the suggested pace before saving', () => {
     openDemo()
     openGoals()
-    fireEvent.click(button(/New Goal/))
+    fireEvent.click(button(/Add Goal/))
     type('What are you saving for?', 'Concert')
     type(/^Target Amount/, '300')
     fireEvent.change(field('Deadline'), { target: { value: 'dated' } })
@@ -473,17 +484,17 @@ describe('Goals & Savings Pots', () => {
   it('saves nothing when the form is left, and keeps the draft for later', async () => {
     openDemo()
     openGoals()
-    fireEvent.click(button(/New Goal/))
+    fireEvent.click(button(/Add Goal/))
     type('What are you saving for?', 'Half done')
     fireEvent.click(button(/All Goals/))
     await waitFor(() => expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift']))
-    fireEvent.click(button(/New Goal/))
+    fireEvent.click(button(/Add Goal/))
     expect(field('What are you saving for?').value).toBe('Half done')
   })
 
   it('suggests a weekly or monthly amount for a goal with a date, and nothing for a flexible one', async () => {
     openDemoGoal('Christmas Gift')
-    expect(screen.getByText('Target date: 25 Dec 2026 · 63 days left')).toBeTruthy()
+    expect(screen.getByText('With Date · Target date: 25 Dec 2026 · 63 days left')).toBeTruthy()
     const pace = region('To Reach Your Goal')
     expect(text(pace)).toContain('55,56 zł per week for 9 weeks')
     expect(text(pace)).toContain('250,00 zł per month for 2 months')
@@ -496,21 +507,21 @@ describe('Goals & Savings Pots', () => {
     expect(screen.queryByRole('heading', { name: 'To Reach Your Goal' })).toBeNull()
   })
 
-  it('adds a contribution with a note, without changing Our Money', async () => {
+  it('gives a purpose to savings already there, without changing the money totals', async () => {
     openDemo()
-    const moneyBefore = text(region('Our Money'))
+    const moneyBefore = text(region('Our Money').querySelector('.tiles'))
     openGoals()
     fireEvent.click(button(/^Trip to Japan/))
-    saveMovement('Add', '100', 'First savings')
-    expect(text(screen.getByRole('status'))).toBe('Contribution of 100,00 zł saved.')
+    saveMovement('Add', '100', 'First savings', /Savings I already have/)
+    expect(text(screen.getAllByRole('status').find(s => s.textContent)!)).toBe('Added 100,00 zł (from unassigned savings). Demo only: not saved.')
     expect(text(region('Progress'))).toContain('100,00 zł')
     expect(text(region('Progress'))).toContain('19 900,00 zł still needed')
-    expect(text(region('Savings Activity'))).toBe('Savings Activity23 Oct 2026 · First savings+100,00 zł')
+    expect(text(region('Savings Activity'))).toBe('Savings Activity23 Oct 2026 · First savingsFrom unassigned savings+100,00 zł')
 
     fireEvent.click(button(/All Goals/))
     await waitFor(() => expect(stat('Saved in Goals')).toContain('100,00 zł'))
     fireEvent.click(button(/Home/))
-    await waitFor(() => expect(text(region('Our Money'))).toBe(moneyBefore))
+    await waitFor(() => expect(text(region('Our Money').querySelector('.tiles'))).toBe(moneyBefore))
     expect(text(region('Our Goals'))).toContain('100,00 zł')
   })
 
@@ -518,12 +529,12 @@ describe('Goals & Savings Pots', () => {
     openDemoGoal('Trip to Japan')
     saveMovement('Add', '100')
     saveMovement('Withdraw', '150')
-    expect(screen.getByText('You can withdraw up to 100,00 zł, what is saved in this goal.', { normalizer: s => s.replace(/\u00a0|\u202f/g, ' ') })).toBeTruthy()
+    expect(screen.getByText('You can take out up to 100,00 zł, what is saved in this goal.', { normalizer: s => s.replace(/\u00a0|\u202f/g, ' ') })).toBeTruthy()
     expect(text(region('Progress'))).toContain('100,00 zł')
     saveMovement('Withdraw', '40', 'Train tickets')
     expect(text(region('Progress'))).toContain('60,00 zł')
     const rows = [...region('Savings Activity').querySelectorAll('li')].map(li => text(li))
-    expect(rows).toEqual(['23 Oct 2026 · Train tickets−40,00 zł', '23 Oct 2026+100,00 zł'])
+    expect(rows).toEqual(['23 Oct 2026 · Train ticketsBack to unassigned savings−40,00 zł', '23 Oct 2026New savings+100,00 zł'])
   })
 
   it('checks the amount and the date of a change', () => {
@@ -535,8 +546,12 @@ describe('Goals & Savings Pots', () => {
     fireEvent.click(button('Save Contribution'))
     expect(screen.getByText('The date can’t be after today.')).toBeTruthy()
     type('Date', '2026-10-01')
+    // New savings can't be dated before the savings balance (23 Oct): that balance would be wrong.
     fireEvent.click(button('Save Contribution'))
-    expect(text(region('Savings Activity'))).toContain('1 Oct 2026+10,00 zł')
+    expect(screen.getByText(/has a balance from a later date/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: /Savings I already have/ }))
+    fireEvent.click(button('Save Contribution'))
+    expect(text(region('Savings Activity'))).toContain('1 Oct 2026From unassigned savings+10,00 zł')
   })
 
   it('edits the name, target and date, and Cancel changes nothing', () => {
@@ -578,7 +593,7 @@ describe('Goals & Savings Pots', () => {
     expect(goalNames()).toEqual(['Trip to Japan'])
     expect(stat('Saved in Goals')).toContain('0,00 zł')
     fireEvent.click(button(/Home/))
-    await waitFor(() => expect(text(region('Our Goals'))).toContain('Saved toward 1 goal'))
+    await waitFor(() => expect(text(region('Our Goals'))).toContain('Saved for 1 goal'))
   })
 
   it('starts empty in your own space, and keeps a new goal after reopening the app', () => {
@@ -587,19 +602,20 @@ describe('Goals & Savings Pots', () => {
     expect(text(region('My Goals'))).toContain('No goals yet.')
     fireEvent.click(within(region('My Goals')).getByRole('button', { name: /View All/ }))
     expect(screen.getByText('No goals yet.')).toBeTruthy()
-    fireEvent.click(button(/New Goal/))
+    fireEvent.click(button(/Add Goal/))
     type('What are you saving for?', 'Laptop')
     type(/^Target Amount/, '4000')
     fireEvent.click(button('Review Goal'))
     fireEvent.click(button('Create Goal'))
     saveMovement('Add', '250')
     expect(saved(storage).goals).toMatchObject([{ name: 'Laptop', target: 400_000, deadline: null, owner: 'member-1', status: 'active' }])
-    expect(saved(storage).goalMovements).toMatchObject([{ amount: 25_000, date: TODAY }])
+    // No savings account yet, so the movement only gives the goal a purpose; nothing is invented.
+    expect(saved(storage).goalMovements).toMatchObject([{ amount: 25_000, date: TODAY, effect: 'assigned' }])
 
     cleanup()
     start(storage)
     expect(text(region('My Goals'))).toContain('250,00 zł')
-    expect(text(region('My Goals'))).toContain('Saved toward 1 goal')
+    expect(text(region('My Goals'))).toContain('Saved for 1 goal')
   })
 
   // Regression (Safari on iPhone via http://<computer address>): that page is not
@@ -612,10 +628,10 @@ describe('Goals & Savings Pots', () => {
       insecureCrypto()
       openDemoGoal('Christmas Gift')
       saveMovement('Add', '100', 'First saving')
-      expect(text(screen.getByRole('status'))).toBe('Contribution of 100,00 zł saved.')
+      expect(text(screen.getAllByRole('status').find(s => s.textContent)!)).toBe('Added 100,00 zł (new savings). Demo only: not saved.')
       expect(text(region('Progress'))).toContain('100,00 zł')
       expect(text(region('Progress'))).toContain('20.0%')
-      expect(text(region('Savings Activity'))).toContain('23 Oct 2026 · First saving+100,00 zł')
+      expect(text(region('Savings Activity'))).toContain('23 Oct 2026 · First savingNew savings+100,00 zł')
       saveMovement('Withdraw', '40')
       expect(text(region('Progress'))).toContain('60,00 zł')
       expect(region('Savings Activity').querySelectorAll('li')).toHaveLength(2)
@@ -631,7 +647,7 @@ describe('Goals & Savings Pots', () => {
       insecureCrypto()
       openDemo()
       openGoals()
-      fireEvent.click(button(/New Goal/))
+      fireEvent.click(button(/Add Goal/))
       type('What are you saving for?', 'Bike')
       type(/^Target Amount/, '900')
       fireEvent.click(button('Review Goal'))
@@ -758,8 +774,8 @@ describe('Monthly Bills', () => {
 
     fireEvent.click(tab('Home'))
     fireEvent.click(button('November 2026'))
-    expect(stat('Monthly Commitments')).toContain('5581,53 zł')
-    expect(stat('Total Debt')).toContain('46 600,40 zł')
+    expect(stat('Planned Bills')).toContain('5581,53 zł')
+    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('46 600,40 zł')
   })
 
   it('shows an empty state in a new space', () => {
@@ -770,29 +786,29 @@ describe('Monthly Bills', () => {
 })
 
 describe('Keeping information between screens', () => {
-  it('keeps loans and calculator results in Cards after visiting other tabs', async () => {
-    createIndividualSpace()
+  it('keeps a loan added in Cards, with its calculator, after visiting other tabs', async () => {
+    const { storage } = createIndividualSpace()
     fireEvent.click(tab('Cards'))
-    expect(heading('Cards & Loans')).toBeTruthy()
-    type('Monthly Income (PLN)', '5000')
-    fireEvent.click(button('+ Add'))
-    type('Name (optional)', 'Test loan')
+    expect(heading('My Loans & Cards')).toBeTruthy()
+    expect(screen.queryByLabelText(/Monthly Income/)).toBeNull()
+    fireEvent.click(button(/Add Card or Loan/))
+    type('Name', 'Test loan')
     type('Remaining Balance (PLN)', '12000')
     type('Yearly Interest (%)', '12')
     type('Monthly Payment (PLN)', '1000')
+    type('Payment Due Day', '10')
+    fireEvent.click(button('Add'))
     type('Extra Each Month (PLN)', '200')
     expect(screen.getByText('Months Saved').nextElementSibling!.textContent).toBe('2')
 
+    fireEvent.click(button(/Back/))
+    await waitFor(() => expect(heading('My Loans & Cards')).toBeTruthy())
     fireEvent.click(tab('Bills'))
+    expect(stat('Monthly Total')).toContain('1000,00 zł')
     fireEvent.click(tab('Home'))
-    fireEvent.click(button(/Goal Planner/))
-    await browserBack()
-    fireEvent.click(tab('Cards'))
-
-    expect(field('Monthly Income (PLN)').value).toBe('5000')
-    expect(field('Name (optional)').value).toBe('Test loan')
-    expect(field('Extra Each Month (PLN)').value).toBe('200')
-    expect(screen.getByText('Months Saved').nextElementSibling!.textContent).toBe('2')
+    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('12 000,00 zł')
+    expect(saved(storage).debts).toMatchObject([{ name: 'Test loan', yearlyInterestBasisPoints: 1200, dueDay: 10 }])
+    expect(saved(storage).bills).toMatchObject([{ name: 'Test loan', amount: 100_000, debtId: saved(storage).debts[0].id }])
   })
 
   it('keeps typed goal values and the evaluated result after visiting other tabs', async () => {
@@ -831,7 +847,7 @@ describe('Keeping information between screens', () => {
     fireEvent.click(button('Home'))
     await waitFor(() => expect(tab('Home')).toBeTruthy())
     // It appears in Our Goals, and opens the Goal Planner again.
-    const goals = screen.getByRole('region', { name: 'My Goals' })
+    const goals = screen.getByRole('region', { name: 'Plan Another Goal' })
     const goal = within(goals).getByRole('button', { name: /Planned goal.*Holiday fund/ })
     expect(within(goal).getByRole('progressbar', { name: 'Holiday fund progress' })).toBeTruthy()
     fireEvent.click(goal)
@@ -849,7 +865,7 @@ describe('Hidden sections', () => {
   it('are hidden from the keyboard and screen readers', () => {
     createIndividualSpace()
     fireEvent.click(tab('Cards'))
-    fireEvent.click(button('+ Add'))
+    fireEvent.click(button(/Add Card or Loan/))
     // The goal planner is on the page but hidden: none of its controls are exposed.
     expect(section('planner')!.hidden).toBe(true)
     expect(screen.queryByRole('button', { name: 'Evaluate goal' })).toBeNull()

@@ -30,7 +30,7 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
   if (state.step === 'confirm' && read.status === 'valid') {
     const { fields } = read
     // A preview only: the same progress the new, empty goal will have.
-    const preview = goalProgress({ id: 'preview', ...fields, currency: data.space.currency, openingBalance: 0, createdOn: today, status: 'active' }, [], today)
+    const preview = goalProgress({ id: 'preview', kind: 'goal', ...fields, currency: data.space.currency, openingBalance: 0, createdOn: today, status: 'active' }, [], today)
     return (
       <div className="tab-screen">
         <button type="button" className="back-link" onClick={() => onStateChange({ ...state, step: 'form' })}><Icon name="arrowLeft" size={18} /> Edit</button>
@@ -38,13 +38,14 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
         <section className="block">
           <dl className="fact-rows">
             <div><dt>Goal</dt><dd>{fields.name}</dd></div>
+            <div><dt>Type</dt><dd>{fields.deadline ? 'With Date' : 'Flexible'}</dd></div>
             <div><dt>Target</dt><dd>{money(fields.target)}</dd></div>
             <div><dt>Deadline</dt><dd>{fields.deadline ? formatDate(fields.deadline) : 'No deadline (Flexible)'}</dd></div>
             <div><dt>Saved so far</dt><dd>{money(0)}</dd></div>
           </dl>
         </section>
         <GoalPace progress={preview} currency={data.space.currency} />
-        <p className="muted-note">This creates a savings pot to track. No money is moved and nothing is paid automatically.</p>
+        <p className="muted-note">This creates a goal that starts at 0. To count money you already saved, add it to the goal afterwards as savings you already have. No money is moved and nothing is paid automatically.</p>
         <div className="inline-actions">
           <button type="button" className="button-small button-small-primary" onClick={() => onCreate(fields)}>Create Goal</button>
           <button type="button" className="button-small" onClick={() => onStateChange({ ...state, step: 'form' })}>Edit</button>
