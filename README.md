@@ -1,75 +1,44 @@
-# React + TypeScript + Vite
+# Goal Planning App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Prototipo web, pensado primero para el móvil, que ayuda a una persona a
+entender sus ingresos, facturas, deudas, dinero y metas con cifras
+explicables y conectadas entre sí.
 
-Currently, two official plugins are available:
+- **Estado:** prototipo de aprendizaje. La prioridad actual es la demo
+  Individual de **Alex** (datos inventados y completamente editables). El modo
+  Duo se muestra, pero su versión privada queda para más adelante.
+- **Sin servidor ni cuentas:** todo se calcula en el navegador. El espacio
+  propio se guarda solo en este dispositivo (`localStorage`); la demo no se
+  guarda nunca.
+- **Interfaz en inglés sencillo**; documentación en español.
+- **Menú:** Home, Bills, Cards, History y Data. Goals, Goal Planner y Settings
+  se abren desde Home o la cabecera.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Empezar
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev      # abre http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Comprobaciones antes de entregar un cambio:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm test         # pruebas (Vitest)
+npm run lint     # ESLint
+npm run build    # TypeScript + compilación de producción
 ```
+
+## Documentación
+
+| Documento | Para qué sirve |
+| --- | --- |
+| [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) | Dónde vive cada cosa y qué archivos revisar para cambiar X. |
+| [docs/FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md) | Las reglas financieras, cómo se relacionan las cifras y ejemplos. |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Instalación, comprobaciones, recorrido de revisión y archivos auxiliares. |
+| [docs/demo-alex.md](docs/demo-alex.md) | Los datos de Alex: valores dados, valores inventados y totales esperados. |
+
+## Tecnología
+
+React 19 + TypeScript + Vite. Pruebas con Vitest y Testing Library (jsdom).
+No hay otras dependencias de ejecución.
