@@ -108,6 +108,12 @@ button.stat:hover { background: var(--color-surface-hover); }
   width: 100%; min-width: 0; min-height: 44px; padding: 10px; font-size: 16px; font-weight: 400;
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-small); background: var(--color-surface); color: var(--color-text);
 }
+/*
+ * Safari on iPhone gives date fields their own minimum width, so they stuck
+ * out past the other fields. Plain appearance lets them fit the column.
+ */
+.form-field input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-height: 44px; text-align: left; }
+.form-field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .form-field input:disabled { background: var(--color-surface-muted); cursor: not-allowed; }
 .form-field input:focus-visible, .form-field select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .form-field-spaced { margin-top: 16px; }
