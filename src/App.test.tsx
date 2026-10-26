@@ -1007,6 +1007,19 @@ describe('Data', () => {
     expect(screen.getByText('Imported · Individual')).toBeTruthy()
   })
 
+  it('says when an imported file could not be saved on this device', async () => {
+    const { storage } = createIndividualSpace()
+    const other = { ...saved(storage), space: { ...saved(storage).space, name: 'Imported' } }
+    fireEvent.click(tab('Data'))
+    await upload(JSON.stringify(other))
+    vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('full') })
+    fireEvent.click(button('Replace'))
+    const status = screen.getAllByRole('status').map(s => s.textContent).join(' ')
+    expect(status).toContain('This browser did not save it')
+    expect(status).not.toContain('Saved on this device')
+    expect(saved(storage).space.name).toBe('Robin')
+  })
+
   it('refuses a broken file and changes nothing', async () => {
     const { storage } = createIndividualSpace()
     fireEvent.click(tab('Data'))

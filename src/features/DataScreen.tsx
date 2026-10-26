@@ -25,7 +25,7 @@ type Props = {
   owner: Owner
   newId: () => string
   onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
-  onReplace: (data: FinanceData) => void
+  onReplace: (data: FinanceData) => SaveOutcome
   onOpenBill: (id: Id | null) => void
   onOpenDebt: (id: Id | null) => void
   onOpenGoal: (id: Id) => void
@@ -361,10 +361,10 @@ function GoalsSection({ data, today, owner, newId, onChange, onOpenGoal, onAddGo
 }
 
 /** Export and import a data file. Importing never replaces anything until the user confirms. */
-function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDemo: boolean; onReplace: (data: FinanceData) => void }) {
+function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDemo: boolean; onReplace: (data: FinanceData) => SaveOutcome }) {
   const [pending, setPending] = useState<FinanceData | null>(null)
   const [errors, setErrors] = useState<string[]>([])
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
 
   const download = () => {
@@ -379,7 +379,7 @@ function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDem
   const readFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
-    setDone(false)
+    setDone('')
     if (!file) return
     const result = importFinanceData(await file.text())
     if (result.status === 'imported') { setErrors([]); setPending(result.data) }
@@ -413,12 +413,12 @@ function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDem
           <div className="callout" role="alert">
             <p>Replace everything in this space with “{pending.space.name}” from the file? This cannot be undone. Export first if you want a copy.</p>
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-primary" onClick={() => { onReplace(pending); setPending(null); setDone(true) }}>Replace</button>
+              <button type="button" className="button-small button-small-primary" onClick={() => { setDone(outcomeText('Your space was replaced with the file.', onReplace(pending))); setPending(null) }}>Replace</button>
               <button type="button" className="button-small" onClick={() => setPending(null)}>Cancel</button>
             </div>
           </div>
         )}
-        {done && <p className="muted-note" role="status">Your space was replaced with the file.</p>}
+        {done && <p className="muted-note" role="status">{done}</p>}
       </>}
     </section>
   </>
