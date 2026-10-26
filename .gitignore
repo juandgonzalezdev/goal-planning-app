@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Delivery packages and temporary copies: keep them outside the repository
+# (see docs/DEVELOPMENT.md, "Archivos auxiliares").
+*.mbox
+*.patch
+*.bak
+*.orig
+*.rej
+
+# Screenshots taken while testing
+shots/
+
+# Secrets and private data: never commit them
+.env
+.env.*
+!.env.example
+goal-planning-data*.json
