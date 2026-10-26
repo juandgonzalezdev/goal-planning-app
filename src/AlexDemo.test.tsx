@@ -272,3 +272,17 @@ describe('Alex demo: keyboard and labels', () => {
     expect(screen.getAllByRole('button').every(b => b.tabIndex >= 0)).toBe(true)
   })
 })
+
+describe('Alex demo: Goal Planner and Reset Demo', () => {
+  it('plans on the demo date, not the device date', () => {
+    // The device says 25 October; the demo is shown on 23 October 2026.
+    openAlex()
+    fireEvent.click(button(/Goal Planner/))
+    expect(field('Target date').value).toBe('2027-02-23')
+    fireEvent.click(button('Short deadline'))
+    expect(field('Target date').value).toBe('2026-10-23')
+    // A deadline on the demo's "today" is reported as today, with no days left.
+    fireEvent.click(button('Evaluate goal'))
+    expect(text(screen.getByText('Days remaining').parentElement)).toContain('0')
+  })
+})

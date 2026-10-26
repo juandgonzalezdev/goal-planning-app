@@ -248,7 +248,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         {open && <>
           <div className="screen screen-section" data-screen="planner" hidden={!shows('planner')}>
             <button type="button" className="back-link" onClick={back}><Icon name="arrowLeft" size={18} /> Home</button>
-            <GoalPlanner getToday={getToday} onConfirmedGoalChange={setConfirmedGoal} />
+            {/* Plans on the open space's date: the demo's fixed date in the demo. */}
+            <GoalPlanner getToday={() => space.today} onConfirmedGoalChange={setConfirmedGoal} />
           </div>
         </>}
       </main>
