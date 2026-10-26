@@ -1,6 +1,6 @@
-import type { SpaceSetup } from '../domain/finance/space'
-import type { SpaceMode, Theme } from '../domain/finance/types'
-import type { CurrencyCode } from '../domain/money'
+import type { SpaceSetup } from '../../domain/finance/space'
+import type { SpaceMode, Theme } from '../../domain/finance/types'
+import type { CurrencyCode } from '../../domain/money'
 
 /** What has been chosen so far in Welcome Setup. Kept by the app, so nothing is lost when moving away and back. */
 export type SetupDraft = { step: number; name: string; partner: string; mode: SpaceMode; currency: CurrencyCode; theme: Theme }

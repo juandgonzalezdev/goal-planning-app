@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Icon, type IconName } from '../components/Icon'
-import { MEMBER_NAME_MAX_LENGTH, validateSetup, type SetupError } from '../domain/finance/space'
-import type { SpaceMode, Theme } from '../domain/finance/types'
-import { CURRENCIES, type CurrencyCode } from '../domain/money'
+import { Icon, type IconName } from '../../components/Icon'
+import { MEMBER_NAME_MAX_LENGTH, validateSetup, type SetupError } from '../../domain/finance/space'
+import type { SpaceMode, Theme } from '../../domain/finance/types'
+import { CURRENCIES, type CurrencyCode } from '../../domain/money'
 import { setupFromDraft, type SetupDraft } from './setupDraft'
 
 const STEPS = ['Your Profile', 'Your Plan', 'Your Preferences', 'Privacy & Terms'] as const

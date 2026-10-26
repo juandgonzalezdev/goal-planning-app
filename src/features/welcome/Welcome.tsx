@@ -1,4 +1,4 @@
-import { Icon, type IconName } from '../components/Icon'
+import { Icon, type IconName } from '../../components/Icon'
 
 const POINTS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'idea', title: 'Start with an idea', text: 'Big or small, every goal starts somewhere.' },

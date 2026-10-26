@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Icon } from '../components/Icon'
-import { ownerColor } from '../domain/finance/space'
-import type { FinanceData, Theme } from '../domain/finance/types'
-import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../screens/WelcomeSetup'
+import { Icon } from '../../components/Icon'
+import { ownerColor } from '../../domain/finance/space'
+import type { FinanceData, Theme } from '../../domain/finance/types'
+import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSetup'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
 

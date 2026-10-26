@@ -1,4 +1,4 @@
-import { Icon } from '../components/Icon'
+import { Icon } from '../../components/Icon'
 
 type Props = { mode: 'sign-up' | 'log-in'; onBack: () => void; onContinue: () => void }
 

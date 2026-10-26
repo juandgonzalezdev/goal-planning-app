@@ -1,7 +1,7 @@
-import { usualAmountFor } from '../domain/finance/bills'
-import type { FinanceData } from '../domain/finance/types'
-import { formatAmount, formatDate, formatYearMonth } from '../ui/format'
-import { EFFECT_NAMES } from '../ui/labels'
+import { usualAmountFor } from '../../domain/finance/bills'
+import type { FinanceData } from '../../domain/finance/types'
+import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
+import { EFFECT_NAMES } from '../../ui/labels'
 
 /**
  * Financial History: only what was recorded, newest first, in four
