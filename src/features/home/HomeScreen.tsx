@@ -8,8 +8,9 @@ import type { SaveOutcome } from '../../ui/saveOutcome'
 import { BillsByCategory } from './BillsByCategory'
 import { LeftToPay } from './LeftToPay'
 import { MonthOverview } from './MonthOverview'
-import { OurGoals, PlannerSection } from './OurGoals'
-import { OurMoney } from './OurMoney'
+import { PlannerSection } from './PlannerSection'
+import { HomeGoals } from './HomeGoals'
+import { HomeMoney } from './HomeMoney'
 import { TotalDebt } from './TotalDebt'
 import { YearlyNetIncome } from './YearlyNetIncome'
 import { MonthSwitch } from '../../components/MonthSwitch'
@@ -54,8 +55,8 @@ export function HomeScreen(props: Props) {
       <LeftToPay overview={overview} month={month} currency={data.space.currency} onOpenBills={() => onOpen('bills')} />
       <BillsByCategory data={data} month={month} view={props.chartView} onViewChange={props.onChartViewChange} onChange={props.onChange} onOpenBill={props.onOpenBill} />
       <TotalDebt data={data} onOpenDebt={props.onOpenDebt} onOpenCards={() => onOpen('cards')} />
-      <OurMoney data={data} title={individual ? 'My Money' : 'Our Money'} onOpenGoal={props.onOpenGoal} onOpenData={() => onOpen('data')} />
-      <OurGoals data={data} title={individual ? 'My Goals' : 'Our Goals'} today={today}
+      <HomeMoney data={data} title={individual ? 'My Money' : 'Our Money'} onOpenGoal={props.onOpenGoal} onOpenData={() => onOpen('data')} />
+      <HomeGoals data={data} title={individual ? 'My Goals' : 'Our Goals'} today={today}
         onViewAll={() => onOpen('goals')} onAddGoal={props.onAddGoal} onOpenGoal={props.onOpenGoal} />
       <PlannerSection confirmedGoal={props.confirmedGoal} currency={data.space.currency} today={today} savedAsGoal={props.plannedGoalSaved}
         onOpenPlanner={() => onOpen('planner')} onSaveAsGoal={props.onSavePlannedGoal} />

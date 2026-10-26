@@ -20,7 +20,7 @@ type Props = { data: FinanceData; title: string; onOpenGoal: (id: Id) => void; o
  * emergency fund and what has no purpose yet. The purposes are part of
  * Savings, so they are never added to it again. Debt is never subtracted.
  */
-export function OurMoney({ data, title, onOpenGoal, onOpenData }: Props) {
+export function HomeMoney({ data, title, onOpenGoal, onOpenData }: Props) {
   // v5.9 opens with Investment chosen.
   const [chosen, setChosen] = useState<MoneyAccountKind>('investment')
   const summary = summarizeMoney(data)
