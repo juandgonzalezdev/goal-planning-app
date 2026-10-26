@@ -12,6 +12,7 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { formatAmount, formatDate, formatDueDay, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { SubscriptionSection } from './SubscriptionSection'
 
 type Props = {
   data: FinanceData
@@ -237,11 +238,15 @@ export function BillScreen(props: Props) {
           </div>}
       </section>
 
+      {bill.category === 'Subscriptions' && <SubscriptionSection data={data} bill={bill} today={today} onChange={onChange} onMessage={setMessage} />}
+
       <section className="block" aria-labelledby="bill-details">
         <h2 id="bill-details" className="section-title">Details</h2>
         <dl className="fact-rows">
           <div><dt>Category</dt><dd>{bill.category}</dd></div>
           <div><dt>Due Day</dt><dd>{formatDueDay(bill.dueDay)}</dd></div>
+          {bill.frequency === 'yearly' && <div><dt>Billing</dt><dd>Once a year</dd></div>}
+          {(bill.pausedMonths ?? []).length > 0 && <div><dt>Paused</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
           <div><dt>First Month</dt><dd>{formatYearMonth(bill.startMonth)}</dd></div>
           <div><dt>Last Month</dt><dd>{bill.endMonth ? formatYearMonth(bill.endMonth) : 'No end'}</dd></div>
           {bill.note && <div><dt>Note</dt><dd>{bill.note}</dd></div>}
