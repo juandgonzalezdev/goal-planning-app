@@ -28,7 +28,11 @@ Ejecuta las tres antes de entregar un cambio:
 | `npm run build` | `tsc -b` (tipos) y compilación de Vite. | Sin errores. |
 
 `npm run test:watch` repite las pruebas al guardar. Para una sola carpeta:
-`npx vitest run src/features/planner`.
+`npx vitest run src/report`.
+
+`npm run build` avisa de que el paquete JS supera 500 kB (unos 507 kB, 135 kB
+comprimido): la mayor parte del aumento son los 401 registros del año de Alex.
+Es un aviso, no un error.
 
 ### Escribir pruebas
 
@@ -47,28 +51,34 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
 1. **Bienvenida → Explore the App.** Aparece la franja "Demo · Alex is
    invented…" con Reset Demo y Exit Demo. Menú: Home, Bills, Cards, History,
    Data.
-2. **Home.** Income 6.500, Planned Bills 5.750, Income minus Bills 750 ("Not
-   money saved"). Left to Pay 250 y "You still have bills to pay in October.".
-   Total Debt 17.400 (Show abre las tres deudas). My Money con Savings 1.350
-   dividido por propósito. My Goals: Japón 6 %, Navidad 25 %.
-3. **Change amount.** En Monthly Bills by Category, Utilities → 750 en octubre:
-   Planned Bills 5.800 y diferencia 700. Cambia a November 2026: sigue 5.750.
-4. **Bills.** Abre el día 25 y marca Student Loan como pagado: Home dice "All
-   your October bills are paid." y Total Debt sigue en 17.400.
-5. **Cards.** Abre Small Loan, Update Balance a 3.300: Total Debt baja a 17.100
-   en Home y el saldo anterior aparece en History.
-6. **Goals.** Abre Trip to Japan y añade 100 con "Savings I already have":
-   Savings no cambia. Añade otros 100 con "New savings": Savings sube 100.
-7. **Goal Planner** (Home → Plan Another Goal). La fecha propuesta es el
-   23-02-2027 (cuatro meses después de la fecha de la demo). Evalúa, revisa,
-   confirma y pulsa **Save as Goal** en Home.
-8. **Reset Demo** desde la franja, Data o Settings: vuelven 17.400 y 750, la
-   meta guardada desaparece, no queda "Saved in My Goals" y el Goal Planner
-   empieza vacío.
-9. **Exit Demo → Create Account → Continue Without an Account.** Crea un
-   espacio propio, añade una factura y recarga la página: sigue ahí. En Data,
-   Export JSON descarga el archivo.
-10. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
+2. **Home (December 2026).** Income 7.200, Planned Bills 6.401,84, Spent
+   5.097,35, Result 2.102,65. Left to Pay 69,99 (Phone & Internet). Total Debt
+   12.266,98. Savings 2.900 = Japón 1.800 + New Bike 200 + Emergency Fund 900.
+   Year Summary: 55.998 / 48.781,14 / 7.216,86, déficits en Feb, Jul y Aug.
+3. **Meses.** Elige August 2026 con las flechas o el selector: Result
+   −3.037,86. "How is this worked out?" muestra 1.500 de Savings, 1.160,57 de la
+   cuenta diaria y 377,29 de deuda nueva.
+4. **Categorías.** Spending by Category → Bars → Groceries: lista de compras;
+   abre una y cámbiala en History. Home se actualiza. **Ideas to Review** →
+   Gym Membership → What If I Pause It? → 387,00. Cancel no cambia nada.
+5. **Ocultar importes.** Hide All Amounts: todos los importes son `••••`, sin
+   barras ni porcentajes reveladores. El ojo de un bloque lo muestra solo a él.
+   La preferencia se recuerda en este dispositivo.
+6. **Fondo de emergencia.** My Goals → Review My Emergency Fund: esenciales
+   4.415,42 al mes; 3 months → objetivo 13.246,26. Cancel no cambia nada; Save
+   Review guarda el objetivo y la cobertura (~0,2 meses) aparece en Home.
+7. **Metas.** Trip to Japan → Try an Amount or Date: 500 al mes → 17 meses
+   (31-5-2028). New Goal sin objetivo se puede crear; con fecha pide objetivo.
+8. **History.** Gráfico de 12 meses; elige August para ver sus categorías.
+   Filtra por tipo, categoría y cuenta; añade un gasto y una transferencia.
+9. **Data.** Export Report → One Month / Whole Year → Download PDF, con y sin
+   importes. Data Backup → Download Backup.
+10. **Reset Demo** desde la franja, Data o Settings: vuelve todo el año y
+    December 2026.
+11. **Exit Demo → Create Account → Continue Without an Account.** Crea un
+    espacio propio, añade una factura y recarga la página: sigue ahí. Restore
+    Backup lee el JSON descargado.
+12. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
     de pestañas no tapa el pie de página.
 
 ## Ramas y entregas

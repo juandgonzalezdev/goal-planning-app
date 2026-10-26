@@ -4,8 +4,21 @@ Estas reglas deciden qué cifra aparece en cada pantalla. Están en
 `src/domain/` (funciones puras, con pruebas) y ninguna pantalla las repite. Si
 una regla cambia, se cambia allí y se actualizan sus pruebas y este documento.
 
-Los ejemplos usan la demo de Alex (fecha de la demo: **23-10-2026**). Los
-valores completos están en [demo-alex.md](demo-alex.md).
+Los ejemplos usan el año ficticio de Alex (fecha de la demo: **31-12-2026**).
+Los valores completos están en [demo-alex-year.md](demo-alex-year.md).
+
+## 0. Principio del producto
+
+La app ayuda a responder siete preguntas: ¿qué ingresos recibo y cómo varían?,
+¿en qué uso mi dinero?, ¿cuáles son mis compromisos esenciales?, ¿qué gastos
+podría revisar?, ¿qué consecuencias tendría un cambio?, ¿qué protección tengo
+ante un imprevisto? y ¿cómo evoluciona mi ahorro?
+
+Cada sugerencia (fondo de emergencia, ideas para revisar, simulaciones,
+Explore de una meta, notas de referencia) **explica sus datos, supuestos y
+límites**, se puede abrir y editar, y **no cambia nada hasta que el usuario la
+confirma**. Las referencias generales nunca se presentan como consejo
+personal.
 
 ## 1. Una sola fuente de datos
 
@@ -28,10 +41,10 @@ valores completos están en [demo-alex.md](demo-alex.md).
   formatean como texto, así que la zona horaria del dispositivo no puede mover
   un día.
 - **Hoy** es la fecha del dispositivo en el espacio propio y la fecha fija en la
-  demo (23-10-2026). Todas las pantallas, incluido el Goal Planner, usan la
-  misma fecha (`space.today`).
+  demo (31-12-2026). Todas las pantallas usan la misma fecha (`space.today`).
 - Los porcentajes se calculan desde sus componentes en el momento:
-  Japón 600 de 10.000 → 6,0 %.
+  Japón 1.800 de 10.000 → 18 %. Con ingresos cero o datos incompletos no se
+  muestra porcentaje.
 
 ## 3. Desconocido no es cero
 
@@ -49,7 +62,9 @@ valores completos están en [demo-alex.md](demo-alex.md).
 - Una fuente de ingreso tiene un importe habitual y un día de cobro. Mientras no
   se registra lo que llegó, ese mes cuenta como **esperado**; al registrarlo,
   cuenta lo **recibido** (`monthIncome` en `domain/finance/income.ts`).
-- **Yearly Net Income** suma solo ingresos recibidos. No proyecta nada.
+- Un ingreso puede marcarse como **extraordinario** (la devolución del IRPF de
+  Alex); Year Summary lo dice aparte.
+- **Year Summary** suma solo ingresos recibidos. No proyecta nada.
 - Borrar una fuente no borra los ingresos ya recibidos.
 
 ## 5. Facturas y recurrencia
@@ -64,13 +79,44 @@ valores completos están en [demo-alex.md](demo-alex.md).
 - Marcar una factura como pagada afecta solo a ese mes.
 - **Planned Bills** = suma de los importes conocidos del mes. Es lo planificado,
   no lo gastado.
-- **Income minus Bills** = ingresos (recibidos + esperados) − facturas
-  conocidas. No es dinero ahorrado ni libre para gastar: no incluye el gasto
-  diario.
+- Una factura puede ser **anual**, tener **meses en pausa** y datos de
+  **suscripción** (si se puede pausar o cancelar, y la valoración del usuario:
+  Needed / Could adjust / Optional).
+- Un pago guarda **cuándo** se pagó y **desde qué cuenta**. Pagado después del
+  vencimiento = "Paid late"; sin pagar tras el vencimiento = "Overdue".
 
-Ejemplo (Alex, octubre): 6.500 − 5.750 = **750**. Si Utilities pasa a 750 solo
-en octubre: Planned Bills 5.800 y diferencia 700; noviembre sigue en 5.750 y
-750.
+## 5b. Obligación, gasto, transferencia y deuda
+
+La app distingue seis cosas y cada una tiene su registro:
+
+| Qué | Registro | ¿Es gasto? |
+| --- | --- | --- |
+| Obligación prevista | Factura (mes de factura) | No hasta que se paga |
+| Pago o gasto realizado | Factura pagada o `Expense` | Sí, una vez |
+| Transferencia entre cuentas propias | `Transfer` | No (ni ingreso ni gasto) |
+| Aportación o retirada de ahorro | Transferencia + movimiento de meta | No |
+| Nueva deuda / amortización | Compra con tarjeta / principal de una cuota | La compra sí, al comprar; el pago de la tarjeta no |
+| Saldo observado | `BalanceSnapshot` con fecha | No |
+
+- **Resultado del mes = ingresos recibidos − gasto.** Gasto = facturas pagadas
+  que no pagan deuda + gastos (con tarjeta, cuando se compra) + **solo los
+  intereses** de las cuotas de préstamos (`monthResult`,
+  `domain/finance/spending.ts`). El resultado **no es ahorro**.
+- **Flujo de caja** ("How is this worked out?"): dinero que entra y sale de
+  las cuentas, incluidos pagos de tarjeta y principal. La identidad
+  `resultado = Δ Everyday + Δ Savings + Δ inversiones − Δ deuda` se comprueba
+  y la parte "sin explicar" debe ser 0 (`monthFunding`,
+  `domain/finance/flows.ts`). Con un déficit, la app dice cuánto vino de
+  Savings, de la cuenta diaria y de deuda nueva.
+- **Planned Bills** = facturas del mes, pagadas o no (lo previsto).
+- La cuota de un préstamo sin interés anotado no reduce el principal: la app
+  no lo adivina, y la conciliación de ese mes dice que falta el dato.
+- Los saldos son **instantáneas con fecha**. Home muestra el último saldo hasta
+  el fin del mes elegido (o hoy). History nunca reconstruye saldos pasados a
+  partir del actual.
+
+Ejemplo (Alex, agosto): resultado −3.037,86 = 1.500 de Savings + 1.160,57 de la
+cuenta diaria + 377,29 de deuda nueva.
 
 ## 6. Deudas y cuotas
 
@@ -81,17 +127,17 @@ en octubre: Planned Bills 5.800 y diferencia 700; noviembre sigue en 5.750 y
   cuota vive solo en esa factura: Cards la muestra, Monthly Bills la cuenta, y
   la deuda no guarda una cuota propia (`debtPayment`; la importación rechaza un
   archivo con las dos).
-- **Marcar una cuota como pagada no reduce el principal.** La app no sabe qué
-  parte es interés. El saldo cambia solo cuando el usuario introduce un saldo
-  nuevo con su fecha; el anterior queda en el historial.
+- **Marcar una cuota como pagada no reduce el principal por sí solo.** Si la
+  cuota guarda su interés, el principal es cuota − interés; si no, la app no
+  lo supone. El saldo registrado sigue siendo la referencia; el anterior queda
+  en el historial.
 - La estimación de pago ("Estimate", "What If I Pay Extra?") es solo un cálculo:
   mismo interés y misma cuota cada mes, máximo 50 años, y no cambia nada.
 - Borrar una deuda con factura vinculada obliga a elegir: borrar también la
   factura o conservarla sin vínculo. Nunca queda apuntando a nada.
 - El pago mínimo de una tarjeta es un dato introducido; la app no lo calcula.
 
-Ejemplo (Alex): 1.800 + 12.000 + 3.600 = **17.400**. Marcar pagado el Student
-Loan deja Left to Pay en 0 y Total Debt sigue en 17.400.
+Ejemplo (Alex, 31-12-2026): 0 + 2.644,35 + 9.622,63 = **12.266,98**.
 
 ## 7. Cuentas, Savings y metas
 
@@ -108,8 +154,11 @@ Loan deja Left to Pay en 0 y Total Debt sigue en 17.400.
   `domain/finance/savings.ts`). Si los propósitos suman más que Savings, la
   pantalla lo dice.
 
-- Ejemplo (Alex): Savings 1.350 = Japón 600 + Navidad 100 + Emergency 300 +
-  350 sin asignar. My Goals muestra 700 "part of your Savings".
+- Ejemplo (Alex, diciembre): Savings 2.900 = Japón 1.800 + New Bike 200 +
+  Emergency 900 + 0 sin asignar. My Goals muestra 2.000 "part of your Savings".
+- **El dinero no gastado no se ahorra solo.** Savings cambia únicamente con
+  una transferencia o un movimiento registrado; ni las simulaciones ni las
+  ideas para revisar lo suben.
 
 ### Aportar o retirar de una meta
 
@@ -129,27 +178,83 @@ Cada movimiento dice de dónde viene o adónde va el dinero
   el historial explique el cambio. No se mueve dinero real.
 - Borrar una meta devuelve lo ahorrado a sin asignar; ningún saldo cambia.
 
-### Ritmo sugerido y Goal Planner
+### Metas: objetivo opcional y Explore
 
-- Regla mensual aprobada: se cuentan **meses completos** desde hoy hasta la
-  fecha objetivo; la primera aportación es un mes después de hoy. La aportación
-  mensual necesaria se **redondea hacia arriba** al siguiente grosz.
-- Una fecha con menos de un mes completo no admite plan mensual, salvo que la
-  meta ya esté cubierta.
-- El ritmo semanal usa la misma regla con semanas. Es una sugerencia, nunca un
-  pago.
-- El Goal Planner no crea nada por sí mismo: un plan confirmado solo pasa a My
-  Goals con **Save as Goal**, con 0 ahorrado.
-- Las alternativas (aumentar la aportación o mover la fecha) se aplican solo si
-  el usuario las confirma, y se pueden deshacer.
+- Una meta tiene nombre; el **objetivo es opcional**. Una fecha límite
+  **necesita objetivo** (sin él no hay ritmo que calcular). Nunca se pide una
+  aportación mensual para crearla.
+- Ritmo sugerido: se cuentan **meses completos** desde hoy hasta la fecha; la
+  primera aportación es un mes después de hoy; el importe se **redondea hacia
+  arriba** al grosz. Es lo que haría falta, **no** lo que la persona puede
+  permitirse.
+- **Explore** (dentro de la meta): "si ahorro X al mes" → cuántos meses y fecha
+  aproximada (máximo 50 años); "o llegar en esta fecha" → importe mensual. No
+  cambia nada; **Use This Date** pide confirmación (`domain/goalExplore.ts`).
+
+### Fondo de emergencia
+
+```
+objetivo = gastos esenciales mensuales confirmados × meses de cobertura
+```
+
+- Es un **borrador**: Home sugiere "Start with an emergency fund" (Review My
+  Emergency Fund / Maybe Later) si no hay fondo, y nada se crea ni se asigna
+  hasta **Create Emergency Fund** o **Save Review**. Si ya hay un fondo, solo
+  se ofrece revisarlo: nunca hay dos.
+- Líneas propuestas (`estimateEssentials`, `domain/finance/emergency.ts`):
+  facturas esenciales con su importe actual (anuales ÷ 12), pagos mínimos de
+  deuda, y gasto diario esencial (vivienda, alimentación, servicios,
+  transporte, salud) como **media de hasta 6 meses completos** con registros.
+  Los gastos **excepcionales** de los últimos 12 meses se muestran aparte y no
+  cuentan: un mes extremo no se toma como referencia.
+- Las aportaciones a otras metas nunca son gasto esencial. El usuario marca o
+  desmarca cada línea y puede cambiar su importe.
+- Opciones de 1, 3 o 6 meses, u otro número (0,5–24). 1 mes es un primer hito;
+  3–6 meses es una referencia orientativa.
+- Si a una línea marcada le falta importe: **Estimate incomplete**; se puede
+  completar, desmarcar o guardar el fondo sin objetivo.
+- "Money already set aside": ahorro **sin asignar** que pasa al fondo nuevo
+  (nunca más del que hay); no crea Savings nuevo.
+- Cobertura = lo que tiene **el propio fondo** ÷ esenciales confirmados. No
+  cuenta otras metas ni inversiones.
+- Referencias (texto en la app, "Where these references come from"):
+  FINRA, [How to avoid bad financial luck](https://www.finra.org/investors/insights/how-avoid-bad-financial-luck-friday-13th)
+  (13-3-2026: un fondo podría llegar a cubrir de 3 a 6 meses de gastos), y
+  CFPB, [Start Small, Save Up](https://www.consumerfinance.gov/about-us/newsroom/cfpb-announces-start-small-save-initiative/)
+  (15-4-2019: empezar poco a poco, sin un número fijo de meses). Son
+  orientaciones generales, no una garantía personal.
+
+### Suscripciones y simulaciones
+
+- **What If I Pause It? / What If I Cancel It?** calcula, con las fechas
+  efectivas de los próximos cargos (y el coste de reactivación si se conoce),
+  cuánto bajaría el gasto previsto: "Pausing Gym Membership for 3 monthly
+  periods … could reduce planned spending by 387,00 zł."
+- La simulación no cambia nada. **Confirm** cambia solo meses futuros; los
+  pagos ya hechos nunca cambian. **Cancel** lo deja todo igual.
+- **Ideas to Review** ordena por impacto anual y facilidad (se puede pausar o
+  cancelar, valoración del usuario). No da por hecho que el ocio sobra y
+  recuerda el mayor déficit del año para dar escala: recortes pequeños rara vez
+  cubren un déficit grande.
+
+### Notas de referencia (Year Summary → Reference Notes)
+
+- **Vivienda / ingresos**: (vivienda + servicios pagados) ÷ ingreso neto
+  recibido, mismo periodo. Eurostat llama
+  [sobrecarga por costes de vivienda](https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:Housing_cost_overburden_rate)
+  a superar el **40 % de la renta disponible** del hogar: es una medida
+  estadística de dificultad, **no un límite recomendado**. El ingreso neto de
+  la app no es exactamente renta disponible. Sin ingresos o con una factura sin
+  importe, no se muestra porcentaje.
+- **50/30/20**: reparto orientativo popularizado por el libro *All Your Worth*
+  (2005); la app no puntúa al usuario contra él.
 
 ## 8. Demo y espacio propio
 
 - La demo (Alex) y el espacio propio nunca se mezclan: abrir, usar o reiniciar
   la demo no lee ni escribe el espacio propio. La demo no se puede importar.
-- **Reset Demo** (franja, Data o Settings) devuelve el ejemplo completo: los
-  registros, el mes elegido, el borrador y el plan del Goal Planner, y el aviso
-  "Saved in My Goals".
+- **Reset Demo** (franja, Data o Settings) devuelve el año completo: todos los
+  registros y el mes elegido (diciembre de 2026).
 - **Exit Demo** descarta todos los cambios.
 
 ## 9. Guardado y mensajes
@@ -161,16 +266,36 @@ Cada movimiento dice de dónde viene o adónde va el dinero
   silencio: la bienvenida ofrece borrarlos.
 - **Importar** comprueba el archivo (versión, migración y validación) y no
   reemplaza nada hasta que el usuario confirma.
-- **Formato guardado:** `schemaVersion` 2. Un cambio de formato necesita una
-  migración nueva en `data/migrations.ts` y pruebas que conserven los datos
-  existentes.
+- **Formato guardado:** `schemaVersion` 3 (añade gastos y transferencias; la
+  migración 2 → 3 los crea vacíos y no toca nada más). Un cambio de formato
+  necesita una migración nueva en `data/migrations.ts` y pruebas que conserven
+  los datos existentes.
+
+## 10. Informe PDF, copia de seguridad y ocultar importes
+
+- **Export Report** (Data) descarga un PDF de un mes o un año: periodo, moneda,
+  fecha de generación, aviso de datos inventados en la demo, resumen, mes a mes
+  (año), categorías con gráfico, pagos pendientes, deudas con la fecha de su
+  saldo, cuentas, Savings y metas, datos que faltan y supuestos. Dice siempre
+  que **no es un extracto bancario ni un certificado** y que los datos no los
+  ha verificado ninguna entidad. Se genera en el navegador (`src/report/`), sin
+  dependencias nuevas.
+- **Include amounts** decide si el PDF lleva importes; no depende de lo oculto
+  en Home y el informe dice en su portada si los incluye.
+- **Data Backup** (Download Backup / Restore Backup) es el JSON restaurable. El
+  PDF no es una copia de seguridad.
+- **Ocultar importes** (ojo en cada bloque de Home y Hide All Amounts) solo
+  cambia lo que se ve: máscara fija `••••`, también en etiquetas accesibles,
+  porcentajes y gráficos. Se recuerda en este dispositivo. **No es cifrado ni
+  protección de acceso.**
 
 ## Dónde están las pruebas de estas reglas
 
 - `src/domain/finance/alexDemo.test.ts`: los criterios de la demo y 5 semillas ×
   60 ediciones aleatorias que comprueban los invariantes (totales desde sus
   partes, cuota contada una vez, Savings sin doble conteo).
-- `src/domain/finance/finance.test.ts`, `goals.test.ts`, `home.test.ts`: cada
-  cálculo con importes exactos.
+- `src/domain/finance/finance.test.ts`, `goals.test.ts`, `home.test.ts`,
+  `src/domain/goalExplore.test.ts`, `src/report/report.test.ts`: cada cálculo
+  con importes exactos.
 - `src/AlexDemo.test.tsx` y `src/App.test.tsx`: las mismas reglas vistas en
   pantalla.

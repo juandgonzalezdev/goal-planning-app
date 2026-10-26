@@ -4,15 +4,19 @@ Prototipo web, pensado primero para el móvil, que ayuda a una persona a
 entender sus ingresos, facturas, deudas, dinero y metas con cifras
 explicables y conectadas entre sí.
 
+- **Propósito:** entender tus finanzas, explorar opciones y decidir con
+  información. Cada sugerencia explica sus datos, supuestos y límites, y nada
+  cambia hasta que lo confirmas.
 - **Estado:** prototipo de aprendizaje. La prioridad actual es la demo
-  Individual de **Alex** (datos inventados y completamente editables). El modo
+  Individual de **Alex**: un año ficticio completo (2026), editable y
+  reproducible. El modo
   Duo se muestra, pero su versión privada queda para más adelante.
 - **Sin servidor ni cuentas:** todo se calcula en el navegador. El espacio
   propio se guarda solo en este dispositivo (`localStorage`); la demo no se
   guarda nunca.
 - **Interfaz en inglés sencillo**; documentación en español.
-- **Menú:** Home, Bills, Cards, History y Data. Goals, Goal Planner y Settings
-  se abren desde Home o la cabecera.
+- **Menú:** Home, Bills, Cards, History y Data. My Goals, el fondo de
+  emergencia y Settings se abren desde Home o la cabecera.
 
 ## Empezar
 
@@ -36,9 +40,9 @@ npm run build    # TypeScript + compilación de producción
 | [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) | Dónde vive cada cosa y qué archivos revisar para cambiar X. |
 | [docs/FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md) | Las reglas financieras, cómo se relacionan las cifras y ejemplos. |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Instalación, comprobaciones, recorrido de revisión y archivos auxiliares. |
-| [docs/demo-alex.md](docs/demo-alex.md) | Los datos de Alex: valores dados, valores inventados y totales esperados. |
+| [docs/demo-alex-year.md](docs/demo-alex-year.md) | El año ficticio de Alex: perfil, acontecimientos, supuestos, resumen mensual y comprobaciones. |
 
 ## Tecnología
 
 React 19 + TypeScript + Vite. Pruebas con Vitest y Testing Library (jsdom).
-No hay otras dependencias de ejecución.
+No hay otras dependencias de ejecución (el PDF se genera con código propio).
