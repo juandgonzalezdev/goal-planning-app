@@ -223,7 +223,6 @@ button.monthly-row:hover { background: var(--color-surface-hover); }
 .stack > span { display: block; height: 100%; }
 .month-split { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 6px; padding-left: 43px; font-size: 12px; color: var(--color-text-muted); }
 
-.screen-section .money-app h1 { font-size: 1.1rem; letter-spacing: 0; margin: 8px 0 4px; }
 
 /* Buttons from Phase 2 in the v5.9 shape */
 .button-primary, .button-secondary, .button-quiet { border-radius: var(--radius-control); }
