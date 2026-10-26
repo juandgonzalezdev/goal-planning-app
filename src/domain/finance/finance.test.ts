@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { createDemoHousehold, DEMO_TODAY } from '../../data/fixtures/demoHousehold'
 import { calculatePayoff } from '../loanPayoff'
 import { balanceHistory, latestBalance } from './balances'
-import { billsForMonth, billTotalsByCategory, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills } from './bills'
+import { billsForMonth, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills } from './bills'
 import { estimateDebtPayoff, summarizeDebts } from './debts'
 import { householdIncomeFor, yearlyIncome } from './income'
 import { summarizeMoney } from './moneyAccounts'
+import { billsByCategory } from './home'
 import { monthlyOverview } from './overview'
 
 // Invented demo household (see data/fixtures/demoHousehold.ts). Every
@@ -57,7 +58,7 @@ describe('bills', () => {
   })
 
   it('adds up known amounts per category, matching the month total', () => {
-    const categories = billTotalsByCategory(billsForMonth(createDemoHousehold(), '2026-10'))
+    const { categories } = billsByCategory(createDemoHousehold(), '2026-10')
     expect(Object.fromEntries(categories.map(c => [c.category, c.total]))).toEqual({
       Loans: 195_000, Education: 30_000, Subscriptions: 10_099, Housing: 300_000, Utilities: 12_045, Other: 9_999,
     })

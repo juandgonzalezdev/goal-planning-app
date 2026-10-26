@@ -97,16 +97,6 @@ export function groupBillsByDay(occurrences: readonly BillOccurrence[]): BillDay
     .map(([dueDate, list]) => ({ dueDate, occurrences: list, summary: summarizeBills(list) }))
 }
 
-/** Known amount per category, for the Monthly Bills chart. Categories with nothing known are left out. */
-export function billTotalsByCategory(occurrences: readonly BillOccurrence[]): { category: BillCategory; total: MoneyAmount }[] {
-  const totals = new Map<BillCategory, MoneyAmount>()
-  for (const { bill, amount } of occurrences) {
-    if (amount === null) continue
-    totals.set(bill.category, (totals.get(bill.category) ?? 0) + amount)
-  }
-  return [...totals.entries()].map(([category, total]) => ({ category, total })).filter(item => item.total > 0)
-}
-
 /** Replaces (or adds) the record of one bill in one month. Other months are not touched. */
 function withBillMonth(data: FinanceData, billId: Id, month: YearMonth, change: (record: BillMonth) => BillMonth): FinanceData {
   const existing = findBillMonth(data.billMonths, billId, month)
