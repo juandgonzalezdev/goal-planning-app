@@ -523,7 +523,7 @@ describe('Goals & Savings Pots', () => {
 
     fireEvent.click(button(/All Goals/))
     await waitFor(() => expect(stat('Saved in Goals')).toContain('100,00 zł'))
-    fireEvent.click(button(/Home/))
+    fireEvent.click(button(/^(?!Go to)\s*Home/))
     await waitFor(() => expect(text(region('Our Money').querySelector('.tiles'))).toBe(moneyBefore))
     expect(text(region('Our Goals'))).toContain('100,00 zł')
   })
@@ -595,7 +595,7 @@ describe('Goals & Savings Pots', () => {
     await waitFor(() => expect(heading('Our Goals')).toBeTruthy())
     expect(goalNames()).toEqual(['Trip to Japan'])
     expect(stat('Saved in Goals')).toContain('0,00 zł')
-    fireEvent.click(button(/Home/))
+    fireEvent.click(button(/^(?!Go to)\s*Home/))
     await waitFor(() => expect(text(region('Our Goals'))).toContain('Saved for 1 goal'))
   })
 
@@ -641,7 +641,7 @@ describe('Goals & Savings Pots', () => {
 
       fireEvent.click(button(/All Goals/))
       await waitFor(() => expect(stat('Saved in Goals')).toContain('60,00 zł'))
-      fireEvent.click(button(/Home/))
+      fireEvent.click(button(/^(?!Go to)\s*Home/))
       await waitFor(() => expect(text(region('Our Goals'))).toContain('60,00 zł'))
       expect(within(region('Our Goals')).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('12')
     })
@@ -966,6 +966,57 @@ describe('Back navigation', () => {
     expect(shell.getAttribute('data-direction')).toBe('forward')
     await browserBack()
     expect(shell.getAttribute('data-direction')).toBe('back')
+  })
+})
+
+describe('Logo (Go to Home)', () => {
+  it('goes to Home from a detail screen, keeping the month, the data and hidden amounts', () => {
+    openDemo()
+    pickMonth('2026-09')
+    fireEvent.click(button('Hide amounts in Total Debt'))
+    fireEvent.click(tab('Cards'))
+    fireEvent.click(document.querySelector<HTMLButtonElement>('[data-screen="cards"] .goal-card')!)
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    const steps = window.history.length
+    fireEvent.click(button('Go to Home'))
+    expect(tab('Home').getAttribute('aria-current')).toBe('page')
+    expect(window.history.length).toBe(steps + 1)
+    expect(monthSelect().value).toBe('2026-09')
+    expect(button('Show amounts in Total Debt')).toBeTruthy()
+    expect(button('Reset Demo')).toBeTruthy()
+  })
+
+  it('adds no history step when Home is already open', () => {
+    createIndividualSpace()
+    const steps = window.history.length
+    fireEvent.click(button('Go to Home'))
+    expect(window.history.length).toBe(steps)
+    expect(tab('Home').getAttribute('aria-current')).toBe('page')
+  })
+
+  it('goes to Home from Settings in the own space', () => {
+    createIndividualSpace()
+    fireEvent.click(button('Settings'))
+    fireEvent.click(button('Go to Home'))
+    expect(tab('Home').getAttribute('aria-current')).toBe('page')
+  })
+
+  it('goes to Welcome before a space is open', () => {
+    start()
+    const steps = window.history.length
+    fireEvent.click(button('Go to Welcome'))
+    expect(window.history.length).toBe(steps)
+    fireEvent.click(button(/Create Account/))
+    fireEvent.click(button('Go to Welcome'))
+    expect(heading('Your goals, your way.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Go to Home' })).toBeNull()
+  })
+
+  it('is a keyboard button with a clear name', () => {
+    openDemo()
+    const logo = button('Go to Home')
+    expect(logo.tagName).toBe('BUTTON')
+    expect(logo.textContent).toContain('Goal Planning')
   })
 })
 

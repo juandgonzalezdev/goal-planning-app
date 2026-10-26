@@ -141,6 +141,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
   const emergencyLaterChange = (later: boolean) => { setEmergencyLater(later); writeEmergencyLater(storage, later) }
   const selectTab = (tab: Tab) => { if (tab !== screen) go(tab) }
+  /** The logo: Home of the open space (or Welcome before one is open). Already there, it does nothing, so no history step is added. */
+  const goToStart = () => {
+    const start = open ? 'home' : 'welcome'
+    if (screen !== start) go(start)
+  }
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
   const showNav = !!open && isTab(screen)
@@ -148,10 +153,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   return (
     <div className={`shell${showNav ? ' has-nav' : ''}`} data-direction={direction}>
       <header className="shell-header">
-        <div className="shell-brand">
+        <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} onClick={goToStart}>
           <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
           <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
-        </div>
+        </button>
         {open && screen !== 'settings' && (
           <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
         )}
