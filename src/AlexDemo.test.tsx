@@ -274,6 +274,23 @@ describe('Alex demo: keyboard and labels', () => {
 })
 
 describe('Alex demo: Goal Planner and Reset Demo', () => {
+  const plannerSection = () => document.querySelector<HTMLElement>('[data-screen="planner"]')!
+
+  /** Plans and confirms a goal in the Goal Planner, then saves it as a goal from Home. */
+  async function planAndSaveGoal() {
+    fireEvent.click(button(/Goal Planner/))
+    type('Goal name', 'Bike')
+    fireEvent.click(button('Evaluate goal'))
+    fireEvent.click(button('Review goal'))
+    fireEvent.click(button('Confirm goal'))
+    fireEvent.click(within(plannerSection()).getByRole('button', { name: /Home/ }))
+    await waitFor(() => expect(tab('Home')).toBeTruthy())
+    fireEvent.click(button('Save as Goal'))
+    await waitFor(() => expect(heading('Bike')).toBeTruthy())
+    await backHome()
+    expect(region('Plan Another Goal')).toContain('Saved in My Goals.')
+  }
+
   it('plans on the demo date, not the device date', () => {
     // The device says 25 October; the demo is shown on 23 October 2026.
     openAlex()
@@ -285,4 +302,31 @@ describe('Alex demo: Goal Planner and Reset Demo', () => {
     fireEvent.click(button('Evaluate goal'))
     expect(text(screen.getByText('Days remaining').parentElement)).toContain('0')
   })
+
+  const resets: Array<[string, () => void]> = [
+    ['the demo banner', () => { fireEvent.click(button('Reset Demo')); fireEvent.click(button('Restore Example')) }],
+    ['Data', () => { fireEvent.click(tab('Data')); fireEvent.click(within(screen.getByRole('region', { name: 'Demo' })).getByRole('button', { name: 'Reset Demo' })); fireEvent.click(tab('Home')) }],
+    ['Settings', () => {
+      fireEvent.click(button('Settings'))
+      const settings = document.querySelector<HTMLElement>('[data-screen="settings"]')!
+      fireEvent.click(within(settings).getByRole('button', { name: 'Reset Demo' }))
+    }],
+  ]
+
+  for (const [from, reset] of resets) {
+    it(`forgets the planned goal and the planner draft when reset from ${from}`, async () => {
+      openAlex()
+      await planAndSaveGoal()
+      reset()
+      await backHome()
+      // The saved goal is gone with the rest of the changes, and nothing says it was saved.
+      expect(region('My Goals')).not.toContain('Bike')
+      expect(region('Plan Another Goal')).not.toContain('Saved in My Goals.')
+      expect(screen.queryByRole('button', { name: /Planned goal/ })).toBeNull()
+      // The Goal Planner starts again from an empty draft.
+      fireEvent.click(button(/Goal Planner/))
+      expect(field('Goal name').value).toBe('')
+      expect(screen.queryByRole('heading', { name: /Bike/ })).toBeNull()
+    })
+  }
 })

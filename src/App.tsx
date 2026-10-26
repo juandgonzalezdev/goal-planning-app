@@ -73,6 +73,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [savedPlan, setSavedPlan] = useState<ConfirmedGoal | null>(null)
   const [chartView, setChartView] = useState<BillsChartView>(() => readChartView(storage))
   const [confirmReset, setConfirmReset] = useState(false)
+  // Changes when the demo is reset, so the Goal Planner starts again from an empty draft.
+  const [plannerRun, setPlannerRun] = useState(0)
   // The months follow "today", which differs between the demo and the own
   // space. A month chosen for another "today" is not reused.
   const thisMonth = yearMonthOf(space.today)
@@ -114,7 +116,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
   const resetGoals = () => { setConfirmedGoal(null); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setSavedPlan(null) }
   const exitDemo = () => { space.closeDemo(); resetGoals(); setConfirmReset(false); replace('welcome') }
-  const resetDemo = () => { space.resetDemo(); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setConfirmReset(false) }
+  // Reset Demo puts the whole example back: the records, and everything planned or chosen on top of them.
+  const resetDemo = () => { space.resetDemo(); resetGoals(); setPlannerRun(run => run + 1); setChosenMonth(null); setConfirmReset(false) }
   const erase = () => {
     const erased = space.eraseOwnSpace()
     if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); replace('welcome') }
@@ -249,7 +252,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           <div className="screen screen-section" data-screen="planner" hidden={!shows('planner')}>
             <button type="button" className="back-link" onClick={back}><Icon name="arrowLeft" size={18} /> Home</button>
             {/* Plans on the open space's date: the demo's fixed date in the demo. */}
-            <GoalPlanner getToday={() => space.today} onConfirmedGoalChange={setConfirmedGoal} />
+            <GoalPlanner key={plannerRun} getToday={() => space.today} onConfirmedGoalChange={setConfirmedGoal} />
           </div>
         </>}
       </main>
