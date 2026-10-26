@@ -37,7 +37,8 @@ export function GoalsScreen({ data, today, onBack, onNew, onOpenGoal }: Props) {
       <h1 className="tab-title">{title}</h1>
       <div className="stat-grid">
         <div className="stat"><small>Saved in Goals</small><b>{money(summary.saved)}</b></div>
-        <div className="stat"><small>Total Targets</small><b>{money(summary.target)}</b></div>
+        <div className="stat"><small>Total Targets</small><b>{money(summary.target)}</b>
+          {summary.withoutTargetCount > 0 && <small>+ {summary.withoutTargetCount} with no target</small>}</div>
       </div>
       <p className="muted-note">What your goals hold is part of your Savings, not extra money on top of it.</p>
       <div className="month-switch" role="group" aria-label="Show goals">
@@ -59,11 +60,15 @@ export function GoalsScreen({ data, today, onBack, onNew, onOpenGoal }: Props) {
               <li key={goal.id}>
                 <button type="button" className="goal-card" onClick={() => onOpenGoal(goal.id)}>
                   <span className="line"><b>{goal.name}</b><small>{goal.deadline ? `With Date · ${formatDate(goal.deadline)}` : 'Flexible · No deadline'}</small></span>
-                  <span className="goal-card-amount">{money(progress.saved)} <small>of {money(goal.target ?? 0)} · {Math.round(progress.percent)}%</small></span>
-                  <span className="bar" role="progressbar" aria-label={`${goal.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.percent)}>
-                    <span style={{ width: `${progress.percent}%`, background: ownerColor(data.space, goal.owner) }} />
-                  </span>
-                  <small>{progress.remaining > 0 ? `${money(progress.remaining)} to go` : 'Goal reached'}</small>
+                  {progress.hasTarget ? <>
+                    <span className="goal-card-amount">{money(progress.saved)} <small>of {money(goal.target ?? 0)} · {Math.round(progress.percent)}%</small></span>
+                    <span className="bar" role="progressbar" aria-label={`${goal.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.percent)}>
+                      <span style={{ width: `${progress.percent}%`, background: ownerColor(data.space, goal.owner) }} />
+                    </span>
+                    <small>{progress.remaining > 0 ? `${money(progress.remaining)} to go` : 'Goal reached'}</small>
+                  </> : <>
+                    <span className="goal-card-amount">{money(progress.saved)} <small>saved · no target</small></span>
+                  </>}
                 </button>
               </li>
             )

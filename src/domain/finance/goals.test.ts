@@ -18,7 +18,7 @@ describe('example goals', () => {
     expect(goal(data, 'trip-to-japan')).toMatchObject({ target: 2_000_000, deadline: null, openingBalance: 0 })
     expect(goal(data, 'christmas-gift')).toMatchObject({ target: 50_000, deadline: '2026-12-25', openingBalance: 0 })
     expect(data.goalMovements).toEqual([])
-    expect(summarizeGoals(data)).toEqual({ saved: 0, target: 2_050_000, activeCount: 2 })
+    expect(summarizeGoals(data)).toEqual({ saved: 0, target: 2_050_000, activeCount: 2, withoutTargetCount: 0 })
   })
 
   it('a goal with no date never gets a pace', () => {
@@ -121,7 +121,7 @@ describe('creating, editing and archiving goals', () => {
     const data = archiveGoal(add(createDemoHousehold(), { amount: 10_000 }), 'trip-to-japan')
     expect(goal(data, 'trip-to-japan').status).toBe('archived')
     expect(data.goalMovements).toHaveLength(1)
-    expect(summarizeGoals(data)).toEqual({ saved: 0, target: 50_000, activeCount: 1 })
+    expect(summarizeGoals(data)).toEqual({ saved: 0, target: 50_000, activeCount: 1, withoutTargetCount: 0 })
     expect(addGoalMovement(data, { id: 'm2', goalId: 'trip-to-japan', effect: 'assigned', amount: 1, date: DEMO_TODAY, note: '' }))
       .toEqual({ status: 'rejected', error: 'goal-archived' })
   })

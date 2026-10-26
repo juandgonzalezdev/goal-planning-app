@@ -39,13 +39,13 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
           <dl className="fact-rows">
             <div><dt>Goal</dt><dd>{fields.name}</dd></div>
             <div><dt>Type</dt><dd>{fields.deadline ? 'With Date' : 'Flexible'}</dd></div>
-            <div><dt>Target</dt><dd>{money(fields.target)}</dd></div>
+            <div><dt>Target</dt><dd>{fields.target === null ? 'No target' : money(fields.target)}</dd></div>
             <div><dt>Deadline</dt><dd>{fields.deadline ? formatDate(fields.deadline) : 'No deadline (Flexible)'}</dd></div>
             <div><dt>Saved so far</dt><dd>{money(0)}</dd></div>
           </dl>
         </section>
         <GoalPace progress={preview} currency={data.space.currency} />
-        <p className="muted-note">This creates a goal that starts at 0. To count money you already saved, add it to the goal afterwards as savings you already have. No money is moved and nothing is paid automatically.</p>
+        <p className="muted-note">This creates a goal that starts at 0. To count money you already saved, add it to the goal afterwards as savings you already have. You never have to commit a monthly amount. No money is moved and nothing is paid automatically.</p>
         <div className="inline-actions">
           <button type="button" className="button-small button-small-primary" onClick={() => onCreate(fields)}>Create Goal</button>
           <button type="button" className="button-small" onClick={() => onStateChange({ ...state, step: 'form' })}>Edit</button>

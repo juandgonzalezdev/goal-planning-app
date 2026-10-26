@@ -42,18 +42,22 @@ export interface ReadGoalOptions {
 }
 
 /**
- * Turns the form into goal fields, or explains what to fix. A new date
- * must be after today; an existing date may be kept as it is.
+ * Turns the form into goal fields, or explains what to fix. The target is
+ * optional (a box to save in); a date needs a target, so there is
+ * something to reach by then. A new date must be after today; an existing
+ * date may be kept as it is. No monthly amount is ever asked for.
  */
 export function readGoalDraft(draft: GoalDraft, { today, owner, currentDeadline = null }: ReadGoalOptions):
-  | { status: 'valid'; fields: { name: string; owner: Owner; target: MoneyAmount; deadline: CalendarDate | null } }
+  | { status: 'valid'; fields: { name: string; owner: Owner; target: MoneyAmount | null; deadline: CalendarDate | null } }
   | { status: 'invalid'; errors: GoalDraftErrors } {
   const errors: GoalDraftErrors = {}
   const name = draft.name.trim()
   if (name === '') errors.name = 'Enter a name for your goal.'
   else if (characterCount(name) > GOAL_NAME_MAX_LENGTH) errors.name = `Use ${GOAL_NAME_MAX_LENGTH} characters or fewer.`
-  const target = parseMoneyInput(draft.target)
-  if (target === null || target <= 0) errors.target = 'Enter an amount above 0, such as 500 or 1250.50.'
+  const noTarget = draft.target.trim() === ''
+  const target = noTarget ? null : parseMoneyInput(draft.target)
+  if (!noTarget && (target === null || target <= 0)) errors.target = 'Enter an amount above 0, such as 500 or 1250.50, or leave it empty.'
+  else if (noTarget && draft.dated) errors.target = 'A goal with a date needs a target amount. Enter one, or choose Flexible.'
   let deadline: CalendarDate | null = null
   if (draft.dated) {
     if (!isCalendarDate(draft.deadline)) errors.deadline = 'Choose a target date.'
@@ -61,7 +65,7 @@ export function readGoalDraft(draft: GoalDraft, { today, owner, currentDeadline 
     else deadline = draft.deadline
   }
   if (errors.name || errors.target || errors.deadline) return { status: 'invalid', errors }
-  return { status: 'valid', fields: { name, owner, target: target as MoneyAmount, deadline } }
+  return { status: 'valid', fields: { name, owner, target, deadline } }
 }
 
 /** What the contribution / withdrawal form holds. */

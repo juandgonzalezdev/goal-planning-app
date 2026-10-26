@@ -10,7 +10,7 @@ type Props = {
   onChange: (draft: GoalDraft) => void
 }
 
-/** The short v5.9 goal form: name, target, and Flexible or With Date. Used to create and to edit. */
+/** The short v5.9 goal form: name, an optional target, and Flexible or With Date. Used to create and to edit. */
 export function GoalFormFields({ idPrefix, draft, errors, currency, onChange }: Props) {
   const set = (patch: Partial<GoalDraft>) => onChange({ ...draft, ...patch })
   const error = (field: keyof GoalDraftErrors) => errors[field] && <p id={`${idPrefix}-${field}-error`} className="field-error">{errors[field]}</p>
@@ -26,9 +26,10 @@ export function GoalFormFields({ idPrefix, draft, errors, currency, onChange }: 
         {error('name')}
       </div>
       <div className="form-field">
-        <label htmlFor={id('target')}>Target Amount ({currency})</label>
-        <input id={id('target')} inputMode="decimal" value={draft.target} aria-invalid={!!errors.target} aria-describedby={described('target')}
+        <label htmlFor={id('target')}>Target Amount ({currency}, optional)</label>
+        <input id={id('target')} inputMode="decimal" value={draft.target} aria-invalid={!!errors.target} aria-describedby={[id('target-help'), described('target')].filter(Boolean).join(' ')}
           onChange={e => set({ target: e.target.value })} />
+        <p id={id('target-help')} className="field-help">Leave it empty to save with no fixed amount. A target date needs a target.</p>
         {error('target')}
       </div>
       <div className="form-field">
@@ -38,7 +39,7 @@ export function GoalFormFields({ idPrefix, draft, errors, currency, onChange }: 
           <option value="dated">With Date</option>
         </select>
         <p id={id('dated-help')} className="field-help">
-          {draft.dated ? 'With Date: a target date, and a suggested weekly or monthly amount to reach it.' : 'Flexible: no target date and no pace. Save at your own rhythm.'}
+          {draft.dated ? 'With Date: a target date, and a suggested weekly or monthly amount to reach it. Only a suggestion: nothing is committed.' : 'Flexible: no target date and no pace. Save at your own rhythm.'}
         </p>
       </div>
       {draft.dated && (

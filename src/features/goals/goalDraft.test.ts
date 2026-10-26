@@ -18,11 +18,18 @@ describe('readGoalDraft', () => {
   it('explains every problem in simple words', () => {
     expect(readGoalDraft({ name: ' ', target: '0', dated: true, deadline: '' }, options)).toEqual({
       status: 'invalid',
-      errors: { name: 'Enter a name for your goal.', target: 'Enter an amount above 0, such as 500 or 1250.50.', deadline: 'Choose a target date.' },
+      errors: { name: 'Enter a name for your goal.', target: 'Enter an amount above 0, such as 500 or 1250.50, or leave it empty.', deadline: 'Choose a target date.' },
     })
     expect(readGoalDraft({ name: 'x'.repeat(61), target: 'abc', dated: true, deadline: DEMO_TODAY }, options).status).toBe('invalid')
     expect(readGoalDraft({ name: 'Gift', target: '10', dated: true, deadline: DEMO_TODAY }, options))
       .toEqual({ status: 'invalid', errors: { deadline: 'Choose a date after today.' } })
+  })
+
+  it('allows a goal with no target, but not a date without a target', () => {
+    expect(readGoalDraft({ name: 'Bike', target: ' ', dated: false, deadline: '' }, options))
+      .toEqual({ status: 'valid', fields: { name: 'Bike', owner: 'shared', target: null, deadline: null } })
+    expect(readGoalDraft({ name: 'Bike', target: '', dated: true, deadline: '2026-12-25' }, options))
+      .toEqual({ status: 'invalid', errors: { target: 'A goal with a date needs a target amount. Enter one, or choose Flexible.' } })
   })
 
   it('lets an edit keep a date that has already passed', () => {

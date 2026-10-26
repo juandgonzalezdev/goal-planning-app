@@ -1,10 +1,10 @@
 import { Icon } from '../../components/Icon'
-import { createEmergencyFund, emergencyFund, goalSaved } from '../../domain/finance/goals'
+import { emergencyFund, goalSaved } from '../../domain/finance/goals'
 import { formatAmount, formatDate } from '../../ui/format'
 import type { SectionProps } from './DataScreen'
 
 /** The active goals and the Emergency Fund; each opens the goal's own screen. */
-export function GoalsSection({ data, today, owner, newId, onChange, onOpenGoal, onAddGoal, say }: SectionProps) {
+export function GoalsSection({ data, onOpenGoal, onAddGoal, onReviewEmergency }: SectionProps) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const pots = data.goals.filter(goal => goal.status === 'active')
   const hasEmergency = emergencyFund(data.goals) !== null
@@ -20,7 +20,7 @@ export function GoalsSection({ data, today, owner, newId, onChange, onOpenGoal, 
             <li key={goal.id}>
               <button type="button" className="line line-button" onClick={() => onOpenGoal(goal.id)}>
                 <span>{goal.name}<small>{goal.kind === 'emergency' ? 'Emergency Fund' : goal.deadline ? `With Date · ${formatDate(goal.deadline)}` : 'Flexible'}</small></span>
-                <b>{money(goalSaved(goal, data.goalMovements))}{goal.target !== null && ` of ${money(goal.target)}`}</b>
+                <b>{money(goalSaved(goal, data.goalMovements))}{goal.target !== null && goal.target !== undefined && ` of ${money(goal.target)}`}</b>
                 <Icon name="arrowRight" size={16} />
               </button>
             </li>
@@ -28,9 +28,7 @@ export function GoalsSection({ data, today, owner, newId, onChange, onOpenGoal, 
         </ul>
       )}
       {!hasEmergency && (
-        <button type="button" className="button-small align-start" onClick={() => say('Emergency Fund added, starting at 0.', onChange(current => createEmergencyFund(current, newId(), owner, today)))}>
-          Add Emergency Fund
-        </button>
+        <button type="button" className="button-small align-start" onClick={onReviewEmergency}>Start an Emergency Fund</button>
       )}
       <p className="field-help">Goals and the Emergency Fund are purposes for part of your Savings.</p>
     </section>

@@ -10,7 +10,9 @@ import { EFFECT_NAMES } from '../../ui/labels'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { GoalFormFields } from './GoalFormFields'
 import { draftFromGoal, NOTE_MAX_LENGTH, readGoalDraft, readMovementDraft, type GoalDraft, type GoalDraftErrors, type MovementDraft, type MovementDraftErrors } from './goalDraft'
+import { GoalExplore } from './GoalExplore'
 import { GoalPace } from './GoalPace'
+import { emergencyCover } from '../../domain/finance/emergency'
 
 type Props = {
   data: FinanceData
@@ -20,6 +22,7 @@ type Props = {
   onBack: () => void
   onChange: (data: FinanceData) => SaveOutcome
   onDeleted: (data: FinanceData) => void
+  onReviewEmergency: () => void
 }
 
 function daysLeftText(days: number | null) {
@@ -36,7 +39,7 @@ function daysLeftText(days: number | null) {
  * Savings, so new money is counted once and moving existing savings
  * between purposes never makes Savings grow.
  */
-export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, onDeleted }: Props) {
+export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, onDeleted, onReviewEmergency }: Props) {
   const currency = data.space.currency
   const money = (minor: number) => formatAmount(minor, currency)
   const progress = goalProgress(goal, data.goalMovements, today)
@@ -134,7 +137,10 @@ export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, o
           : <span>Saved · no target set</span>}
       </section>
 
-      <GoalPace progress={progress} currency={currency} />
+      {isEmergency ? <EmergencyCoverNote data={data} onReview={onReviewEmergency} /> : <>
+        <GoalPace progress={progress} currency={currency} />
+        <GoalExplore data={data} goal={goal} progress={progress} today={today} onChange={onChange} />
+      </>}
 
       <section className="block" aria-labelledby="goal-move">
         <h2 id="goal-move" className="section-title">Add or Take Out</h2>
@@ -232,5 +238,22 @@ export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, o
           </ul>}
       </section>
     </div>
+  )
+}
+
+/** What the emergency fund covers, from its last review. Only what it holds counts. */
+function EmergencyCoverNote({ data, onReview }: { data: FinanceData; onReview: () => void }) {
+  const cover = emergencyCover(data)
+  const money = (minor: number) => formatAmount(minor, data.space.currency)
+  const basis = cover.fund?.emergencyBasis
+  return (
+    <section className="block" aria-labelledby="emergency-cover">
+      <h2 id="emergency-cover" className="section-title">Cover</h2>
+      {basis && cover.months !== null
+        ? <p>{money(cover.saved)} covers about {cover.months.toLocaleString('en-GB')} {cover.months === 1 ? 'month' : 'months'} of essential costs ({money(basis.monthlyEssentials)} a month, reviewed on {formatDate(basis.reviewedOn)}).</p>
+        : <p>Review your essential costs to see how many months this fund covers.</p>}
+      <p className="field-help">Only what this fund holds counts. Your other goals and investments are not included.</p>
+      <button type="button" className="button-small align-start" onClick={onReview}>Review My Emergency Fund</button>
+    </section>
   )
 }

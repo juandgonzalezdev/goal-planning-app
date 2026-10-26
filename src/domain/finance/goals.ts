@@ -29,11 +29,11 @@ export type GoalPace =
 
 export interface GoalProgress {
   saved: MoneyAmount
-  /** 0 when there is no target (the emergency fund). */
+  /** 0 when there is no target. */
   remaining: MoneyAmount
   /** 0 to 100, from the amounts. Above-target savings show 100. Never stored. */
   percent: number
-  /** False for the emergency fund, which has no target: then percent and remaining mean nothing. */
+  /** False for a pot with no target: then percent and remaining mean nothing. */
   hasTarget: boolean
   /** Whole days to the deadline (0 on the day itself, negative after it), or null with no deadline. */
   daysToDeadline: number | null
@@ -70,8 +70,11 @@ export function goalProgress(goal: Goal, movements: readonly GoalMovement[], tod
 export interface GoalsSummary {
   /** Active goals only (not the emergency fund). Part of Savings, not extra money. */
   saved: MoneyAmount
+  /** The targets that are set, added up. */
   target: MoneyAmount
   activeCount: number
+  /** Active goals with no target: they are not in `target`. */
+  withoutTargetCount: number
 }
 
 /** The goals the user is saving for: active, and not the emergency fund. */
@@ -85,8 +88,9 @@ export function summarizeGoals(data: Pick<FinanceData, 'goals' | 'goalMovements'
   const active = activeGoals(data.goals)
   return {
     saved: sumMinor(active.map(goal => goalSaved(goal, data.goalMovements))),
-    target: sumMinor(active.map(goal => goal.target ?? 0)),
+    target: sumMinor(active.flatMap(goal => (goal.target === null ? [] : [goal.target]))),
     activeCount: active.length,
+    withoutTargetCount: active.filter(goal => goal.target === null).length,
   }
 }
 
@@ -173,26 +177,28 @@ export function addGoalMovement(data: FinanceData, request: MovementRequest): { 
 export interface GoalFields {
   name: string
   owner: Owner
-  /** null only for the emergency fund. */
+  /** Optional: null when no target is set. */
   target: MoneyAmount | null
+  /** Optional, and only with a target: a date alone cannot give a pace. */
   deadline: CalendarDate | null
 }
 
-export type GoalFieldError = GoalDetailsError | 'target-not-positive' | 'invalid-deadline' | 'unknown-owner'
+export type GoalFieldError = GoalDetailsError | 'target-not-positive' | 'invalid-deadline' | 'deadline-needs-target' | 'unknown-owner'
 
 /**
  * Checks goal fields. The name follows the existing goal rules (required,
- * at most 60 characters, trimmed). A deadline is optional and may be any
- * real date; whether it is still ahead is shown by the progress, not
- * blocked here.
+ * at most 60 characters, trimmed). A target is optional; when there is one
+ * it must be above 0. A deadline is optional, needs a target, and may be
+ * any real date; whether it is still ahead is shown by the progress, not
+ * blocked here. No monthly amount is ever asked for.
  */
-export function validateGoalFields(data: Pick<FinanceData, 'space'>, fields: GoalFields, kind: Goal['kind'] = 'goal'): { status: 'valid'; fields: GoalFields } | { status: 'invalid'; errors: GoalFieldError[] } {
+export function validateGoalFields(data: Pick<FinanceData, 'space'>, fields: GoalFields): { status: 'valid'; fields: GoalFields } | { status: 'invalid'; errors: GoalFieldError[] } {
   const errors: GoalFieldError[] = []
   const details = validateGoalDetails(fields.name, '')
   if (details.status === 'invalid') errors.push(...details.errors)
-  const targetOptional = kind === 'emergency' && fields.target === null
-  if (!targetOptional && (!isMinorAmount(fields.target) || fields.target <= 0)) errors.push('target-not-positive')
+  if (fields.target !== null && (!isMinorAmount(fields.target) || fields.target <= 0)) errors.push('target-not-positive')
   if (fields.deadline !== null && !isCalendarDate(fields.deadline)) errors.push('invalid-deadline')
+  else if (fields.deadline !== null && fields.target === null) errors.push('deadline-needs-target')
   if (fields.owner !== 'shared' && !data.space.members.some(member => member.id === fields.owner)) errors.push('unknown-owner')
   return errors.length > 0 ? { status: 'invalid', errors } : { status: 'valid', fields: { ...fields, name: fields.name.trim() } }
 }
@@ -205,17 +211,9 @@ export function createGoal(data: FinanceData, id: Id, fields: GoalFields, today:
   return { status: 'valid' as const, data: { ...data, goals: [...data.goals, goal] } }
 }
 
-/** Starts an empty emergency fund (no target, no date), if the space has none. */
-export function createEmergencyFund(data: FinanceData, id: Id, owner: Owner, today: CalendarDate): FinanceData {
-  if (emergencyFund(data.goals)) return data
-  const goal: Goal = { id, kind: 'emergency', name: 'Emergency Fund', owner, target: null, currency: data.space.currency, deadline: null, openingBalance: 0, createdOn: today, status: 'active' }
-  return { ...data, goals: [...data.goals, goal] }
-}
-
 /** Changes a goal's name, owner, target or date. Its movements and every other record stay as they are. */
 export function updateGoal(data: FinanceData, id: Id, fields: GoalFields) {
-  const kind = data.goals.find(goal => goal.id === id)?.kind ?? 'goal'
-  const checked = validateGoalFields(data, fields, kind)
+  const checked = validateGoalFields(data, fields)
   if (checked.status === 'invalid') return checked
   return { status: 'valid' as const, data: { ...data, goals: data.goals.map(goal => (goal.id === id ? { ...goal, ...checked.fields } : goal)) } }
 }
