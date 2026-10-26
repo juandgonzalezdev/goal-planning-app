@@ -9,6 +9,7 @@ import { DebtsSection } from './DebtsSection'
 import { ExchangeSection } from './ExchangeSection'
 import { GoalsSection } from './GoalsSection'
 import { IncomeSection } from './IncomeSection'
+import { ReportSection } from './ReportSection'
 
 export type DataScreenProps = {
   data: FinanceData
@@ -24,6 +25,7 @@ export type DataScreenProps = {
   onOpenDebt: (id: Id | null) => void
   onOpenGoal: (id: Id) => void
   onAddGoal: () => void
+  onReviewEmergency: () => void
   onResetDemo: () => void
 }
 
@@ -31,7 +33,7 @@ export type DataScreenProps = {
  * Manage Your Data: the one place to see and edit every record: income
  * and pay days, bills, cards and loans, account balances and goals. Home,
  * Bills and Cards open these same records, so a change made anywhere
- * shows everywhere. Export and import stay at the end.
+ * shows everywhere. The PDF report and the backup stay at the end.
  */
 export function DataScreen(props: DataScreenProps) {
   const { data, isDemo } = props
@@ -58,6 +60,7 @@ export function DataScreen(props: DataScreenProps) {
           <button type="button" className="button-secondary" onClick={() => { props.onResetDemo(); setMessage('The demo is back to the original example.') }}>Reset Demo</button>
         </section>
       )}
+      <ReportSection data={data} isDemo={isDemo} months={props.months} month={props.month} today={props.today} />
       <ExchangeSection data={data} isDemo={isDemo} onReplace={props.onReplace} />
     </div>
   )

@@ -3,7 +3,11 @@ import { exportFinanceData, importFinanceData } from '../../data/exchange'
 import type { FinanceData } from '../../domain/finance/types'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 
-/** Export and import a data file. Importing never replaces anything until the user confirms. */
+/**
+ * Data Backup: download everything as a JSON file, and restore it later.
+ * This is the copy that can be restored (the PDF report cannot). Restoring
+ * never replaces anything until the user confirms.
+ */
 export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDemo: boolean; onReplace: (data: FinanceData) => SaveOutcome }) {
   const [pending, setPending] = useState<FinanceData | null>(null)
   const [errors, setErrors] = useState<string[]>([])
@@ -14,7 +18,7 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
     const blob = new Blob([exportFinanceData(data)], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = 'goal-planning-data.json'
+    link.download = 'goal-planning-backup.json'
     link.click()
     URL.revokeObjectURL(link.href)
   }
@@ -29,20 +33,17 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
     else { setPending(null); setErrors(result.errors) }
   }
 
-  return <>
-    <section className="block">
-      <h2 className="section-title">Export</h2>
-      <p className="field-help">Download everything in this space as a JSON file.</p>
-      <button type="button" className="button-secondary" onClick={download}>Export JSON</button>
-    </section>
-
-    <section className="block">
-      <h2 className="section-title">Import</h2>
+  return (
+    <section className="block" aria-labelledby="data-backup">
+      <h2 id="data-backup" className="section-title">Data Backup</h2>
+      <p className="field-help">Download everything in this space as a JSON file, to restore it later. Keep it somewhere safe: it is not encrypted.</p>
+      <button type="button" className="button-secondary" onClick={download}>Download Backup</button>
+      <h3 className="section-title">Restore Backup</h3>
       {isDemo ? (
         <p className="field-help">Exit the demo to import your own data. Demo information and your own space are never mixed.</p>
       ) : <>
-        <p className="field-help">Replace this space with a JSON file. The file is checked first, and nothing changes until you confirm.</p>
-        <label className="form-field">Choose a JSON file
+        <p className="field-help">Replace this space with a backup file. The file is checked first, and nothing changes until you confirm.</p>
+        <label className="form-field">Choose a backup file (JSON)
           <input ref={fileInput} type="file" accept="application/json,.json" onChange={readFile} />
         </label>
         {errors.length > 0 && (
@@ -54,7 +55,7 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
         )}
         {pending && (
           <div className="callout" role="alert">
-            <p>Replace everything in this space with “{pending.space.name}” from the file? This cannot be undone. Export first if you want a copy.</p>
+            <p>Replace everything in this space with “{pending.space.name}” from the file? This cannot be undone. Download a backup first if you want a copy.</p>
             <div className="inline-actions">
               <button type="button" className="button-small button-small-primary" onClick={() => { setDone(outcomeText('Your space was replaced with the file.', onReplace(pending))); setPending(null) }}>Replace</button>
               <button type="button" className="button-small" onClick={() => setPending(null)}>Cancel</button>
@@ -64,5 +65,5 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
         {done && <p className="muted-note" role="status">{done}</p>}
       </>}
     </section>
-  </>
+  )
 }
