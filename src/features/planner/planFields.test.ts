@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatMoney, formatMonths } from './format'
+import { formatDate, formatMoney, formatMonths } from '../../ui/format'
 import { fieldsToInput, fromGrosze, isValidCalendarDate, sameFields, toGrosze, type Fields } from './planFields'
 
 describe('toGrosze and fromGrosze', () => {

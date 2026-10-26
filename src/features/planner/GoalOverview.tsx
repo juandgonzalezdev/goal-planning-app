@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import type { GoalPlanResult } from './domain/evaluateGoalPlan'
-import { evaluateConfirmedGoal, type ConfirmedGoal } from './domain/goal'
-import type { CalendarDate } from './domain/goalTime'
-import { formatDate, formatMoney as money } from './ui/format'
-import { progressPercent, STATUS_LABELS } from './ui/planStatus'
+import type { GoalPlanResult } from '../../domain/evaluateGoalPlan'
+import { evaluateConfirmedGoal, type ConfirmedGoal } from '../../domain/goal'
+import type { CalendarDate } from '../../domain/goalTime'
+import { formatDate, formatMoney as money } from '../../ui/format'
+import { progressPercent, STATUS_LABELS } from './planStatus'
 
 type Props = {
   goal: ConfirmedGoal

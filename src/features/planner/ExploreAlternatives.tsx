@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
-import type { GoalPlanInput } from './domain/evaluateGoalPlan'
+import type { GoalPlanInput } from '../../domain/evaluateGoalPlan'
 import {
   exploreAlternatives,
   type AlternativeKind,
   type ContributionSchedule,
   type ExtendDateAlternative,
   type IncreaseContributionAlternative,
-} from './domain/exploreAlternatives'
-import { formatDate, formatMoney, formatMonths } from './ui/format'
+} from '../../domain/exploreAlternatives'
+import { formatDate, formatMoney, formatMonths } from '../../ui/format'
 
 type Props = {
   /** The exact input of the evaluation on screen; never the live form fields. */

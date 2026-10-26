@@ -1,6 +1,6 @@
-import type { GoalPlanInput } from '../domain/evaluateGoalPlan'
-import type { MoneyAmount } from '../domain/goalAmounts'
-import type { CalendarDate } from '../domain/goalTime'
+import type { GoalPlanInput } from '../../domain/evaluateGoalPlan'
+import type { MoneyAmount } from '../../domain/goalAmounts'
+import type { CalendarDate } from '../../domain/goalTime'
 
 /** The four planning inputs exactly as the user typed them. */
 export type Fields = {
@@ -8,15 +8,6 @@ export type Fields = {
   alreadySaved: string
   targetDate: string
   comfortableContribution: string
-}
-
-/** Today's calendar date on this device, as 'YYYY-MM-DD'. */
-export function todayString(): CalendarDate {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 // Input amounts are PLN; the domain engine receives integers in grosze.

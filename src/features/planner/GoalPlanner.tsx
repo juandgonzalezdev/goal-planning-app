@@ -1,19 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { evaluateGoalPlan, type GoalPlanInput, type GoalPlanResult } from './domain/evaluateGoalPlan'
-import { exploreAlternatives, type AlternativeKind } from './domain/exploreAlternatives'
+import { evaluateGoalPlan, type GoalPlanInput, type GoalPlanResult } from '../../domain/evaluateGoalPlan'
+import { exploreAlternatives, type AlternativeKind } from '../../domain/exploreAlternatives'
 import {
   characterCount, confirmGoal, evaluateConfirmedGoal, GOAL_DESCRIPTION_MAX_LENGTH, GOAL_NAME_MAX_LENGTH,
   isConfirmable, validateGoalDetails, type ConfirmedGoal,
-} from './domain/goal'
-import type { CalendarDate } from './domain/goalTime'
-import { addMonthsToDate } from './domain/monthlyPlan'
+} from '../../domain/goal'
+import type { CalendarDate } from '../../domain/goalTime'
+import { addMonthsToDate } from '../../domain/monthlyPlan'
 import { ExploreAlternatives } from './ExploreAlternatives'
 import { GoalOverview } from './GoalOverview'
 import { GoalReview } from './GoalReview'
-import { formatDate, formatMoney as money } from './ui/format'
-import { fieldsToInput, fromGrosze, sameFields, todayString, type Fields } from './ui/planFields'
-import { progressPercent, STATUS_LABELS } from './ui/planStatus'
-import './App.css'
+import { formatDate, formatMoney as money } from '../../ui/format'
+import { todayString } from '../../app/today'
+import { fieldsToInput, fromGrosze, sameFields, type Fields } from './planFields'
+import { progressPercent, STATUS_LABELS } from './planStatus'
+import './planner.css'
 
 type Evaluation = { input: GoalPlanInput; result: GoalPlanResult }
 

@@ -1,5 +1,5 @@
-import type { GoalPlanResult } from '../domain/evaluateGoalPlan'
-import type { MoneyAmount } from '../domain/goalAmounts'
+import type { GoalPlanResult } from '../../domain/evaluateGoalPlan'
+import type { MoneyAmount } from '../../domain/goalAmounts'
 
 /** Short headings for each planning state, shared by every screen. */
 export const STATUS_LABELS: Record<GoalPlanResult['status'], string> = {

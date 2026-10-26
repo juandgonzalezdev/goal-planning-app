@@ -7,7 +7,7 @@ import { savingsSummary } from '../../domain/finance/savings'
 import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import { formatAmount, formatDate } from '../../ui/format'
-import { progressPercent } from '../../ui/planStatus'
+import { progressPercent } from '../planner/planStatus'
 
 type Props = {
   data: FinanceData

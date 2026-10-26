@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import type { GoalPlanInput, GoalPlanResult } from './domain/evaluateGoalPlan'
-import { getShortfallAtTargetDate, type ConfirmedGoal, type GoalDetails } from './domain/goal'
-import { formatDate, formatMoney as money, formatMonths } from './ui/format'
-import { STATUS_LABELS } from './ui/planStatus'
+import type { GoalPlanInput, GoalPlanResult } from '../../domain/evaluateGoalPlan'
+import { getShortfallAtTargetDate, type ConfirmedGoal, type GoalDetails } from '../../domain/goal'
+import { formatDate, formatMoney as money, formatMonths } from '../../ui/format'
+import { STATUS_LABELS } from './planStatus'
 
 type Props = {
   /** The latest validated name and description. */
