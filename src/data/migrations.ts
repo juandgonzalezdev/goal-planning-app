@@ -4,7 +4,7 @@
  * by an older version of the app still loads. Steps never delete what the
  * user entered.
  */
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 type Step = (data: Record<string, unknown>) => Record<string, unknown>
 type Rec = Record<string, unknown>
@@ -44,8 +44,21 @@ export function migrateV1toV2(data: Rec): Rec {
   }
 }
 
+/**
+ * Version 2 to 3 (real spending and transfers):
+ * - Two new lists start empty: expenses (money spent that is not a bill)
+ *   and transfers (money moved between the user's own accounts).
+ * - Everything else stays exactly as it was. The new optional fields
+ *   (where a bill was paid from, a loan installment's interest, yearly
+ *   bills, paused months, subscription details, income notes) are simply
+ *   absent, which means "not known".
+ */
+export function migrateV2toV3(data: Rec): Rec {
+  return { ...data, expenses: [], transfers: [] }
+}
+
 /** STEPS[n] turns version n into version n + 1. */
-const STEPS: Record<number, Step> = { 1: migrateV1toV2 }
+const STEPS: Record<number, Step> = { 1: migrateV1toV2, 2: migrateV2toV3 }
 
 export type MigrationResult =
   | { status: 'migrated'; data: Record<string, unknown>; fromVersion: number }

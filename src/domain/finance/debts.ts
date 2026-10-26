@@ -50,8 +50,8 @@ export interface CardsSummary {
 }
 
 /** "Summary based on your loans and cards": only the debt records and their bills, never income. */
-export function summarizeCards(data: Pick<FinanceData, 'debts' | 'balances' | 'bills'>, month: YearMonth): CardsSummary {
-  const debts = summarizeDebts(data)
+export function summarizeCards(data: Pick<FinanceData, 'debts' | 'balances' | 'bills'>, month: YearMonth, asOf?: CalendarDate): CardsSummary {
+  const debts = summarizeDebts(data, asOf)
   const items = debts.items.map(item => ({ ...item, payment: debtPayment(data, item.debt, month) }))
   return {
     items,
@@ -73,9 +73,10 @@ export interface DebtSummary {
   missingBalanceCount: number
 }
 
-export function summarizeDebts(data: Pick<FinanceData, 'debts' | 'balances'>): DebtSummary {
+/** Every debt's latest balance; with `asOf`, as known on that date. */
+export function summarizeDebts(data: Pick<FinanceData, 'debts' | 'balances'>, asOf?: CalendarDate): DebtSummary {
   const items = data.debts.map(debt => {
-    const snapshot = latestBalance(data.balances, debt.id)
+    const snapshot = latestBalance(data.balances, debt.id, asOf)
     return { debt, balance: snapshot?.amount ?? null, asOf: snapshot?.asOf ?? null }
   })
   return {

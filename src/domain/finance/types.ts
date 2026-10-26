@@ -68,12 +68,38 @@ export interface IncomeEntry {
   receivedOn: CalendarDate
   amount: MoneyAmount
   currency: CurrencyCode
+  /** Where it came from, in the user's words (e.g. a freelance client), when there is no source. */
+  note?: string
+  /** True for money that will not come again, such as a tax refund. It is never treated as usual income. */
+  extraordinary?: boolean
+  /** The money account it arrived in, when known. */
+  accountId?: Id
 }
 
 export const BILL_CATEGORIES = ['Housing', 'Utilities', 'Transport', 'Subscriptions', 'Loans', 'Cards', 'Education', 'Other'] as const
 export type BillCategory = (typeof BILL_CATEGORIES)[number]
 
-/** Something paid every month, such as rent or a subscription. */
+/** How often a bill is due. A yearly bill is due once a year, in the month of its `startMonth`. */
+export type BillFrequency = 'monthly' | 'yearly'
+
+/** The user's own view of a subscription. The app never decides it for them. */
+export const SUBSCRIPTION_RATINGS = ['needed', 'adjustable', 'optional'] as const
+export type SubscriptionRating = (typeof SUBSCRIPTION_RATINGS)[number]
+
+/**
+ * What is known about a subscription bill. null means "not known", which
+ * is different from false ("it cannot be paused").
+ */
+export interface SubscriptionInfo {
+  canPause: boolean | null
+  canCancel: boolean | null
+  /** The user's classification, or null while it is not set. */
+  rating: SubscriptionRating | null
+  /** A known cost to start again after a pause (0 when there is none). Absent when not known. */
+  restartFee?: MoneyAmount
+}
+
+/** Something paid every month (or every year), such as rent or a subscription. */
 export interface RecurringBill {
   id: Id
   name: string
@@ -101,6 +127,12 @@ export interface RecurringBill {
   debtId?: Id
   /** Free text, e.g. what a subscriptions bill covers. */
   note?: string
+  /** Monthly when absent. */
+  frequency?: BillFrequency
+  /** Months in which the bill is paused: it is not due then. Payments already made are never changed. */
+  pausedMonths?: YearMonth[]
+  /** Present on subscription bills, when the user entered it. */
+  subscription?: SubscriptionInfo
 }
 
 /**
@@ -116,6 +148,14 @@ export interface BillMonth {
   paid: boolean
   /** The day it was marked paid, when known. */
   paidOn?: CalendarDate
+  /** The money account it was paid from, when known. */
+  paidFrom?: Id
+  /**
+   * Loan bills only: the interest inside this installment, as the lender
+   * showed it. The rest is principal, which lowers the debt. Absent when
+   * the split is not known: then the app never guesses it.
+   */
+  interest?: MoneyAmount
 }
 
 export type DebtKind = 'card' | 'loan'
@@ -187,8 +227,17 @@ export interface BalanceSnapshot {
 
 export type GoalStatus = 'active' | 'archived'
 
-/** A goal the user is saving for, or the emergency fund (which has no target). */
+/** A goal the user is saving for, or the emergency fund. */
 export type GoalKind = 'goal' | 'emergency'
+
+/** How an emergency fund target was worked out, when the user reviewed it in the app. */
+export interface EmergencyBasis {
+  /** Months of essential spending the target covers (1, 3 or 6, or the user's own). */
+  months: number
+  /** The confirmed essential spending per month the target was based on. */
+  monthlyEssentials: MoneyAmount
+  reviewedOn: CalendarDate
+}
 
 /**
  * A savings pot: a purpose for part of the money in Savings. What is saved
@@ -200,7 +249,7 @@ export interface Goal {
   kind: GoalKind
   name: string
   owner: Owner
-  /** Required for a goal; null only for the emergency fund. */
+  /** Optional: null when the user has not set a target. A deadline needs a target. */
   target: MoneyAmount | null
   currency: CurrencyCode
   /** null for a flexible goal with no date. */
@@ -210,6 +259,8 @@ export interface Goal {
   createdOn: CalendarDate
   /** Archived instead of deleted, so its history is not lost. */
   status: GoalStatus
+  /** Emergency fund only: how its target was worked out, if it was reviewed in the app. */
+  emergencyBasis?: EmergencyBasis
 }
 
 /**
@@ -235,6 +286,55 @@ export interface GoalMovement {
   accountId?: Id
 }
 
+/**
+ * Spending categories. Bills keep their own categories; for spending they
+ * are shown in these groups (loan and card bills only add their interest).
+ */
+export const SPENDING_CATEGORIES = ['Housing', 'Utilities', 'Groceries', 'Eating Out', 'Transport', 'Health', 'Subscriptions', 'Leisure',
+  'Shopping', 'Gifts', 'Education', 'Home', 'Interest & Fees', 'Other'] as const
+export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number]
+
+/**
+ * regular: everyday or monthly spending. annual: once a year (insurance,
+ * a yearly plan). exceptional: an unexpected or one-off cost, such as an
+ * urgent repair. Used to tell usual spending apart from one-off months.
+ */
+export const SPENDING_NATURES = ['regular', 'annual', 'exceptional'] as const
+export type SpendingNature = (typeof SPENDING_NATURES)[number]
+
+/**
+ * Money spent that is not a bill: groceries, a taxi, a repair. Paid from
+ * a money account, or with a card (then it is new card debt, and paying the
+ * card later is not spent again).
+ */
+export interface Expense {
+  id: Id
+  date: CalendarDate
+  /** Always above 0. */
+  amount: MoneyAmount
+  currency: CurrencyCode
+  category: SpendingCategory
+  description: string
+  /** A money account, or a card (a debt of kind 'card'). */
+  accountId: Id
+  nature: SpendingNature
+}
+
+/**
+ * Money moved between two of the user's own money accounts. It is never
+ * income or spending: one account goes down, the other goes up.
+ */
+export interface Transfer {
+  id: Id
+  date: CalendarDate
+  /** Always above 0. */
+  amount: MoneyAmount
+  currency: CurrencyCode
+  fromAccountId: Id
+  toAccountId: Id
+  note: string
+}
+
 export type Language = 'en' | 'es' | 'pl'
 export type Theme = 'system' | 'light' | 'dark' | 'day-night'
 
@@ -246,7 +346,7 @@ export interface Preferences {
 }
 
 export interface FinanceData {
-  schemaVersion: 2
+  schemaVersion: 3
   space: Space
   preferences: Preferences
   incomeSources: IncomeSource[]
@@ -258,4 +358,6 @@ export interface FinanceData {
   balances: BalanceSnapshot[]
   goals: Goal[]
   goalMovements: GoalMovement[]
+  expenses: Expense[]
+  transfers: Transfer[]
 }

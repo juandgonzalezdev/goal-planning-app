@@ -24,9 +24,10 @@ export interface MoneySummary {
   missingBalanceCount: number
 }
 
-export function summarizeMoney(data: Pick<FinanceData, 'moneyAccounts' | 'balances'>): MoneySummary {
+/** The latest balance of each account; with `asOf`, as known on that date. */
+export function summarizeMoney(data: Pick<FinanceData, 'moneyAccounts' | 'balances'>, asOf?: CalendarDate): MoneySummary {
   const items = data.moneyAccounts.map(account => {
-    const snapshot = latestBalance(data.balances, account.id)
+    const snapshot = latestBalance(data.balances, account.id, asOf)
     return { account, balance: snapshot?.amount ?? null, asOf: snapshot?.asOf ?? null }
   })
   const known = (list: MoneyAccountItem[]) => sumMinor(list.flatMap(item => (item.balance === null ? [] : [item.balance])))

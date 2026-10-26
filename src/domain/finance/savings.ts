@@ -1,3 +1,4 @@
+import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
 import { sumMinor } from '../money'
 import { summarizeMoney, type MoneyAccountItem } from './moneyAccounts'
@@ -39,14 +40,18 @@ export interface SavingsSummary {
   unassigned: MoneyAmount | null
 }
 
-export function savingsSummary(data: Pick<FinanceData, 'moneyAccounts' | 'balances' | 'goals' | 'goalMovements'>): SavingsSummary {
-  const accounts = summarizeMoney(data).items.filter(item => item.account.kind === 'savings')
+/**
+ * With `asOf`, Savings as known on that date: the balances true by then,
+ * the goals that existed by then and their movements up to then.
+ */
+export function savingsSummary(data: Pick<FinanceData, 'moneyAccounts' | 'balances' | 'goals' | 'goalMovements'>, asOf?: CalendarDate): SavingsSummary {
+  const accounts = summarizeMoney(data, asOf).items.filter(item => item.account.kind === 'savings')
   const knownTotal = sumMinor(accounts.flatMap(item => (item.balance === null ? [] : [item.balance])))
   const missingBalanceCount = accounts.filter(item => item.balance === null).length
   const total = accounts.length > 0 && missingBalanceCount === 0 ? knownTotal : null
-  const active = data.goals.filter(goal => goal.status === 'active')
+  const active = data.goals.filter(goal => goal.status === 'active' && (asOf === undefined || goal.createdOn <= asOf))
   const ordered = [...active.filter(goal => goal.kind === 'goal'), ...active.filter(goal => goal.kind === 'emergency')]
-  const purposes = ordered.map(goal => ({ goal, saved: goalSaved(goal, data.goalMovements) }))
+  const purposes = ordered.map(goal => ({ goal, saved: goalSaved(goal, data.goalMovements, asOf) }))
   const assigned = sumMinor(purposes.map(purpose => purpose.saved))
   return { accounts, knownTotal, missingBalanceCount, total, purposes, assigned, unassigned: total === null ? null : total - assigned }
 }

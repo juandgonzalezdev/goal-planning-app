@@ -25,7 +25,7 @@ const income: IncomeEntry[] = ALEX_INCOME.flatMap((alex, index) => {
 
 export function createDemoHousehold(): FinanceData {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     space: {
       id: 'demo-space',
       name: 'Demo Household',
@@ -82,5 +82,7 @@ export function createDemoHousehold(): FinanceData {
       { id: 'christmas-gift', kind: 'goal', name: 'Christmas Gift', owner: 'alex', target: 50_000, currency: 'PLN', deadline: '2026-12-25', openingBalance: 0, createdOn: DEMO_TODAY, status: 'active' },
     ],
     goalMovements: [],
+    expenses: [],
+    transfers: [],
   }
 }

@@ -35,7 +35,7 @@ describe('validateFinanceData', () => {
     ['a bill that ends before it starts', d => { d.bills[0].endMonth = '2026-09' }, 'bills[0] ends before it starts.'],
     ['a balance for a missing account', d => { d.balances[0].accountId = 'gone' }, 'balances[0].accountId is not a debt or money account.'],
     ['the same bill month twice', d => { d.billMonths.push({ billId: 'rent', month: '2026-10', paid: false }) }, 'billMonths: rent:2026-10 is recorded twice.'],
-    ['a goal target of 0', d => { d.goals[0].target = 0 }, 'goals[0].target must be a whole amount above 0.'],
+    ['a goal target of 0', d => { d.goals[0].target = 0 }, 'goals[0].target must be a whole amount above 0, or null.'],
   ])('rejects %s', (_label, change, error) => {
     expect(invalidErrors(change)).toContain(error)
   })
@@ -53,12 +53,12 @@ describe('validateFinanceData', () => {
 describe('migrateToCurrent', () => {
   it('passes current data through unchanged', () => {
     const data = createDemoHousehold()
-    expect(migrateToCurrent(data)).toEqual({ status: 'migrated', data, fromVersion: 2 })
+    expect(migrateToCurrent(data)).toEqual({ status: 'migrated', data, fromVersion: 3 })
   })
 
   it('refuses data without a version, or from a newer app', () => {
     expect(migrateToCurrent({ goals: [] })).toEqual({ status: 'no-version' })
-    expect(migrateToCurrent({ schemaVersion: 3 })).toEqual({ status: 'newer-version', version: 3 })
+    expect(migrateToCurrent({ schemaVersion: 4 })).toEqual({ status: 'newer-version', version: 4 })
     expect(migrateToCurrent('text')).toEqual({ status: 'not-data' })
   })
 

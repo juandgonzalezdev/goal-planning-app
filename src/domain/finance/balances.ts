@@ -1,14 +1,17 @@
+import type { CalendarDate } from '../goalTime'
 import type { BalanceSnapshot, Id } from './types'
 
 /**
  * The newest balance entered for an account, or null if none was entered.
  * When two snapshots have the same date, the one entered later (later in
- * the list) wins.
+ * the list) wins. With `asOf`, only balances true on or before that date
+ * count, so an earlier month shows what was known then.
  */
-export function latestBalance(balances: readonly BalanceSnapshot[], accountId: Id): BalanceSnapshot | null {
+export function latestBalance(balances: readonly BalanceSnapshot[], accountId: Id, asOf?: CalendarDate): BalanceSnapshot | null {
   let latest: BalanceSnapshot | null = null
   for (const snapshot of balances) {
     if (snapshot.accountId !== accountId) continue
+    if (asOf !== undefined && snapshot.asOf > asOf) continue
     if (!latest || snapshot.asOf >= latest.asOf) latest = snapshot
   }
   return latest
