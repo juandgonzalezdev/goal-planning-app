@@ -92,7 +92,7 @@ export type DebtPayoffEstimate =
 /**
  * An estimate, not a bank figure: how long paying `monthlyPayment` would
  * take and the interest it would cost, with the same rate every month.
- * It reuses the tested calculator from My Money unchanged; amounts go in
+ * It reuses the tested Phase 1 calculator (loanPayoff.ts) unchanged; amounts go in
  * and come out in minor units, and the interest is rounded to the nearest
  * grosz (or cent).
  */

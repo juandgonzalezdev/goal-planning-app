@@ -1,8 +1,8 @@
 /**
  * Informational payoff estimates for a loan or credit card.
  *
- * Amounts are decimal PLN (for example 120.5 means 120.50), as typed in
- * My Money. Interest is the yearly rate divided by 12, charged each month
+ * Amounts are decimal units (for example 120.5 means 120.50); the card or
+ * loan screen converts its minor units before calling. Interest is the yearly rate divided by 12, charged each month
  * on the outstanding balance. The estimate assumes the same rate and
  * payment every month and no new borrowing.
  */
