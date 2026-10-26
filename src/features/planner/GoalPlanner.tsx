@@ -233,7 +233,7 @@ export function GoalPlanner({ getToday = todayString, onConfirmedGoalChange }: G
 
   return (
     <>
-      <div className="intro"><span className="eyebrow">MAKE YOUR NEXT MOVE WITH CLARITY</span><h1>Plan with clearer numbers.</h1><p>Set a goal, choose your monthly contribution and explore what the numbers say.<br/>Calculations run entirely on this device.</p></div>
+      <div className="intro"><span className="eyebrow">MAKE YOUR NEXT MOVE WITH CLARITY</span><h1>Plan with clearer numbers.</h1><p>Set a goal, choose your monthly contribution and explore what the numbers say. <br/>Calculations run entirely on this device.</p></div>
       <div className="workspace">
         <section className="panel input-panel">
           <h2>{editing ? 'Edit your personal goal' : 'Create a personal goal'}</h2>

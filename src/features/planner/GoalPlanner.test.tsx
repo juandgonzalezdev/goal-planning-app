@@ -254,3 +254,10 @@ describe('Explore alternatives: restoring the previous plan', () => {
     expect(screen.queryByRole('region', { name: 'Applied alternative' })).toBeNull()
   })
 })
+
+describe('Introduction', () => {
+  it('keeps a space between its sentences when the line break is hidden on phones', () => {
+    render(<GoalPlanner getToday={() => TODAY} />)
+    expect(document.querySelector('.intro p')!.textContent).toContain('numbers say. Calculations')
+  })
+})
