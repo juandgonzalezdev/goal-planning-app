@@ -861,6 +861,40 @@ describe('Keeping information between screens', () => {
   })
 })
 
+describe('Card or loan estimate', () => {
+  // These cases were covered by the old My Money screen's tests; the estimate now lives on each card or loan.
+  function addLoan(payment: string) {
+    createIndividualSpace()
+    fireEvent.click(tab('Cards'))
+    fireEvent.click(button(/Add Card or Loan/))
+    type('Name', 'Test loan')
+    type('Remaining Balance (PLN)', '12000')
+    type('Yearly Interest (%)', '12')
+    type('Monthly Payment (PLN)', payment)
+    type('Payment Due Day', '10')
+    fireEvent.click(button('Add'))
+  }
+  const estimate = () => text(screen.getByRole('region', { name: 'Estimate' }))
+
+  it('says when the payment does not cover the monthly interest', () => {
+    addLoan('100')
+    expect(estimate()).toContain('This payment does not cover the monthly interest')
+    expect(screen.queryByLabelText(/Extra Each Month/)).toBeNull()
+  })
+
+  it('says when paying off would take more than 50 years', () => {
+    addLoan('120.30')
+    expect(estimate()).toContain('This would take more than 50 years.')
+  })
+
+  it('asks for a readable extra amount', () => {
+    addLoan('1000')
+    type('Extra Each Month (PLN)', 'abc')
+    expect(estimate()).toContain('Enter an amount such as 50.')
+    expect(screen.queryByText('Months Saved')).toBeNull()
+  })
+})
+
 describe('Hidden sections', () => {
   it('are hidden from the keyboard and screen readers', () => {
     createIndividualSpace()
