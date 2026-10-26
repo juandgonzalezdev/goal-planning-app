@@ -5,27 +5,31 @@ import { savingsSummary } from '../../domain/finance/savings'
 import type { FinanceData, Id, MoneyAccountKind } from '../../domain/finance/types'
 import { sharePercents } from '../../ui/chart'
 import { MONEY_KINDS } from '../../ui/chartColors'
-import { formatAmount } from '../../ui/format'
+import type { CalendarDate } from '../../domain/goalTime'
+import { formatDate } from '../../ui/format'
+import { EyeToggle } from '../../ui/privacy'
+import { useBlockAmounts } from '../../ui/amountVisibility'
 import { Donut } from './Donut'
 
 const PURPOSE_COLORS = ['#3b82f6', '#c09662', '#c183a8', '#55a6a4', '#7299c5', '#8874ce']
 const EMERGENCY_COLOR = '#55a58f'
 const UNASSIGNED_COLOR = 'var(--color-track-strong)'
 
-type Props = { data: FinanceData; title: string; onOpenGoal: (id: Id) => void; onOpenData: () => void }
+type Props = { data: FinanceData; title: string; asOf: CalendarDate; onOpenGoal: (id: Id) => void; onOpenData: () => void }
 
 /**
  * What money do I have? The latest balances of Daily Spending,
  * Investments and Savings. Savings is then divided by purpose: goals, the
  * emergency fund and what has no purpose yet. The purposes are part of
  * Savings, so they are never added to it again. Debt is never subtracted.
+ * For a past month, the balances entered by the end of that month.
  */
-export function HomeMoney({ data, title, onOpenGoal, onOpenData }: Props) {
+export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenData }: Props) {
   // v5.9 opens with Investment chosen.
   const [chosen, setChosen] = useState<MoneyAccountKind>('investment')
-  const summary = summarizeMoney(data)
-  const savings = savingsSummary(data)
-  const money = (minor: number) => formatAmount(minor, data.space.currency)
+  const summary = summarizeMoney(data, asOf)
+  const savings = savingsSummary(data, asOf)
+  const { money, hidden } = useBlockAmounts('money', data.space.currency)
   const hasOther = data.moneyAccounts.some(account => account.kind === 'other')
   const kinds = summary.byKind.filter(item => item.kind !== 'other' || hasOther)
   const focus = kinds.find(item => item.kind === chosen) ?? kinds[0]
@@ -45,13 +49,17 @@ export function HomeMoney({ data, title, onOpenGoal, onOpenData }: Props) {
     <section className="block home-section" aria-labelledby="home-money">
       <div className="section-head">
         <h2 id="home-money" className="section-title">{title}</h2>
-        <button type="button" className="button-small" onClick={onOpenData}>Edit Balances <Icon name="arrowRight" size={16} /></button>
+        <div className="inline-actions">
+          <EyeToggle block="money" />
+          <button type="button" className="button-small" onClick={onOpenData}>Edit Balances <Icon name="arrowRight" size={16} /></button>
+        </div>
       </div>
+      <p className="muted-note">Balances by {formatDate(asOf)}</p>
       {data.moneyAccounts.length === 0
         ? <p className="muted-note">No accounts yet. Add them in Data.</p>
         : <>
           <Donut
-            segments={kinds.map(item => ({ value: item.total, color: MONEY_KINDS[item.kind].color }))}
+            segments={hidden ? [] : kinds.map(item => ({ value: item.total, color: MONEY_KINDS[item.kind].color }))}
             caption={MONEY_KINDS[focus.kind].label}
             value={money(focus.total)}
           />
@@ -72,7 +80,7 @@ export function HomeMoney({ data, title, onOpenGoal, onOpenData }: Props) {
         <div className="savings-split" aria-label="Savings by purpose" role="group">
           <h3 className="section-title">Savings</h3>
           <p className="muted-note">Your savings are divided by purpose.</p>
-          {parts.length > 0 && (
+          {parts.length > 0 && !hidden && (
             <div className="bar stacked" aria-hidden="true">
               {parts.map((part, index) => <span key={part.key} style={{ width: `${shares[index]}%`, background: part.color }} />)}
             </div>

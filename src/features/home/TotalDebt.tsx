@@ -2,25 +2,32 @@ import { useId, useState } from 'react'
 import { Icon } from '../../components/Icon'
 import { summarizeDebts } from '../../domain/finance/debts'
 import type { FinanceData, Id } from '../../domain/finance/types'
-import { formatAmount, formatDate } from '../../ui/format'
+import type { CalendarDate } from '../../domain/goalTime'
+import { formatDate } from '../../ui/format'
+import { EyeToggle } from '../../ui/privacy'
+import { useBlockAmounts } from '../../ui/amountVisibility'
 
 /**
  * How much do I owe? The total of the Remaining Balances (never the
  * monthly payments). It opens in place to show each card and loan; each
- * row opens that card or loan in Cards, where it can be edited.
+ * row opens that card or loan in Cards, where it can be edited. For a
+ * past month it uses the balances entered by the end of that month.
  */
-export function TotalDebt({ data, onOpenDebt, onOpenCards }: { data: FinanceData; onOpenDebt: (id: Id) => void; onOpenCards: () => void }) {
+export function TotalDebt({ data, asOf, onOpenDebt, onOpenCards }: { data: FinanceData; asOf: CalendarDate; onOpenDebt: (id: Id) => void; onOpenCards: () => void }) {
   const [open, setOpen] = useState(false)
   const detailsId = useId()
-  const summary = summarizeDebts(data)
-  const money = (minor: number) => formatAmount(minor, data.space.currency)
+  const summary = summarizeDebts(data, asOf)
+  const { money, spoken } = useBlockAmounts('debt', data.space.currency)
   return (
     <section className="block home-section" aria-labelledby="home-debt">
-      <h2 id="home-debt" className="section-title">Total Debt</h2>
-      <button type="button" className="debt-toggle" aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen(!open)}>
+      <div className="section-head">
+        <h2 id="home-debt" className="section-title">Total Debt</h2>
+        <EyeToggle block="debt" />
+      </div>
+      <button type="button" className="debt-toggle" aria-label={`Total Debt ${spoken(summary.total)}, ${open ? 'hide' : 'show'} cards and loans`} aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen(!open)}>
         <span>
           <b className="year-total">{money(summary.total)}</b>
-          <small>{summary.items.length === 0 ? 'No cards or loans yet' : `${summary.items.length} ${summary.items.length === 1 ? 'card or loan' : 'cards and loans'} · Remaining balances`}</small>
+          <small>{summary.items.length === 0 ? 'No cards or loans yet' : `${summary.items.length} ${summary.items.length === 1 ? 'card or loan' : 'cards and loans'} · Balances by ${formatDate(asOf)}`}</small>
         </span>
         <span className="debt-toggle-label">{open ? 'Hide' : 'Show'} <Icon name={open ? 'chevronUp' : 'chevronDown'} size={18} /></span>
       </button>
