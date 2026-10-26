@@ -33,6 +33,8 @@
   --color-positive-soft: #eaf7f1;
   --color-warning-text: #7a4700;
   --color-warning-soft: #fff5e8;
+  /* A month that spent more than it received, an overdue bill. */
+  --color-negative: #b42318;
 
   /* People and shared items in charts (approved). */
   --color-member-1: #3b82f6;
@@ -81,6 +83,7 @@
   --color-positive-soft: #173a30;
   --color-warning-text: #f3c77c;
   --color-warning-soft: #3d2f17;
+  --color-negative: #ff8a80;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
@@ -107,5 +110,6 @@
     --color-positive-soft: #173a30;
     --color-warning-text: #f3c77c;
     --color-warning-soft: #3d2f17;
+    --color-negative: #ff8a80;
   }
 }

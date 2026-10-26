@@ -5,12 +5,11 @@ import { alexDemo, useSpace, type DemoFixture } from './app/useSpace'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { browserStorage } from './data/localStore'
-import { readChartView, writeChartView, type BillsChartView } from './data/uiPrefs'
-import { addMonthsToYearMonth, yearMonthOf, type YearMonth } from './domain/calendar'
+import { readChartView, readEmergencyLater, readHiddenBlocks, writeChartView, writeEmergencyLater, writeHiddenBlocks, type BillsChartView } from './data/uiPrefs'
+import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
 import type { Id } from './domain/finance/types'
-import type { ConfirmedGoal } from './domain/goal'
 import type { CalendarDate } from './domain/goalTime'
 import { BillScreen } from './features/bills/BillScreen'
 import { BillsScreen } from './features/bills/BillsScreen'
@@ -24,7 +23,9 @@ import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
 import { HomeScreen } from './features/home/HomeScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
-import { GoalPlanner } from './features/planner/GoalPlanner'
+import { EmergencyScreen } from './features/goals/EmergencyScreen'
+import { AmountVisibilityProvider } from './ui/privacy'
+import { HOME_BLOCKS, type HomeBlock } from './ui/amountVisibility'
 import { AuthPreview } from './features/welcome/AuthPreview'
 import { Welcome } from './features/welcome/Welcome'
 import { EMPTY_SETUP, setupFromDraft, type SetupDraft } from './features/welcome/setupDraft'
@@ -48,11 +49,6 @@ type Props = {
  * The app shell: header, the current screen, the tab bar and the moves
  * between screens.
  *
- * The Goal Planner stays on the page once a space is open and is only
- * hidden while another screen shows. Hidden content is not displayed,
- * cannot be reached with the keyboard and is skipped by screen readers,
- * and everything typed in it is still there when the user comes back.
- *
  * Every screen reads the same records (the open space's data) and changes
  * them through `space.update`, so Home, Bills, Cards, Data, History and
  * the goals always agree.
@@ -61,24 +57,25 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const space = useSpace(storage, getToday, createDemo)
   const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
-  // A copy for Home to show. The goal itself is owned by GoalPlanner.
-  const [confirmedGoal, setConfirmedGoal] = useState<ConfirmedGoal | null>(null)
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
   const [goalId, setGoalId] = useState<Id | null>(null)
   const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
   // The card or loan, and the bill, shown on their own screens (null: adding a new one).
   const [debtId, setDebtId] = useState<Id | null>(null)
   const [billId, setBillId] = useState<Id | null>(null)
-  // The planned goal last saved as a goal, so it is not saved twice.
-  const [savedPlan, setSavedPlan] = useState<ConfirmedGoal | null>(null)
+  // The record History opens on (a purchase chosen on Home).
+  const [historyFocus, setHistoryFocus] = useState<Id | null>(null)
   const [chartView, setChartView] = useState<BillsChartView>(() => readChartView(storage))
   const [confirmReset, setConfirmReset] = useState(false)
-  // Changes when the demo is reset, so the Goal Planner starts again from an empty draft.
-  const [plannerRun, setPlannerRun] = useState(0)
+  // Hidden amounts on Home and "Maybe Later" on the emergency fund: screen preferences of this device, never data.
+  const [hiddenBlocks, setHiddenBlocks] = useState<ReadonlySet<HomeBlock>>(
+    () => new Set(readHiddenBlocks(storage).filter((block): block is HomeBlock => (HOME_BLOCKS as readonly string[]).includes(block))))
+  const [emergencyLater, setEmergencyLater] = useState(() => readEmergencyLater(storage))
   // The months follow "today", which differs between the demo and the own
-  // space. A month chosen for another "today" is not reused.
+  // space: the twelve months of today's year (and next January in
+  // December, to plan ahead). A month chosen for another "today" is not reused.
   const thisMonth = yearMonthOf(space.today)
-  const months = [thisMonth, addMonthsToYearMonth(thisMonth, 1)]
+  const months = [...monthsOfYear(Number(thisMonth.slice(0, 4))), ...(thisMonth.endsWith('-12') ? [addMonthsToYearMonth(thisMonth, 1)] : [])]
   const [chosenMonth, setChosenMonth] = useState<{ from: YearMonth; month: YearMonth } | null>(null)
   const month = chosenMonth?.from === thisMonth ? chosenMonth.month : thisMonth
   const setMonth = (next: YearMonth) => setChosenMonth({ from: thisMonth, month: next })
@@ -114,10 +111,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
-  const resetGoals = () => { setConfirmedGoal(null); setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setSavedPlan(null) }
+  const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null) }
   const exitDemo = () => { space.closeDemo(); resetGoals(); setConfirmReset(false); replace('welcome') }
   // Reset Demo puts the whole example back: the records, and everything planned or chosen on top of them.
-  const resetDemo = () => { space.resetDemo(); resetGoals(); setPlannerRun(run => run + 1); setChosenMonth(null); setConfirmReset(false) }
+  const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setConfirmReset(false) }
   const erase = () => {
     const erased = space.eraseOwnSpace()
     if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); replace('welcome') }
@@ -130,17 +127,19 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // New records belong to the one person in an Individual space, and are shared in a Duo.
   const newGoalOwner = open?.data.space.mode === 'individual' ? open.data.space.members[0].id : 'shared'
   const changeChartView = (view: BillsChartView) => { setChartView(view); writeChartView(storage, view) }
-  const savePlannedGoal = () => {
-    if (!open || !confirmedGoal) return
-    const id = newId()
-    const created = createGoal(open.data, id, {
-      name: confirmedGoal.details.name, owner: newGoalOwner, target: confirmedGoal.input.targetAmount, deadline: confirmedGoal.input.targetDate,
-    }, space.today)
-    if (created.status !== 'valid') return
-    space.update(() => created.data)
-    setSavedPlan(confirmedGoal)
-    openGoal(id)
+  const openExpense = (id: Id) => { setHistoryFocus(id); go('history') }
+  const saveHidden = (next: ReadonlySet<HomeBlock>) => { setHiddenBlocks(next); writeHiddenBlocks(storage, [...next]) }
+  const visibility = {
+    hidden: hiddenBlocks,
+    toggle: (block: HomeBlock) => {
+      const next = new Set(hiddenBlocks)
+      if (next.has(block)) next.delete(block)
+      else next.add(block)
+      saveHidden(next)
+    },
+    setAll: (hide: boolean) => saveHidden(new Set(hide ? HOME_BLOCKS : [])),
   }
+  const emergencyLaterChange = (later: boolean) => { setEmergencyLater(later); writeEmergencyLater(storage, later) }
   const selectTab = (tab: Tab) => { if (tab !== screen) go(tab) }
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
@@ -192,10 +191,13 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
 
         {open && <>
           {shows('home') && <div className="screen" data-screen="home">
-            <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} confirmedGoal={confirmedGoal} today={space.today}
-              plannedGoalSaved={!!confirmedGoal && savedPlan === confirmedGoal} chartView={chartView} onChartViewChange={changeChartView}
-              onChange={space.update} onOpen={go} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
-              onSavePlannedGoal={savePlannedGoal} />
+            <AmountVisibilityProvider value={visibility}>
+              <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} today={space.today}
+                chartView={chartView} onChartViewChange={changeChartView}
+                onChange={space.update} onOpen={go} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
+                onOpenExpense={openExpense} emergencyLater={emergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
+                onReviewEmergency={() => go('emergency')} />
+            </AmountVisibilityProvider>
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
             <BillsScreen data={open.data} months={months} month={month} today={space.today} onMonthChange={setMonth} onChange={space.update}
@@ -220,7 +222,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
             <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} newId={newId} onBack={back}
               onChange={data => space.update(() => data)}
-              onDeleted={data => { space.update(() => data); setGoalId(null); back() }} />
+              onDeleted={data => { space.update(() => data); setGoalId(null); back() }} onReviewEmergency={() => go('emergency')} />
           </div>}
           {shows('new-goal') && <div className="screen" data-screen="new-goal">
             <NewGoalScreen data={open.data} today={space.today} owner={newGoalOwner} state={newGoal} onStateChange={setNewGoal} onCancel={back}
@@ -234,26 +236,23 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 replace('goal')
               }} />
           </div>}
+          {shows('emergency') && <div className="screen" data-screen="emergency">
+            <EmergencyScreen data={open.data} today={space.today} owner={newGoalOwner} newId={newId} onBack={back}
+              onSave={data => { space.update(() => data); emergencyLaterChange(false) }} onOpenGoal={id => { setGoalId(id); replace('goal') }} />
+          </div>}
           {shows('history') && <div className="screen" data-screen="history">
-            <HistoryScreen data={open.data} />
+            <HistoryScreen key={historyFocus ?? 'all'} data={open.data} months={months} month={month} today={space.today} newId={newId} focusId={historyFocus}
+              onChange={space.update} onOpenBill={openBill} onOpenGoal={openGoal} />
           </div>}
           {shows('data') && <div className="screen" data-screen="data">
             <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today} owner={newGoalOwner} newId={newId}
               onChange={space.update} onReplace={data => space.update(() => data)} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
-              onAddGoal={() => go('new-goal')} onResetDemo={resetDemo} />
+              onAddGoal={() => go('new-goal')} onReviewEmergency={() => go('emergency')} onResetDemo={resetDemo} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onResetDemo={resetDemo} onErase={erase}
               onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} />
           </div>}
-        </>}
-        {/* Kept on the page while a space is open, so nothing typed in them is lost. */}
-        {open && <>
-          <div className="screen screen-section" data-screen="planner" hidden={!shows('planner')}>
-            <button type="button" className="back-link" onClick={back}><Icon name="arrowLeft" size={18} /> Home</button>
-            {/* Plans on the open space's date: the demo's fixed date in the demo. */}
-            <GoalPlanner key={plannerRun} getToday={() => space.today} onConfirmedGoalChange={setConfirmedGoal} />
-          </div>
         </>}
       </main>
       <footer className="shell-footer">
