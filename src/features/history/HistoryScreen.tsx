@@ -21,7 +21,8 @@ type Props = {
   /** A purchase to open for editing (chosen on Home). */
   focusId: Id | null
   onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
-  onOpenBill: (id: Id) => void
+  /** Opens a bill on the month of the payment chosen. */
+  onOpenBill: (id: Id, month: YearMonth) => void
   onOpenGoal: (id: Id) => void
 }
 
@@ -182,7 +183,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, onCh
               <li key={entry.key}>
                 <EntryRow entry={entry} money={money} onOpen={() => {
                   const ref = entry.ref
-                  if (ref.kind === 'bill') onOpenBill(ref.billId)
+                  if (ref.kind === 'bill') onOpenBill(ref.billId, ref.month)
                   else if (ref.kind === 'movement' || ref.kind === 'opening') onOpenGoal(ref.goalId)
                   else if (ref.kind === 'expense' || ref.kind === 'transfer' || ref.kind === 'income') { setEditing({ kind: ref.kind, id: ref.id }); setConfirmDelete(null) }
                 }} />

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Field } from '../../components/Field'
 import { amountText } from '../../ui/labels'
 import { Icon } from '../../components/Icon'
+import { MonthSwitch } from '../../components/MonthSwitch'
 import type { YearMonth } from '../../domain/calendar'
 import {
   addBill, billsForMonth, deleteBill, setBillMonthAmount, setBillPaid, setUsualAmountFrom, updateBill, usualAmountFor,
@@ -18,7 +19,9 @@ type Props = {
   data: FinanceData
   /** null: adding a new bill. */
   billId: Id | null
+  months: YearMonth[]
   month: YearMonth
+  onMonthChange: (month: YearMonth) => void
   today: CalendarDate
   owner: Owner
   newId: () => string
@@ -72,7 +75,10 @@ export function BillScreen(props: Props) {
   const [editing, setEditing] = useState(billId === null)
   const [draft, setDraft] = useState<BillDraft>(() => draftOf(bill, month))
   const [errors, setErrors] = useState<DraftErrors>({})
-  const [monthText, setMonthText] = useState<string | null>(null)
+  // The amount being typed for one month; another month shows its own amount, not this draft.
+  const [monthDraft, setMonthDraft] = useState<{ month: YearMonth; text: string } | null>(null)
+  const monthText = monthDraft?.month === month ? monthDraft.text : null
+  const setMonthText = (text: string | null) => setMonthDraft(text === null ? null : { month, text })
   const [usual, setUsual] = useState<{ amount: string; from: string; error?: string } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [message, setMessage] = useState('')
@@ -181,6 +187,7 @@ export function BillScreen(props: Props) {
         <h1 className="tab-title">{bill.name}</h1>
         <p className="muted-note">{bill.category} · Due {formatDueDay(bill.dueDay).toLowerCase()}</p>
       </div>
+      <MonthSwitch months={props.months} value={month} onChange={next => { setMonthDraft(null); setMessage(''); props.onMonthChange(next) }} />
       <p className="muted-note" role="status">{message}</p>
 
       <section className="block" aria-labelledby="bill-month">

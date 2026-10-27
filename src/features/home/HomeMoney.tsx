@@ -6,10 +6,11 @@ import type { FinanceData, Id, MoneyAccountKind } from '../../domain/finance/typ
 import { sharePercents } from '../../ui/chart'
 import { MONEY_KINDS } from '../../ui/chartColors'
 import type { CalendarDate } from '../../domain/goalTime'
-import { formatDate } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { balanceDatesText } from './balanceDates'
 import { Donut } from './Donut'
+import { HomeBlockFrame } from './HomeBlock'
 
 const PURPOSE_COLORS = ['#3b82f6', '#c09662', '#c183a8', '#55a6a4', '#7299c5', '#8874ce']
 const EMERGENCY_COLOR = '#55a58f'
@@ -44,17 +45,16 @@ export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenData }: Props) 
       ? [{ key: 'unassigned', name: 'Unassigned', amount: savings.unassigned, goalId: null, color: UNASSIGNED_COLOR }] : []),
   ]
   const shares = sharePercents(parts.map(part => part.amount))
+  // One line per kind of account (Savings already holds the goals, so they are not added again).
+  const summaryText = data.moneyAccounts.length === 0 ? 'No accounts yet'
+    : kinds.map(item => `${MONEY_KINDS[item.kind].label} ${money(item.total)}${missing(item.kind) ? ' +?' : ''}`).join(' · ')
+  const actions = <>
+    <EyeToggle block="money" />
+    <button type="button" className="button-small" onClick={onOpenData}>Edit Balances <Icon name="arrowRight" size={16} /></button>
+  </>
 
   return (
-    <section className="block home-section" aria-labelledby="home-money">
-      <div className="section-head">
-        <h2 id="home-money" className="section-title">{title}</h2>
-        <div className="inline-actions">
-          <EyeToggle block="money" />
-          <button type="button" className="button-small" onClick={onOpenData}>Edit Balances <Icon name="arrowRight" size={16} /></button>
-        </div>
-      </div>
-      <p className="muted-note">Balances by {formatDate(asOf)}</p>
+    <HomeBlockFrame block="money" title={title} period={balanceDatesText(summary.items.map(item => item.asOf), asOf)} summary={summaryText} actions={actions}>
       {data.moneyAccounts.length === 0
         ? <p className="muted-note">No accounts yet. Add them in Data.</p>
         : <>
@@ -110,6 +110,6 @@ export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenData }: Props) 
           <p className="field-help">Goals and the Emergency Fund are part of Savings, not extra money.</p>
         </div>
       )}
-    </section>
+    </HomeBlockFrame>
   )
 }

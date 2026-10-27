@@ -22,6 +22,13 @@ export function formatDate(date: CalendarDate): string {
 }
 
 /**
+ * The day an estimate is worked out from. In the own space it is really
+ * today; the demo uses its own fixed date, so it never says "today" there.
+ */
+export const referenceDay = (today: CalendarDate, isDemo: boolean): string =>
+  isDemo ? `${formatDate(today)} (the demo’s date)` : `today (${formatDate(today)})`
+
+/**
  * An amount in minor units shown the way the approved design shows money,
  * e.g. 719_403 PLN -> '7194,03 zł'. Used by the new finance screens.
  */

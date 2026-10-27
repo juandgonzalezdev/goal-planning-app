@@ -280,6 +280,17 @@ export function validateFinanceData(input: unknown): ValidationResult {
     if (!('currency' in item)) fail(`${where}.currency is missing.`)
   })
 
+  // When a record was entered (optional, for the order of same-day records in History).
+  for (const name of ['income', 'billMonths', 'balances', 'goalMovements', 'expenses', 'transfers']) {
+    const list = input[name]
+    if (!Array.isArray(list)) continue
+    list.forEach((item, index) => {
+      if (isRecord(item) && item.recordedAt !== undefined && !(isText(item.recordedAt) && !Number.isNaN(Date.parse(item.recordedAt)))) {
+        fail(`${name}[${index}].recordedAt must be a date and time.`)
+      }
+    })
+  }
+
   // A pot can never go below zero at any point in its history.
   if (errors.length === 0) {
     const data = input as unknown as FinanceData

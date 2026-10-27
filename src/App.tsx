@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
 import { alexDemo, useSpace, type DemoFixture } from './app/useSpace'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { browserStorage } from './data/localStore'
-import { readChartView, readEmergencyLater, readHiddenBlocks, writeChartView, writeEmergencyLater, writeHiddenBlocks, type BillsChartView } from './data/uiPrefs'
+import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
@@ -22,6 +22,7 @@ import { GoalsScreen } from './features/goals/GoalsScreen'
 import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
 import { HomeScreen } from './features/home/HomeScreen'
+import { DEFAULT_LAYOUT, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
 import { AmountVisibilityProvider } from './ui/privacy'
@@ -79,6 +80,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [chosenMonth, setChosenMonth] = useState<{ from: YearMonth; month: YearMonth } | null>(null)
   const month = chosenMonth?.from === thisMonth ? chosenMonth.month : thisMonth
   const setMonth = (next: YearMonth) => setChosenMonth({ from: thisMonth, month: next })
+  // How Home is arranged. The own space's layout is remembered on this device for that space;
+  // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
+  const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
+  const [ownLayout, setOwnLayout] = useState<{ spaceId: string; layout: HomeLayout } | null>(null)
   const mainRef = useRef<HTMLElement>(null)
   const firstScreen = useRef(true)
 
@@ -104,6 +109,40 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     heading.focus()
   }, [screen])
 
+  const homeLayout = !open ? DEFAULT_LAYOUT
+    : open.kind === 'demo' ? demoLayout
+      : ownLayout?.spaceId === open.data.space.id ? ownLayout.layout : normalizeLayout(readHomeLayout(storage, open.data.space.id))
+  const changeHomeLayout = (layout: HomeLayout) => {
+    if (!open) return
+    if (open.kind === 'demo') { setDemoLayout(layout); return }
+    setOwnLayout({ spaceId: open.data.space.id, layout })
+    writeHomeLayout(storage, open.data.space.id, layout)
+  }
+
+  // Home's month bar sticks under the header (and the tab row on wide screens). Their real
+  // height changes with the iPhone notch and the font size, so it is measured, not guessed.
+  const shellRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const shell = shellRef.current
+    if (!shell || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      const header = shell.querySelector<HTMLElement>('.shell-header')
+      const nav = shell.querySelector<HTMLElement>('.bottom-nav')
+      const bar = shell.querySelector<HTMLElement>('[data-sticky-bar]')
+      // On wide screens the tab row sticks right under the header (at its own `top`).
+      const navStyle = nav ? getComputedStyle(nav) : null
+      const top = nav && navStyle?.position === 'sticky' ? (parseFloat(navStyle.top) || 0) + nav.offsetHeight : header?.offsetHeight ?? 64
+      const root = document.documentElement.style
+      root.setProperty('--sticky-top', `${top}px`)
+      root.setProperty('--sticky-bar', `${bar?.offsetHeight ?? 0}px`)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    for (const element of shell.querySelectorAll('.shell-header, .bottom-nav, [data-sticky-bar]')) observer.observe(element)
+    window.addEventListener('resize', measure)
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
+  }, [screen, open?.kind])
+
   const finishSetup = () => {
     const created = createSpaceData(setupFromDraft(setupDraft))
     if (created.status !== 'created') return
@@ -112,17 +151,18 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     replace('home')
   }
   const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null) }
-  const exitDemo = () => { space.closeDemo(); resetGoals(); setConfirmReset(false); replace('welcome') }
-  // Reset Demo puts the whole example back: the records, and everything planned or chosen on top of them.
-  const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setConfirmReset(false) }
+  const exitDemo = () => { space.closeDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setConfirmReset(false); replace('welcome') }
+  // Reset Demo puts the whole example back: the records, the Home layout, and everything planned or chosen on top of them.
+  const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setConfirmReset(false) }
   const erase = () => {
     const erased = space.eraseOwnSpace()
-    if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); replace('welcome') }
+    if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setChosenMonth(null); replace('welcome') }
     return erased
   }
   const openGoal = (id: Id) => { setGoalId(id); go('goal') }
   const openDebt = (id: Id | null) => { setDebtId(id); go('debt') }
-  const openBill = (id: Id | null) => { setBillId(id); go('bill') }
+  /** Opens a bill; with `forMonth` (a payment chosen in Cards or History), on that month, which becomes the shared month. */
+  const openBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); if (forMonth) setMonth(forMonth); go('bill') }
   const selectedGoal = open?.data.goals.find(goal => goal.id === goalId && goal.status === 'active') ?? null
   // New records belong to the one person in an Individual space, and are shared in a Duo.
   const newGoalOwner = open?.data.space.mode === 'individual' ? open.data.space.members[0].id : 'shared'
@@ -151,7 +191,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const showNav = !!open && isTab(screen)
 
   return (
-    <div className={`shell${showNav ? ' has-nav' : ''}`} data-direction={direction}>
+    <div className={`shell${showNav ? ' has-nav' : ''}`} data-direction={direction} ref={shellRef}>
       <header className="shell-header">
         <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} onClick={goToStart}>
           <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
@@ -198,7 +238,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
               <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} today={space.today}
-                chartView={chartView} onChartViewChange={changeChartView}
+                chartView={chartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 onChange={space.update} onOpen={go} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
                 onOpenExpense={openExpense} emergencyLater={emergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 onReviewEmergency={() => go('emergency')} />
@@ -209,15 +249,15 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onOpenBill={openBill} onAddBill={() => openBill(null)} />
           </div>}
           {shows('cards') && <div className="screen" data-screen="cards">
-            <CardsScreen data={open.data} month={month} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
+            <CardsScreen data={open.data} months={months} month={month} onMonthChange={setMonth} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
           </div>}
           {shows('debt') && <div className="screen" data-screen="debt">
-            <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} month={month} today={space.today} owner={newGoalOwner} newId={newId}
-              onBack={back} onChange={space.update} onOpenBill={openBill}
+            <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} months={months} month={month} onMonthChange={setMonth}
+              today={space.today} isDemo={open.kind === 'demo'} owner={newGoalOwner} newId={newId} onBack={back} onChange={space.update} onOpenBill={openBill}
               onCreated={id => { setDebtId(id); replace('debt') }} onDeleted={() => { setDebtId(null); back() }} />
           </div>}
           {shows('bill') && <div className="screen" data-screen="bill">
-            <BillScreen key={`${billId ?? 'new'}:${month}`} data={open.data} billId={billId} month={month} today={space.today} owner={newGoalOwner} newId={newId}
+            <BillScreen key={billId ?? 'new'} data={open.data} billId={billId} months={months} month={month} onMonthChange={setMonth} today={space.today} owner={newGoalOwner} newId={newId}
               onBack={back} onChange={space.update} onOpenDebt={openDebt}
               onCreated={id => { setBillId(id); replace('bill') }} onDeleted={() => { setBillId(null); back() }} />
           </div>}
@@ -225,7 +265,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <GoalsScreen data={open.data} today={space.today} onBack={back} onNew={() => go('new-goal')} onOpenGoal={openGoal} />
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
-            <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} newId={newId} onBack={back}
+            <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} isDemo={open.kind === 'demo'} newId={newId} onBack={back}
               onChange={data => space.update(() => data)}
               onDeleted={data => { space.update(() => data); setGoalId(null); back() }} onReviewEmergency={() => go('emergency')} />
           </div>}
@@ -251,7 +291,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('data') && <div className="screen" data-screen="data">
             <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today} owner={newGoalOwner} newId={newId}
-              onChange={space.update} onReplace={data => space.update(() => data)} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
+              onChange={space.update} onReplace={space.replaceData} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
               onAddGoal={() => go('new-goal')} onReviewEmergency={() => go('emergency')} onResetDemo={resetDemo} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">

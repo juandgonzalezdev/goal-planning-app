@@ -35,10 +35,12 @@ async function backHome() {
   fireEvent.click(tab('Home'))
 }
 
-function openAlex(storage: Storage = memoryStorage()) {
+/** Opens the demo on Home. Most tests look inside the Home blocks, so they open all of them (Expand All). */
+function openAlex(storage: Storage = memoryStorage(), { expanded = true } = {}) {
   // The device date is in October; the demo keeps its own date.
   const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
   fireEvent.click(button('Explore the App'))
+  if (expanded) fireEvent.click(button('Expand All'))
   return { storage, ...result }
 }
 
@@ -57,7 +59,7 @@ describe('Alex demo: Home', () => {
     expect(monthSelect().value).toBe('2026-12')
     expect(monthSelect().options).toHaveLength(13)
     expect(monthSelect().options[0].textContent).toBe('January 2026')
-    const titles = [...document.querySelectorAll('[data-screen="home"] section > .section-head h2, [data-screen="home"] section > .section-head div > h2')].map(h => h.textContent)
+    const titles = [...document.querySelectorAll('[data-screen="home"] section .block-name')].map(h => h.textContent)
     expect(titles).toEqual(['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'My Money', 'My Goals', 'Year Summary'])
   })
 
@@ -86,8 +88,9 @@ describe('Alex demo: Home', () => {
     expect(region('Total Debt')).toContain('12 266,98 zł')
     pickMonth('2026-08')
     expect(region('Total Debt')).toContain('16 029,46 zł')
-    expect(region('Total Debt')).toContain('Balances by 31 Aug 2026')
-    expect(region('My Money')).toContain('Balances by 31 Aug 2026')
+    expect(region('Total Debt')).toContain('Balances as of 31 Aug 2026')
+    // Investments was last entered at the end of 2025: the dates are shown as they are, not as one day.
+    expect(region('My Money')).toContain('Latest balances, dated 31 Dec 2025 to 31 Aug 2026')
   })
 
   it('says what is still to pay in December, and changes when it is paid (5)', () => {
@@ -195,7 +198,6 @@ describe('Alex demo: Home', () => {
     expect(year).toContain('Result for 20267216,86 zł')
     expect(year).toContain('Includes 1138,00 zł of one-off income.')
     expect(year).toContain('Spending was higher than income in Feb, Jul, Aug.')
-    fireEvent.click(within(regionOf('Year Summary')).getByRole('button', { name: /Details/ }))
     fireEvent.click(screen.getByText('Reference Notes'))
     expect(region('Year Summary')).toContain('Housing and utilities were 49.3% of the net income you received')
     expect(region('Year Summary')).toContain('not a spending limit')
@@ -207,9 +209,7 @@ describe('Alex demo: hiding amounts (11)', () => {
     openAlex()
     fireEvent.click(button('Hide All Amounts'))
     fireEvent.click(button('How is this worked out?'))
-    fireEvent.click(button(/show cards and loans/))
     fireEvent.click(button('Ideas to Review'))
-    fireEvent.click(within(regionOf('Year Summary')).getByRole('button', { name: /Details/ }))
     fireEvent.click(screen.getByText('Reference Notes'))
     const home = document.querySelector<HTMLElement>('[data-screen="home"]')!
     expect(text(home)).not.toMatch(amount)
@@ -223,7 +223,7 @@ describe('Alex demo: hiding amounts (11)', () => {
     expect(home.querySelector<HTMLElement>('.donut')!.style.background).toContain('var(--color-track)')
     expect(within(home).queryAllByRole('progressbar')).toEqual([])
     // Titles and navigation stay.
-    expect(heading('My Money')).toBeTruthy()
+    expect(regionOf('My Money')).toBeTruthy()
     expect(tab('Bills')).toBeTruthy()
   })
 
@@ -457,7 +457,7 @@ describe('Alex demo: keyboard and labels', () => {
 
   it('uses real buttons, so Enter and Space work and focus moves through them', () => {
     openAlex()
-    const toggle = button(/show cards and loans/)
+    const toggle = button(/^Total Debt/)
     expect(toggle.tagName).toBe('BUTTON')
     expect(toggle.getAttribute('type')).toBe('button')
     act(() => toggle.focus())

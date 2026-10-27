@@ -5,7 +5,7 @@ import type { MoneyAmount } from '../goalAmounts'
 import { calculatePayoff, type PayoffEstimate } from '../loanPayoff'
 import { isMinorAmount, MINOR_UNITS_PER_UNIT, sumMinor } from '../money'
 import { latestBalance } from './balances'
-import { isBillDueIn, usualAmountFor } from './bills'
+import { billsForMonth, isBillDueIn, usualAmountFor } from './bills'
 import type { BalanceSnapshot, DebtAccount, DebtKind, FinanceData, Id, Owner, RecurringBill } from './types'
 
 export interface DebtItem {
@@ -39,20 +39,42 @@ export function debtPayment(data: Pick<FinanceData, 'bills'>, debt: DebtAccount,
   return { amount: null, source: 'none', bill: null }
 }
 
+export interface DebtMonthPayment extends DebtPayment {
+  /** The planned payment from the bill's usual amount (or the debt), used for estimates. */
+  usual: MoneyAmount | null
+  /** The bill has its own amount for this month (for example, the card paid in full). */
+  changedThisMonth: boolean
+  /** False when the linked bill has no payment in this month (before its first or after its last month). */
+  due: boolean
+}
+
+/**
+ * The payment of one month exactly as Monthly Bills shows it: the bill's
+ * own amount for that month when it has one, otherwise the usual amount.
+ * Cards, the card or loan screen and the bill always agree on it.
+ */
+export function debtMonthPayment(data: Pick<FinanceData, 'bills' | 'billMonths'>, debt: DebtAccount, month: YearMonth): DebtMonthPayment {
+  const planned = debtPayment(data, debt, month)
+  if (!planned.bill) return { ...planned, usual: planned.amount, changedThisMonth: false, due: true }
+  const occurrence = billsForMonth({ bills: [planned.bill], billMonths: data.billMonths }, month)[0]
+  if (!occurrence) return { ...planned, usual: planned.amount, changedThisMonth: false, due: false }
+  return { ...planned, amount: occurrence.amount, usual: planned.amount, changedThisMonth: occurrence.amountChangedThisMonth, due: true }
+}
+
 export interface CardsSummary {
-  items: (DebtItem & { payment: DebtPayment })[]
+  items: (DebtItem & { payment: DebtMonthPayment })[]
   /** Remaining balances added up (not payments). */
   totalBalance: MoneyAmount
   missingBalanceCount: number
-  /** Planned monthly payments, each debt once. */
+  /** The month's payments as Monthly Bills shows them, each debt once. */
   totalPayments: MoneyAmount
   missingPaymentCount: number
 }
 
 /** "Summary based on your loans and cards": only the debt records and their bills, never income. */
-export function summarizeCards(data: Pick<FinanceData, 'debts' | 'balances' | 'bills'>, month: YearMonth, asOf?: CalendarDate): CardsSummary {
+export function summarizeCards(data: Pick<FinanceData, 'debts' | 'balances' | 'bills' | 'billMonths'>, month: YearMonth, asOf?: CalendarDate): CardsSummary {
   const debts = summarizeDebts(data, asOf)
-  const items = debts.items.map(item => ({ ...item, payment: debtPayment(data, item.debt, month) }))
+  const items = debts.items.map(item => ({ ...item, payment: debtMonthPayment(data, item.debt, month) }))
   return {
     items,
     totalBalance: debts.total,

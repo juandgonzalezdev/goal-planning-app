@@ -90,7 +90,12 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
     }
     const aside = setAside.trim() === '' ? 0 : parseMoneyInput(setAside)
     if (aside === null || aside < 0) { setError('Enter the money already set aside, such as 500, or leave it empty.'); return }
-    if (aside > available) { setError(`You can count at most ${money(available)}: the part of your Savings with no purpose yet.`); return }
+    if (aside > available) {
+      setError(available <= 0
+        ? 'All your savings already have a purpose. Reduce another allocation first, or leave this empty.'
+        : `You can count at most ${money(available)}: the part of your Savings with no purpose yet.`)
+      return
+    }
     const created = createEmergencyFundFromDraft(data, { goalId: newId(), movementId: newId() }, owner, today,
       { target: chosenTarget, ...(fundBasis ? { basis: fundBasis } : {}), alreadySetAside: aside })
     if (created.status === 'rejected') {

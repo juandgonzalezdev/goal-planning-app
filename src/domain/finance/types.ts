@@ -74,6 +74,13 @@ export interface IncomeEntry {
   extraordinary?: boolean
   /** The money account it arrived in, when known. */
   accountId?: Id
+  /**
+   * When this record was entered in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 export const BILL_CATEGORIES = ['Housing', 'Utilities', 'Transport', 'Subscriptions', 'Loans', 'Cards', 'Education', 'Other'] as const
@@ -156,6 +163,13 @@ export interface BillMonth {
    * the split is not known: then the app never guesses it.
    */
   interest?: MoneyAmount
+  /**
+   * When the payment was marked paid in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 export type DebtKind = 'card' | 'loan'
@@ -223,6 +237,13 @@ export interface BalanceSnapshot {
   source: 'entered' | 'goal-movement'
   /** The goal movement behind it, when source is 'goal-movement'. */
   movementId?: Id
+  /**
+   * When this record was entered in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 export type GoalStatus = 'active' | 'archived'
@@ -274,6 +295,14 @@ export interface Goal {
 export const MOVEMENT_EFFECTS = ['new-savings', 'assigned', 'unassigned', 'taken-out'] as const
 export type MovementEffect = (typeof MOVEMENT_EFFECTS)[number]
 
+/** What a goal movement did to Savings, in plain words (Goals and History). */
+export const MOVEMENT_EFFECT_NAMES: Record<MovementEffect, string> = {
+  'new-savings': 'New savings',
+  assigned: 'From unassigned savings',
+  unassigned: 'Back to unassigned savings',
+  'taken-out': 'Taken out of savings',
+}
+
 /** Money put into a pot (positive) or taken out of it (negative). No bank transfer happens. */
 export interface GoalMovement {
   id: Id
@@ -284,6 +313,13 @@ export interface GoalMovement {
   effect: MovementEffect
   /** The savings account that grew or shrank (new-savings and taken-out only). */
   accountId?: Id
+  /**
+   * When this record was entered in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 /**
@@ -318,6 +354,13 @@ export interface Expense {
   /** A money account, or a card (a debt of kind 'card'). */
   accountId: Id
   nature: SpendingNature
+  /**
+   * When this record was entered in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 /**
@@ -333,6 +376,13 @@ export interface Transfer {
   fromAccountId: Id
   toAccountId: Id
   note: string
+  /**
+   * When this record was entered in the app (an ISO date and time), only
+   * to list same-day records in the order they were entered. Records
+   * entered before this existed and the demo's have none; it is never
+   * invented for them.
+   */
+  recordedAt?: string
 }
 
 export type Language = 'en' | 'es' | 'pl'

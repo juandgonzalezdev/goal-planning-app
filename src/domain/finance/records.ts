@@ -97,3 +97,50 @@ export function updateIncomeEntry(data: FinanceData, id: Id, amount: MoneyAmount
   if (errors.length > 0) return { status: 'invalid', errors }
   return { status: 'ok', data: { ...data, income: data.income.map(entry => (entry.id === id ? { ...entry, amount, receivedOn } : entry)) } }
 }
+
+type Stampable = { id: Id; recordedAt?: string }
+
+/** New records (ids not there before) get `now`; changed ones keep the time they were first entered. */
+function stampList<T extends Stampable>(before: readonly T[], after: readonly T[], now: string): T[] {
+  if (before === after) return after as T[]
+  const earlier = new Map(before.map(item => [item.id, item]))
+  return after.map(item => {
+    if (item.recordedAt !== undefined) return item
+    const old = earlier.get(item.id)
+    if (!old) return { ...item, recordedAt: now }
+    return old.recordedAt !== undefined ? { ...item, recordedAt: old.recordedAt } : item
+  })
+}
+
+/**
+ * Notes when each record was entered, after a change made in the app, so
+ * History can list records of the same day newest first. Only records
+ * created by this change get the time; nothing older ever gets one (it
+ * would be invented). A bill month gets it when it is marked paid.
+ * Imports and the demo's example data never go through here.
+ */
+export function stampNewRecords(before: FinanceData, after: FinanceData, now: string): FinanceData {
+  if (before === after) return after
+  const paidBefore = new Map(before.billMonths.map(record => [`${record.billId}:${record.month}`, record]))
+  const billMonths = before.billMonths === after.billMonths ? after.billMonths : after.billMonths.map(record => {
+    const old = paidBefore.get(`${record.billId}:${record.month}`)
+    if (!record.paid) {
+      if (record.recordedAt === undefined) return record
+      const rest = { ...record }
+      delete rest.recordedAt
+      return rest
+    }
+    if (record.recordedAt !== undefined) return record
+    if (old?.paid) return old.recordedAt !== undefined ? { ...record, recordedAt: old.recordedAt } : record
+    return { ...record, recordedAt: now }
+  })
+  return {
+    ...after,
+    income: stampList(before.income, after.income, now),
+    billMonths,
+    balances: stampList(before.balances, after.balances, now),
+    goalMovements: stampList(before.goalMovements, after.goalMovements, now),
+    expenses: stampList(before.expenses, after.expenses, now),
+    transfers: stampList(before.transfers, after.transfers, now),
+  }
+}

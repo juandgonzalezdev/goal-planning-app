@@ -66,3 +66,38 @@ export function writeEmergencyLater(storage: Storage | null, later: boolean): vo
     // Not remembered; the suggestion stays hidden until the page closes.
   }
 }
+
+const LAYOUT_KEY = 'goal-planning-app.home-layout'
+
+/**
+ * How the own space arranges Home (block order and open blocks), saved on
+ * this device for that space only. The demo never uses this: its layout
+ * lasts while the demo is open. The value is returned as read; the screen
+ * checks it, so an old or broken value never loses or repeats a block.
+ */
+export function readHomeLayout(storage: Storage | null, spaceId: string): unknown {
+  try {
+    const value: unknown = JSON.parse(storage?.getItem(LAYOUT_KEY) ?? 'null')
+    const record = typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+    return record?.spaceId === spaceId ? record.layout : null
+  } catch {
+    return null
+  }
+}
+
+export function writeHomeLayout(storage: Storage | null, spaceId: string, layout: unknown): void {
+  try {
+    storage?.setItem(LAYOUT_KEY, JSON.stringify({ spaceId, layout }))
+  } catch {
+    // Not remembered; the layout still applies until the page closes.
+  }
+}
+
+/** Forgets the own space's Home layout (when the own space is erased). */
+export function clearHomeLayout(storage: Storage | null): void {
+  try {
+    storage?.removeItem(LAYOUT_KEY)
+  } catch {
+    // Nothing to do: it is only a screen preference.
+  }
+}

@@ -10,6 +10,7 @@ import type { FinanceData, Id } from '../../domain/finance/types'
 import { formatDate } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HomeBlockFrame } from './HomeBlock'
 
 type Props = {
   data: FinanceData
@@ -44,17 +45,19 @@ export function HomeGoals(props: Props) {
   const cover = emergencyCover({ ...data, ...past }, asOf)
   const hasFund = data.goals.some(goal => goal.kind === 'emergency' && goal.status === 'active')
   const { money, percent, hidden } = useBlockAmounts('goals', data.space.currency)
+  const showFund = cover.fund !== null && cover.fund.createdOn <= asOf
+  const summaryText = [
+    rows.length === 0 ? 'No goals yet' : `${money(summary.saved)} for ${summary.activeCount} ${summary.activeCount === 1 ? 'goal' : 'goals'}`,
+    showFund ? `${cover.fund!.name} ${money(cover.saved)}` : null,
+  ].filter(Boolean).join(' · ')
+  const actions = <>
+    <EyeToggle block="goals" />
+    <button type="button" className="button-small button-small-primary" onClick={props.onAddGoal}><Icon name="plus" size={16} /> Add Goal</button>
+    <button type="button" className="button-small" onClick={props.onViewAll}>View All <Icon name="arrowRight" size={16} /></button>
+  </>
 
   return (
-    <section className="block home-section" aria-labelledby="home-goals">
-      <div className="section-head">
-        <h2 id="home-goals" className="section-title">{title}</h2>
-        <div className="inline-actions">
-          <EyeToggle block="goals" />
-          <button type="button" className="button-small button-small-primary" onClick={props.onAddGoal}><Icon name="plus" size={16} /> Add Goal</button>
-          <button type="button" className="button-small" onClick={props.onViewAll}>View All <Icon name="arrowRight" size={16} /></button>
-        </div>
-      </div>
+    <HomeBlockFrame block="goals" title={title} period={`Saved by ${formatDate(asOf)} · Target dates on each goal`} summary={summaryText} actions={actions}>
 
       {!hasFund && !props.emergencyLater && (
         <div className="suggestion-card" role="group" aria-labelledby="emergency-suggestion">
@@ -68,7 +71,7 @@ export function HomeGoals(props: Props) {
         </div>
       )}
 
-      {cover.fund && cover.fund.createdOn <= asOf && (
+      {showFund && cover.fund && (
         <button type="button" className="goal-row" onClick={() => onOpenGoal(cover.fund!.id)}>
           <span>{cover.fund.name}<small className="goal-kind">
             {cover.months === null ? 'Cover not worked out yet' : `Covers about ${cover.months.toLocaleString('en-GB')} ${cover.months === 1 ? 'month' : 'months'} of essential costs`}
@@ -107,6 +110,6 @@ export function HomeGoals(props: Props) {
             ))}
           </ul>
         </>}
-    </section>
+    </HomeBlockFrame>
   )
 }

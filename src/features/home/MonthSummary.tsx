@@ -8,6 +8,7 @@ import type { FinanceData } from '../../domain/finance/types'
 import { formatYearMonth, monthName } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HomeBlockFrame } from './HomeBlock'
 
 type Props = { data: FinanceData; month: YearMonth; today: CalendarDate; onOpenIncome: () => void; onOpenBills: () => void; onOpenHistory: () => void }
 
@@ -33,12 +34,9 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
 
   const resultNote = future ? 'Nothing has happened yet'
     : r.result < 0 ? 'Spent more than received' : 'Income minus spent'
+  const summary = future ? 'Nothing has happened yet' : `Result ${money(r.result)} · ${resultNote}`
   return (
-    <section className="block home-section" aria-labelledby="home-month">
-      <div className="section-head">
-        <h2 id="home-month" className="section-title">This Month</h2>
-        <EyeToggle block="month" />
-      </div>
+    <HomeBlockFrame block="month" title="This Month" period={formatYearMonth(month)} summary={summary} actions={<EyeToggle block="month" />}>
       <div className="stat-grid">
         <button type="button" className="stat" onClick={onOpenIncome}>
           <small>Income</small><b>{r.income.entries.length === 0 && expected.expected === 0 ? '—' : money(r.income.total)}</b>
@@ -78,7 +76,7 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
           <p className="field-help">From the records of {formatYearMonth(month)}. Nothing is estimated.</p>
         </div>
       )}
-    </section>
+    </HomeBlockFrame>
   )
 }
 

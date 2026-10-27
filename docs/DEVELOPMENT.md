@@ -78,7 +78,11 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
 11. **Exit Demo → Create Account → Continue Without an Account.** Crea un
     espacio propio, añade una factura y recarga la página: sigue ahí. Restore
     Backup lee el JSON descargado.
-12. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
+12. **Home plegable.** Al abrir solo This Month y Left to Pay están abiertos;
+    los demás muestran periodo y resumen. Customize Home → Move up / Move down
+    o arrastrar por el asa → Done. Reset Layout vuelve al inicio. El mes se
+    queda arriba al desplazarse. Bills → January 2027 → Home muestra enero.
+13. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
     de pestañas no tapa el pie de página.
 
 ## Ramas y entregas

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ALEX_DEMO_TODAY, createAlexDemo } from '../data/fixtures/demoAlex'
 import { browserStorage, createLocalStore, type FinanceStore, type LoadResult } from '../data/localStore'
+import { stampNewRecords } from '../domain/finance/records'
 import type { FinanceData } from '../domain/finance/types'
 import type { CalendarDate } from '../domain/goalTime'
 import type { SaveOutcome } from '../ui/saveOutcome'
@@ -10,6 +11,8 @@ export interface DemoFixture {
   data: FinanceData
   today: CalendarDate
 }
+
+const isoNow = () => new Date().toISOString()
 
 /** The public demo: Alex's Individual space. */
 export const alexDemo = (): DemoFixture => ({ data: createAlexDemo(), today: ALEX_DEMO_TODAY })
@@ -22,7 +25,8 @@ export const alexDemo = (): DemoFixture => ({ data: createAlexDemo(), today: ALE
  */
 export type OpenSpace = { kind: 'own'; data: FinanceData } | { kind: 'demo'; data: FinanceData }
 
-export function useSpace(storage: Storage | null = browserStorage(), getToday: () => CalendarDate, createDemo: () => DemoFixture = alexDemo) {
+export function useSpace(storage: Storage | null = browserStorage(), getToday: () => CalendarDate, createDemo: () => DemoFixture = alexDemo,
+  getNow: () => string = isoNow) {
   const store: FinanceStore = useMemo(() => createLocalStore(storage), [storage])
   const [initialLoad] = useState<LoadResult>(() => store.load())
   const [open, setOpen] = useState<OpenSpace | null>(() => (initialLoad.status === 'loaded' ? { kind: 'own', data: initialLoad.data } : null))
@@ -45,11 +49,20 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   /**
    * Changes the open space's data. The own space is saved straight away;
    * the demo never is. Says which, so the screen can tell the user.
+   * Records the change creates get the time they were entered (for the
+   * order of same-day records in History).
    */
   const update = useCallback((change: (data: FinanceData) => FinanceData): SaveOutcome => {
     const current = openRef.current
     if (!current) return 'not-saved'
-    return replaceOpen({ ...current, data: change(current.data) })
+    return replaceOpen({ ...current, data: stampNewRecords(current.data, change(current.data), getNow()) })
+  }, [replaceOpen, getNow])
+
+  /** Replaces the whole space with a restored backup, as it is: no record gets a time it did not have. */
+  const replaceData = useCallback((data: FinanceData): SaveOutcome => {
+    const current = openRef.current
+    if (!current) return 'not-saved'
+    return replaceOpen({ ...current, data })
   }, [replaceOpen])
 
   const startOwnSpace = useCallback((data: FinanceData) => {
@@ -80,5 +93,5 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   // The demo always shows its own fixed date, so its October data makes sense on any day.
   const today = open?.kind === 'demo' && demoToday ? demoToday : getToday()
 
-  return { open, today, unreadable, saveFailed, update, startOwnSpace, openDemo, closeDemo, resetDemo, eraseOwnSpace }
+  return { open, today, unreadable, saveFailed, update, replaceData, startOwnSpace, openDemo, closeDemo, resetDemo, eraseOwnSpace }
 }

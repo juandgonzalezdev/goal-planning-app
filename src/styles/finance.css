@@ -287,14 +287,8 @@ button.monthly-row:hover { background: var(--color-surface-hover); }
 .line-button { width: 100%; min-height: 44px; padding: 6px 2px; border: 0; background: transparent; color: var(--color-text); text-align: left; cursor: pointer; border-radius: 8px; }
 .line-button:hover { background: var(--color-surface-hover); }
 .line-button > .icon { color: var(--color-text-muted); flex-shrink: 0; }
-.debt-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 4px 0; min-height: 48px;
-  border: 0; background: transparent; color: var(--color-text); text-align: left; cursor: pointer;
-}
-.debt-toggle > span:first-child { display: grid; gap: 4px; }
-.debt-toggle small { font-size: 12px; color: var(--color-text-muted); }
-.debt-toggle-label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--color-accent); }
-.debt-details { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--color-border); }
+.debt-total { display: grid; gap: 4px; }
+.debt-total small { font-size: 12px; color: var(--color-text-muted); }
 .savings-split { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--color-border); }
 .savings-split h3 { margin: 0; }
 .bar.stacked { display: flex; height: 12px; }
@@ -320,7 +314,7 @@ button.monthly-row:hover { background: var(--color-surface-hover); }
 .edit-box { padding: 12px; border-radius: 11px; background: var(--color-surface-muted); }
 .record { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--color-border); }
 .record:first-of-type { border-top: 0; }
-:is(.segmented button, .category-bars button, .line-button, .debt-toggle, .inline-link):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+:is(.segmented button, .category-bars button, .line-button, .block-toggle, .inline-link):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* Alex's year: month picker, hidden amounts, emergency fund, History records and charts */
 .month-picker { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
@@ -403,3 +397,65 @@ p.explain { margin: 0; padding: 10px 12px; border-radius: 11px; background: var(
 @media (max-width: 380px) { .filter-grid { grid-template-columns: 1fr; } }
 :is(.month-picker button, .result-row, .check-row input, .choice-row input):focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .block > .segmented, .form-stack > .segmented { justify-self: start; }
+
+/*
+ * Home: the month stays at the top while scrolling, under the header (and
+ * under the tab row on wide screens). --sticky-top is measured by the app;
+ * scroll-padding keeps a focused field from ending up behind it.
+ */
+html { scroll-padding-top: calc(var(--sticky-top, 64px) + var(--sticky-bar, 0px) + 12px); }
+@media (max-width: 739px) { html { scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px); } }
+.home-month-bar {
+  position: sticky; top: var(--sticky-top, 64px); z-index: 5;
+  margin: -6px calc(-1 * var(--space-gutter)) 0; padding: 6px var(--space-gutter);
+  background: var(--color-bg); border-bottom: 1px solid transparent;
+}
+.home-month-bar .month-picker { max-width: var(--column-wide); margin: 0 auto; }
+.home-month-bar .month-picker select { min-height: 44px; }
+.home-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.home-tools .inline-actions { gap: 6px; }
+.home-tools.is-customizing { padding: 10px 12px; border-radius: var(--radius-card); background: var(--color-accent-soft); }
+.home-tools.is-customizing .muted-note { flex: 1 1 16rem; color: var(--color-text); }
+.home-blocks { display: grid; gap: 14px; }
+
+/* A Home block that opens and closes from its heading (like a day in Bills). */
+.block-head { align-items: flex-start; }
+.section-head .block-title { flex: 1 1 14rem; min-width: 0; margin: 0; white-space: normal; font-size: 1rem; }
+.block-toggle {
+  display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 44px; padding: 4px 4px 4px 0; margin: 0;
+  border: 0; border-radius: var(--radius-small); background: transparent; color: var(--color-text-strong); font: inherit; text-align: left; cursor: pointer;
+}
+button.block-toggle:hover .block-name { text-decoration: underline; text-underline-offset: 3px; }
+.block-chevron { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; color: var(--color-text-muted); transition: transform var(--motion-quick) var(--motion-ease); }
+.home-block.is-open .block-chevron { transform: rotate(180deg); }
+.block-toggle-text { display: grid; gap: 2px; min-width: 0; padding-top: 1px; }
+.block-name { font-weight: 700; }
+.block-period { font-size: 12px; font-weight: 500; color: var(--color-text-muted); }
+.block-summary { font-size: 14px; font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.block-actions { padding-top: 2px; }
+/*
+ * The content stays in the page while closed (so forms keep what was
+ * typed) but takes no room, cannot be focused (inert) and is not read.
+ */
+.block-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--motion-quick) var(--motion-ease); }
+.block-body-inner { display: grid; gap: 12px; min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
+.home-block:not(.is-open) > .block-body { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows var(--motion-quick) var(--motion-ease), visibility 0s var(--motion-quick); }
+.home-block:not(.is-open) { gap: 0; }
+.home-blocks.is-customizing .block-body { display: none; }
+.home-blocks.is-customizing .home-block { gap: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .block-body, .home-block:not(.is-open) > .block-body, .block-chevron { transition: none; }
+}
+
+/* Customize Home: a handle to drag, and Move up / Move down for keyboard and touch. */
+.block-arrange { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--color-border-strong); }
+.drag-handle {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-control);
+  border: 1px solid var(--color-border-strong); color: var(--color-text-muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.home-blocks.is-dragging, .home-blocks.is-dragging * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.block-position { flex: 1; font-size: 12px; color: var(--color-text-muted); }
+.block-arrange .button-small:disabled { opacity: .45; cursor: not-allowed; }
+.home-block.is-dragging { opacity: .6; outline: 2px dashed var(--color-selected-border); }
+.home-block.drop-before { box-shadow: 0 -4px 0 0 var(--color-focus); }
+.home-block.drop-after { box-shadow: 0 4px 0 0 var(--color-focus); }

@@ -4,18 +4,23 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { tryDate, tryMonthlyAmount } from '../../domain/goalExplore'
 import { updateGoal, type GoalProgress } from '../../domain/finance/goals'
 import type { FinanceData, Goal } from '../../domain/finance/types'
-import { formatAmount, formatDate, formatMonths } from '../../ui/format'
+import { formatAmount, formatDate, formatMonths, referenceDay } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 
-type Props = { data: FinanceData; goal: Goal; progress: GoalProgress; today: CalendarDate; onChange: (data: FinanceData) => SaveOutcome }
+type Props = {
+  data: FinanceData; goal: Goal; progress: GoalProgress; today: CalendarDate
+  /** The demo works from its own fixed date, so the text never calls it "today". */
+  isDemo: boolean
+  onChange: (data: FinanceData) => SaveOutcome
+}
 
 /**
  * Explore: try a monthly amount or a date and see what it would mean.
  * It only calculates; the goal changes only with Use This Date, after a
  * confirmation. No monthly amount is ever required or saved.
  */
-export function GoalExplore({ data, goal, progress, today, onChange }: Props) {
+export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [monthly, setMonthly] = useState('')
   const [date, setDate] = useState('')
@@ -23,6 +28,7 @@ export function GoalExplore({ data, goal, progress, today, onChange }: Props) {
   const [message, setMessage] = useState('')
   const panelId = useId()
   const money = (minor: number) => formatAmount(minor, data.space.currency)
+  const from = referenceDay(today, isDemo)
   if (!progress.hasTarget || progress.remaining <= 0) return null
 
   const perMonth = monthly.trim() === '' ? null : parseMoneyInput(monthly)
@@ -71,7 +77,7 @@ export function GoalExplore({ data, goal, progress, today, onChange }: Props) {
           </div>
           {dateTry && (
             <div className="explain" role="status">
-              {dateTry.status === 'too-soon' && <p>Choose a date at least one month from today.</p>}
+              {dateTry.status === 'too-soon' && <p>Choose a date at least one month after {from}.</p>}
               {dateTry.status === 'ok' && <>
                 <p>About {money(dateTry.perMonth)} a month for {formatMonths(dateTry.months)} (rounded up, so it always gets there).</p>
                 {date !== goal.deadline && (confirmDate
@@ -84,7 +90,7 @@ export function GoalExplore({ data, goal, progress, today, onChange }: Props) {
               </>}
             </div>
           )}
-          <p className="field-help">An illustration only: the first contribution counts one month from today. It is not a commitment and nothing is paid automatically.</p>
+          <p className="field-help">An illustration only, worked out from {from}: the first contribution counts one month after it. It is not a commitment and nothing is paid automatically.</p>
         </div>
       )}
       <p className="muted-note" role="status">{message}</p>

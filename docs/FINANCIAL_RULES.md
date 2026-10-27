@@ -131,8 +131,18 @@ cuenta diaria + 377,29 de deuda nueva.
   cuota guarda su interés, el principal es cuota − interés; si no, la app no
   lo supone. El saldo registrado sigue siendo la referencia; el anterior queda
   en el historial.
+- **La cuota de un mes** que muestran Cards y el detalle de una tarjeta o
+  préstamo es la misma que Monthly Bills para ese mes: el importe propio del
+  mes si la factura lo tiene (p. ej. la tarjeta pagada entera en diciembre,
+  2.489,27) o, si no, el habitual (`debtMonthPayment`). El enlace a la factura
+  abre ese mismo mes.
+- Se distinguen tres fechas: el **mes de la cuota** (el mes elegido), la
+  **fecha del saldo registrado** (la del último saldo introducido, nunca una
+  proyección del mes elegido) y la **fecha de referencia de la estimación**
+  (hoy en el espacio propio; 31-12-2026 en la demo, dicho así).
 - La estimación de pago ("Estimate", "What If I Pay Extra?") es solo un cálculo:
-  mismo interés y misma cuota cada mes, máximo 50 años, y no cambia nada.
+  mismo interés y la cuota habitual cada mes, máximo 50 años, y no cambia nada.
+  Con saldo 0 dice "Nothing left to pay" y no muestra estimación ni ahorros.
 - Borrar una deuda con factura vinculada obliga a elegir: borrar también la
   factura o conservarla sin vínculo. Nunca queda apuntando a nada.
 - El pago mínimo de una tarjeta es un dato introducido; la app no lo calcula.
@@ -254,7 +264,11 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
 - La demo (Alex) y el espacio propio nunca se mezclan: abrir, usar o reiniciar
   la demo no lee ni escribe el espacio propio. La demo no se puede importar.
 - **Reset Demo** (franja, Data o Settings) devuelve el año completo: todos los
-  registros y el mes elegido (diciembre de 2026).
+  registros, el mes elegido (diciembre de 2026) y el diseño inicial de Home.
+- El orden y los bloques abiertos de Home son preferencias de pantalla, no
+  datos. En el espacio propio se recuerdan en este dispositivo
+  (`goal-planning-app.home-layout`, ligado al id del espacio); en la demo duran
+  mientras está abierta y nunca se guardan.
 - **Exit Demo** descarta todos los cambios.
 
 ## 9. Guardado y mensajes

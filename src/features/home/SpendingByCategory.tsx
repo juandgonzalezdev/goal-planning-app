@@ -12,7 +12,9 @@ import { formatDate, formatYearMonth, monthName } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import type { SaveOutcome } from '../../ui/saveOutcome'
+import { billsByCategory } from '../../domain/finance/home'
 import { Donut } from './Donut'
+import { HomeBlockFrame } from './HomeBlock'
 import { PlannedBills } from './PlannedBills'
 
 type Props = {
@@ -48,11 +50,8 @@ export function SpendingByCategory(props: Props) {
   const worst = ideasOpen ? largestDeficit(data, Number(today.slice(0, 4)), today) : null
 
   return (
-    <section className="block home-section" aria-labelledby="home-categories">
-      <div className="section-head">
-        <h2 id="home-categories" className="section-title">Spending by Category</h2>
-        <EyeToggle block="categories" />
-      </div>
+    <HomeBlockFrame block="categories" title="Spending by Category" period={formatYearMonth(month)}
+      summary={<CategoriesSummary data={data} month={month} mode={mode} spent={spending} money={money} />} actions={<EyeToggle block="categories" />}>
       <div className="segment-row">
         <div className="segmented" role="group" aria-label="Show">
           {(['spent', 'planned'] as const).map(option => (
@@ -127,8 +126,18 @@ export function SpendingByCategory(props: Props) {
           <p className="field-help">Money not spent is not saved automatically: Savings change only when you record savings.</p>
         </div>
       )}
-    </section>
+    </HomeBlockFrame>
   )
+}
+
+/** The closed block's line: the total of the view chosen inside (Spent or Planned), saying which. */
+function CategoriesSummary({ data, month, mode, spent, money }: {
+  data: FinanceData; month: YearMonth; mode: 'spent' | 'planned'; spent: ReturnType<typeof monthSpending>; money: (minor: number) => string
+}) {
+  if (mode === 'spent') return <>{spent.items.length === 0 ? 'Spent · Nothing recorded' : `Spent ${money(spent.total)}`}</>
+  const planned = billsByCategory(data, month)
+  if (planned.categories.length === 0 && planned.unknownCount === 0) return <>Planned · No bills</>
+  return <>Planned {money(planned.total)}{planned.unknownCount > 0 ? ` + ${planned.unknownCount} unknown ${planned.unknownCount === 1 ? 'amount' : 'amounts'}` : ''}</>
 }
 
 function ItemRow({ item, data, money, onOpenBill, onOpenExpense }: { item: SpendingItem; data: FinanceData; money: (minor: number) => string; onOpenBill: (id: Id) => void; onOpenExpense: (id: Id) => void }) {

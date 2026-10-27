@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
+import { MonthSwitch } from '../../components/MonthSwitch'
 import type { YearMonth } from '../../domain/calendar'
 import { balanceHistory } from '../../domain/finance/balances'
-import { debtPayment, deleteDebt, estimateDebtPayoff, recordBalance, summarizeDebts } from '../../domain/finance/debts'
+import { debtMonthPayment, debtPayment, deleteDebt, estimateDebtPayoff, recordBalance, summarizeDebts } from '../../domain/finance/debts'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { compareExtraPayments } from '../../domain/loanPayoff'
-import { formatAmount, formatDate, formatDueDay, formatRate, formatYearMonth } from '../../ui/format'
+import { formatAmount, formatDate, formatDueDay, formatRate, formatYearMonth, referenceDay } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { amountText, DEBT_KIND_NAMES } from '../../ui/labels'
@@ -17,15 +18,20 @@ type Props = {
   data: FinanceData
   /** null: adding a new card or loan. */
   debtId: Id | null
+  months: YearMonth[]
   month: YearMonth
+  onMonthChange: (month: YearMonth) => void
   today: CalendarDate
+  /** The demo shows its own fixed date, so estimates never say "today" there. */
+  isDemo: boolean
   owner: Owner
   newId: () => string
   onBack: () => void
   onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
   onCreated: (id: Id) => void
   onDeleted: () => void
-  onOpenBill: (id: Id) => void
+  /** Opens the bill that pays this debt, on the month whose payment was chosen. */
+  onOpenBill: (id: Id, month: YearMonth) => void
 }
 
 /**
@@ -53,7 +59,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
   const money = (minor: number) => formatAmount(minor, currency)
   const debt = data.debts.find(d => d.id === debtId)!
   const item = summarizeDebts(data).items.find(i => i.debt.id === debtId)!
-  const payment = debtPayment(data, debt, month)
+  const payment = debtMonthPayment(data, debt, month)
   const history = balanceHistory(data.balances, debtId).reverse()
   const [editing, setEditing] = useState(false)
   const [balanceForm, setBalanceForm] = useState<{ amount: string; asOf: string; error?: string } | null>(null)
@@ -76,8 +82,12 @@ function DebtDetail(props: Props & { debtId: Id }) {
     setMessage(outcomeText('Remaining Balance updated.', outcome))
   }
 
-  const estimate = item.balance !== null && payment.amount !== null && payment.amount > 0
-    ? estimateDebtPayoff(item.balance, debt.yearlyInterestBasisPoints, payment.amount) : null
+  // The estimate uses the planned (usual) payment, the same every month; a one-month amount would distort it.
+  const planned = payment.usual
+  const nothingOwed = item.balance === 0
+  const estimate = !nothingOwed && item.balance !== null && planned !== null && planned > 0
+    ? estimateDebtPayoff(item.balance, debt.yearlyInterestBasisPoints, planned) : null
+  const monthLabel = formatYearMonth(month)
 
   return (
     <div className="tab-screen">
@@ -86,11 +96,12 @@ function DebtDetail(props: Props & { debtId: Id }) {
         <h1 className="tab-title">{debt.name}</h1>
         <p className="muted-note">{DEBT_KIND_NAMES[debt.kind]}</p>
       </div>
+      <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
 
       <section className="goal-hero" aria-label="Remaining Balance">
         <span>Remaining Balance</span>
         <b className="goal-hero-saved">{item.balance === null ? 'Not entered' : money(item.balance)}</b>
-        <span>{item.asOf ? `As of ${formatDate(item.asOf)}` : 'Enter the balance from your bank or statement.'}</span>
+        <span>{item.asOf ? `As of ${formatDate(item.asOf)} · the latest balance you entered` : 'Enter the balance from your bank or statement.'}</span>
       </section>
       {!balanceForm
         ? <button type="button" className="button-small align-start" onClick={() => setBalanceForm({ amount: amountText(item.balance), asOf: today })}>Update Balance</button>
@@ -114,7 +125,8 @@ function DebtDetail(props: Props & { debtId: Id }) {
         <dl className="fact-rows">
           <div><dt>Type</dt><dd>{DEBT_KIND_NAMES[debt.kind]}</dd></div>
           <div><dt>Yearly Interest</dt><dd>{formatRate(debt.yearlyInterestBasisPoints)}</dd></div>
-          <div><dt>Monthly Payment · {formatYearMonth(month)}</dt><dd>{payment.amount === null ? 'Not entered' : money(payment.amount)}</dd></div>
+          <div><dt>Monthly Payment · {monthLabel}</dt><dd>{!payment.due ? 'No payment this month' : payment.amount === null ? 'Not entered' : money(payment.amount)}</dd></div>
+          {payment.changedThisMonth && <div><dt>Usual Payment</dt><dd>{planned === null ? 'Not known' : money(planned)}</dd></div>}
           {debt.kind === 'card' && <div><dt>Minimum Payment</dt><dd>{debt.minimumPayment === undefined ? 'Not entered' : money(debt.minimumPayment)}</dd></div>}
           <div><dt>Payment Due</dt><dd>{formatDueDay(debt.dueDay)}</dd></div>
           {debt.kind === 'card' && <div><dt>Statement Closing Day</dt><dd>{debt.closingDay ? formatDueDay(debt.closingDay) : 'Not entered'}</dd></div>}
@@ -122,8 +134,10 @@ function DebtDetail(props: Props & { debtId: Id }) {
           {debt.kind === 'loan' && <div><dt>Last Payment</dt><dd>{debt.finalPaymentMonth ? formatYearMonth(debt.finalPaymentMonth) : 'Not entered'}</dd></div>}
           <div><dt>Balance Date</dt><dd>{item.asOf ? formatDate(item.asOf) : 'Not entered'}</dd></div>
         </dl>
+        {payment.changedThisMonth && <p className="field-help">{monthLabel} has its own amount in the bill; other months use the usual payment.</p>}
         {payment.bill
-          ? <p className="field-help">The payment is the bill <button type="button" className="text-button inline-link" onClick={() => onOpenBill(payment.bill!.id)}>{payment.bill.name}</button>, counted once in Monthly Bills.</p>
+          ? <p className="field-help">The payment is the bill <button type="button" className="text-button inline-link" aria-label={`${payment.bill.name}, ${monthLabel}`}
+            onClick={() => onOpenBill(payment.bill!.id, month)}>{payment.bill.name}</button> ({monthLabel}), counted once in Monthly Bills.</p>
           : <p className="field-help">No bill pays this {debt.kind === 'card' ? 'card' : 'loan'} yet, so its payment is not in Monthly Bills.</p>}
         {debt.kind === 'card' && <p className="field-help">The minimum payment is the amount you entered from your statement. The app does not calculate it.</p>}
         <button type="button" className="button-small align-start" onClick={() => { setEditing(true); setMessage('') }}>Edit Details</button>
@@ -131,14 +145,21 @@ function DebtDetail(props: Props & { debtId: Id }) {
 
       <section className="block" aria-labelledby="debt-estimate">
         <h2 id="debt-estimate" className="section-title">Estimate</h2>
-        {estimate === null
-          ? <p className="muted-note">Enter the Remaining Balance and a monthly payment to see an estimate.</p>
-          : estimate.status === 'estimated'
-            ? <p className="pace-line">About <b>{estimate.months} {estimate.months === 1 ? 'month' : 'months'}</b> to pay it off, with about <b>{money(estimate.interest)}</b> interest.</p>
-            : <p className="muted-note">{estimate.status === 'payment-too-low' ? 'This payment does not cover the monthly interest, so the balance would not go down.' : 'This would take more than 50 years.'}</p>}
-        <p className="field-help">Calculated today ({formatDate(today)}) from the balance of {item.asOf ? formatDate(item.asOf) : '—'}, with the same interest and payment every month. Your bank may calculate differently.</p>
-        {estimate?.status === 'estimated' && item.balance !== null && payment.amount !== null && (
-          <ExtraPayments balance={item.balance} basisPoints={debt.yearlyInterestBasisPoints} payment={payment.amount} money={money} currency={currency} />
+        {nothingOwed
+          ? <p className="pace-line"><b>Nothing left to pay</b> on the balance of {formatDate(item.asOf!)}.</p>
+          : estimate === null
+            ? <p className="muted-note">Enter the Remaining Balance and a monthly payment to see an estimate.</p>
+            : estimate.status === 'estimated'
+              ? <p className="pace-line">About <b>{estimate.months} {estimate.months === 1 ? 'month' : 'months'}</b> to pay it off, with about <b>{money(estimate.interest)}</b> interest.</p>
+              : <p className="muted-note">{estimate.status === 'payment-too-low' ? 'This payment does not cover the monthly interest, so the balance would not go down.' : 'This would take more than 50 years.'}</p>}
+        {!nothingOwed && (
+          <p className="field-help">
+            Calculated on {referenceDay(today, props.isDemo)} from the balance of {item.asOf ? formatDate(item.asOf) : '—'}
+            {planned !== null && planned > 0 ? `, paying the planned ${money(planned)} every month` : ''}, with the same interest. It does not depend on the month chosen above. Your bank may calculate differently.
+          </p>
+        )}
+        {estimate?.status === 'estimated' && item.balance !== null && planned !== null && (
+          <ExtraPayments balance={item.balance} basisPoints={debt.yearlyInterestBasisPoints} payment={planned} money={money} currency={currency} />
         )}
       </section>
 

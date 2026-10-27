@@ -18,6 +18,8 @@ type Props = {
   data: FinanceData
   goal: Goal
   today: CalendarDate
+  /** The demo works from its own fixed date, so day counts say which date they start from. */
+  isDemo: boolean
   newId: () => string
   onBack: () => void
   onChange: (data: FinanceData) => SaveOutcome
@@ -25,12 +27,13 @@ type Props = {
   onReviewEmergency: () => void
 }
 
-function daysLeftText(days: number | null) {
+function daysLeftText(days: number | null, today: CalendarDate, isDemo: boolean) {
   if (days === null) return 'No deadline'
-  if (days > 1) return `${days} days left`
-  if (days === 1) return '1 day left'
-  if (days === 0) return 'The target date is today'
-  return 'The target date has passed'
+  const from = isDemo ? ` from ${formatDate(today)}, the demo’s date` : ''
+  if (days > 1) return `${days} days left${from}`
+  if (days === 1) return `1 day left${from}`
+  if (days === 0) return isDemo ? 'The target date is the demo’s date' : 'The target date is today'
+  return isDemo ? `The target date was before ${formatDate(today)}, the demo’s date` : 'The target date has passed'
 }
 
 /**
@@ -39,7 +42,7 @@ function daysLeftText(days: number | null) {
  * Savings, so new money is counted once and moving existing savings
  * between purposes never makes Savings grow.
  */
-export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, onDeleted, onReviewEmergency }: Props) {
+export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onChange, onDeleted, onReviewEmergency }: Props) {
   const currency = data.space.currency
   const money = (minor: number) => formatAmount(minor, currency)
   const progress = goalProgress(goal, data.goalMovements, today)
@@ -65,7 +68,9 @@ export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, o
     const account = savingsAccounts.find(a => a.id === accountId)
     switch (error) {
       case 'more-than-saved': return `You can take out up to ${money(progress.saved)}, what is saved in this goal.`
-      case 'more-than-unassigned': return `Only ${money(Math.max(savings.unassigned ?? 0, 0))} of your savings has no purpose yet. Choose New savings, or move less.`
+      case 'more-than-unassigned': return (savings.unassigned ?? 0) <= 0
+        ? 'All your savings already have a purpose. Reduce another allocation first, or choose New savings if you’re adding new money.'
+        : `Only ${money(savings.unassigned ?? 0)} of your savings has no purpose yet. Move that much or less, or choose New savings if you’re adding new money.`
       case 'account-balance-unknown': return `Enter the balance of ${account?.name ?? 'the savings account'} in Data first.`
       case 'before-balance-date': return `${account?.name ?? 'The account'} has a balance from a later date. Use that date or a later one.`
       case 'more-than-account': return `${account?.name ?? 'The account'} does not hold that much.`
@@ -120,7 +125,7 @@ export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, o
       <div>
         <h1 className="tab-title">{goal.name}</h1>
         <p className="muted-note">
-          {isEmergency ? 'Part of your Savings, for the unexpected' : goal.deadline ? `With Date · Target date: ${formatDate(goal.deadline)} · ${daysLeftText(progress.daysToDeadline)}` : 'No deadline · Flexible'}
+          {isEmergency ? 'Part of your Savings, for the unexpected' : goal.deadline ? `With Date · Target date: ${formatDate(goal.deadline)} · ${daysLeftText(progress.daysToDeadline, today, isDemo)}` : 'No deadline · Flexible'}
         </p>
       </div>
 
@@ -139,7 +144,7 @@ export function GoalDetailScreen({ data, goal, today, newId, onBack, onChange, o
 
       {isEmergency ? <EmergencyCoverNote data={data} onReview={onReviewEmergency} /> : <>
         <GoalPace progress={progress} currency={currency} />
-        <GoalExplore data={data} goal={goal} progress={progress} today={today} onChange={onChange} />
+        <GoalExplore data={data} goal={goal} progress={progress} today={today} isDemo={isDemo} onChange={onChange} />
       </>}
 
       <section className="block" aria-labelledby="goal-move">

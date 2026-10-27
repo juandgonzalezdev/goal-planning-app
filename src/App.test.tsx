@@ -44,11 +44,15 @@ function createIndividualSpace(storage: Storage = memoryStorage(), name = 'Robin
   return result
 }
 
-function openDemo() {
+/** Opens the demo on Home. Most tests look inside the Home blocks, so they open all of them (Expand All). */
+function openDemo({ expanded = true } = {}) {
   const result = start()
   fireEvent.click(button('Explore the App'))
+  if (expanded) fireEvent.click(button('Expand All'))
   return result
 }
+
+const expandAll = () => fireEvent.click(button('Expand All'))
 
 const saved = (storage: Storage) => JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null')
 
@@ -248,7 +252,7 @@ describe('Home', () => {
   it('answers its questions in order, with the Year Summary last', () => {
     openDemo()
     const main = document.querySelector('main')!
-    const order = [...main.querySelectorAll('[data-screen="home"] section')].map(s => s.getAttribute('aria-label') ?? s.querySelector('h2')?.textContent)
+    const order = [...main.querySelectorAll('[data-screen="home"] section')].map(s => s.getAttribute('aria-label') ?? s.querySelector('.block-name')?.textContent)
     expect(order).toEqual(['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'Our Money', 'Our Goals', 'Year Summary'])
     expect(screen.queryByRole('region', { name: 'Plan Another Goal' })).toBeNull()
   })
@@ -268,7 +272,6 @@ describe('Home', () => {
 
   it('lists what is still owed on each card and loan inside Total Debt', () => {
     openDemo()
-    fireEvent.click(within(region('Total Debt')).getByRole('button', { expanded: false }))
     const debt = text(region('Total Debt'))
     expect(debt).toContain('Credit CardAs of 23 Oct 20263250,40 zł')
     expect(debt).toContain('Car LoanAs of 23 Oct 202642 000,00 zł')
@@ -333,14 +336,15 @@ describe('Home', () => {
   })
 
   it('starts the Year Summary closed, with the year so far', () => {
-    openDemo()
+    openDemo({ expanded: false })
     const year = region('Year Summary')
-    const details = within(year).getByRole('button', { name: /Details/ })
-    expect(details.getAttribute('aria-expanded')).toBe('false')
-    expect(text(year)).toContain('10 of 12 months so far')
+    const toggle = within(year).getByRole('button', { name: /^Year Summary/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(text(toggle)).toContain('10 of 12 months so far')
+    expect(text(toggle)).toContain('Result for 2026: 113 381,57 zł')
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(text(year)).toContain('Income in 2026117 003,00 zł')
-    fireEvent.click(details)
-    expect(within(year).getByRole('button', { name: /Less/ }).getAttribute('aria-expanded')).toBe('true')
     const people = within(year).getByRole('list', { name: 'Income by person' })
     expect([...people.querySelectorAll('li')].map(li => text(li))).toEqual(['Alex53 002,00 zł', 'Jordan64 001,00 zł'])
     expect((within(year).getByRole('button', { name: /^November 2026/ }) as HTMLButtonElement).disabled).toBe(true)
@@ -349,7 +353,6 @@ describe('Home', () => {
   it('opens a month of the Year Summary on Home', () => {
     openDemo()
     const year = region('Year Summary')
-    fireEvent.click(within(year).getByRole('button', { name: /Details/ }))
     fireEvent.click(within(year).getByRole('button', { name: /^July 2026/ }))
     expect(monthSelect().value).toBe('2026-07')
   })
@@ -372,6 +375,7 @@ describe('Home', () => {
 
   it('starts empty in your own space, with no invented numbers', () => {
     createIndividualSpace()
+    expandAll()
     expect(text(region('Total Debt'))).toContain('No cards or loans yet')
     expect(text(region('Spending by Category'))).toContain('Nothing spent is recorded for October 2026.')
     expect(text(region('My Money'))).toContain('No accounts yet.')
@@ -380,7 +384,6 @@ describe('Home', () => {
     const year = region('Year Summary')
     expect(text(year)).toContain('0,00 zł')
     expect(text(year)).toContain('10 of 12 months so far')
-    fireEvent.click(within(year).getByRole('button', { name: /Details/ }))
     expect(within(year).queryByRole('list', { name: 'Income by person' })).toBeNull()
   })
 })
@@ -497,7 +500,7 @@ describe('Goals & Savings Pots', () => {
 
   it('suggests a weekly or monthly amount for a goal with a date, and nothing for a flexible one', async () => {
     openDemoGoal('Christmas Gift')
-    expect(screen.getByText('With Date · Target date: 25 Dec 2026 · 63 days left')).toBeTruthy()
+    expect(screen.getByText('With Date · Target date: 25 Dec 2026 · 63 days left from 23 Oct 2026, the demo’s date')).toBeTruthy()
     const pace = region('To Reach Your Goal')
     expect(text(pace)).toContain('55,56 zł per week for 9 weeks')
     expect(text(pace)).toContain('250,00 zł per month for 2 months')
@@ -817,6 +820,7 @@ describe('Keeping information between screens', () => {
 
   it('opens the emergency fund draft, which creates nothing until it is confirmed', async () => {
     const { storage } = createIndividualSpace()
+    expandAll()
     fireEvent.click(button('Review My Emergency Fund'))
     expect(heading('Start an Emergency Fund')).toBeTruthy()
     // A new space has no spending yet: the estimate says what is missing.
@@ -840,6 +844,7 @@ describe('Keeping information between screens', () => {
 
   it('never creates a second emergency fund, and offers a review instead', async () => {
     const { storage } = createIndividualSpace()
+    expandAll()
     fireEvent.click(button('Review My Emergency Fund'))
     fireEvent.click(button('Create Without a Target'))
     fireEvent.click(button('Back'))
@@ -898,7 +903,7 @@ describe('Hiding amounts on Home', () => {
     fireEvent.click(button('Hide amounts in Total Debt'))
     expect(text(region('Total Debt'))).not.toMatch(amount)
     expect(text(region('Total Debt'))).toContain('••••')
-    expect(within(region('Total Debt')).getByRole('button', { name: /Total Debt amount hidden/ })).toBeTruthy()
+    expect(text(region('Total Debt'))).toContain('Total Debt')
     expect(text(region('Our Money'))).toMatch(amount)
     fireEvent.click(button('Show amounts in Total Debt'))
     expect(text(region('Total Debt'))).toContain('46 600,40 zł')
@@ -909,10 +914,14 @@ describe('Hiding amounts on Home', () => {
     openAccountsWithBalance()
     fireEvent.click(button('Hide All Amounts'))
     expect(home()).not.toMatch(amount)
-    expect(home().match(/•+/g)!.every(mask => mask === '••••')).toBe(true)
+    // Each text piece on its own: two masks in neighbouring table cells are still two masks.
+    const pieces = [...document.querySelectorAll('[data-screen="home"] *')].flatMap(element => [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent ?? ''))
+    const masks = pieces.flatMap(piece => piece.match(/•+/g) ?? [])
+    expect(masks.length).toBeGreaterThan(0)
+    expect(masks.every(mask => mask === '••••')).toBe(true)
     for (const name of ['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'My Money', 'My Goals', 'Year Summary']) {
       expect(button(`Show amounts in ${name}`)).toBeTruthy()
-      expect(heading(name)).toBeTruthy()
+      expect(screen.getByRole('region', { name })).toBeTruthy()
     }
     // Only the screen changes: the saved data is the same, and the choice is kept on this device.
     expect(JSON.parse(storage.getItem('goal-planning-app.hidden-amounts')!)).toHaveLength(7)

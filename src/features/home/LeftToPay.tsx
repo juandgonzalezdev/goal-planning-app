@@ -5,9 +5,10 @@ import { leftToPayStatus } from '../../domain/finance/overview'
 import { monthResult } from '../../domain/finance/spending'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
-import { formatDate, monthName } from '../../ui/format'
+import { formatDate, formatYearMonth, monthName } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HomeBlockFrame } from './HomeBlock'
 
 /** The sentence about the chosen month: all paid, bills left, or amounts still unknown. */
 export function LeftToPayMessage({ bills, month }: { bills: BillSummary; month: YearMonth }) {
@@ -32,15 +33,16 @@ export function LeftToPay({ data, month, today, onOpenBills, onOpenBill }: Props
   const { money, spoken } = useBlockAmounts('left-to-pay', data.space.currency)
   const r = monthResult(data, month, today)
   const status = leftToPayStatus(r.planned)
+  const count = r.planned.count - r.planned.paidCount
+  const summary = status.status === 'no-bills' ? 'No bills planned'
+    : status.status === 'all-paid' ? 'All bills paid'
+      : `${money(r.planned.leftToPay)}${status.status === 'amounts-missing' ? ' + unknown' : ''} left · ${count} ${count === 1 ? 'bill' : 'bills'} not paid`
+  const actions = <>
+    <EyeToggle block="left-to-pay" />
+    <button type="button" className="button-small" onClick={onOpenBills}>Bills <Icon name="arrowRight" size={16} /></button>
+  </>
   return (
-    <section className="block home-section" aria-labelledby="home-left">
-      <div className="section-head">
-        <h2 id="home-left" className="section-title">Left to Pay</h2>
-        <span className="inline-actions">
-          <EyeToggle block="left-to-pay" />
-          <button type="button" className="button-small" onClick={onOpenBills}>Bills <Icon name="arrowRight" size={16} /></button>
-        </span>
-      </div>
+    <HomeBlockFrame block="left-to-pay" title="Left to Pay" period={formatYearMonth(month)} summary={summary} actions={actions}>
       <div className="left-to-pay">
         <b className="year-total">{money(r.planned.leftToPay)}{status.status === 'amounts-missing' && <small> + unknown</small>}</b>
         <LeftToPayMessage bills={r.planned} month={month} />
@@ -60,6 +62,6 @@ export function LeftToPay({ data, month, today, onOpenBills, onOpenBill }: Props
         )}
         {status.status === 'amounts-missing' && <p className="muted-note">Enter the missing amounts in Bills to know the full total.</p>}
       </div>
-    </section>
+    </HomeBlockFrame>
   )
 }
