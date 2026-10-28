@@ -418,7 +418,7 @@ html { scroll-padding-top: calc(var(--sticky-top, 64px) + var(--sticky-bar, 0px)
 .home-tools.is-customizing .muted-note { flex: 1 1 16rem; color: var(--color-text); }
 .home-blocks { display: grid; gap: 14px; }
 
-/* A Home block that opens and closes from its heading (like a day in Bills). */
+/* A block that opens and closes from its heading (Home and Data, like a day in Bills). */
 .block-head { align-items: flex-start; }
 .section-head .block-title { flex: 1 1 14rem; min-width: 0; margin: 0; white-space: normal; font-size: 1rem; }
 .block-toggle {
@@ -427,7 +427,7 @@ html { scroll-padding-top: calc(var(--sticky-top, 64px) + var(--sticky-bar, 0px)
 }
 button.block-toggle:hover .block-name { text-decoration: underline; text-underline-offset: 3px; }
 .block-chevron { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; color: var(--color-text-muted); transition: transform var(--motion-quick) var(--motion-ease); }
-.home-block.is-open .block-chevron { transform: rotate(180deg); }
+.fold-block.is-open .block-chevron { transform: rotate(180deg); }
 .block-toggle-text { display: grid; gap: 2px; min-width: 0; padding-top: 1px; }
 .block-name { font-weight: 700; }
 .block-period { font-size: 12px; font-weight: 500; color: var(--color-text-muted); }
@@ -439,12 +439,12 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
  */
 .block-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--motion-quick) var(--motion-ease); }
 .block-body-inner { display: grid; gap: 12px; min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
-.home-block:not(.is-open) > .block-body { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows var(--motion-quick) var(--motion-ease), visibility 0s var(--motion-quick); }
-.home-block:not(.is-open) { gap: 0; }
+.fold-block:not(.is-open) > .block-body { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows var(--motion-quick) var(--motion-ease), visibility 0s var(--motion-quick); }
+.fold-block:not(.is-open) { gap: 0; }
 .home-blocks.is-customizing .block-body { display: none; }
 .home-blocks.is-customizing .home-block { gap: 6px; }
 @media (prefers-reduced-motion: reduce) {
-  .block-body, .home-block:not(.is-open) > .block-body, .block-chevron { transition: none; }
+  .block-body, .fold-block:not(.is-open) > .block-body, .block-chevron { transition: none; }
 }
 
 /* Customize Home: a handle to drag, and Move up / Move down for keyboard and touch. */
@@ -459,3 +459,279 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .home-block.is-dragging { opacity: .6; outline: 2px dashed var(--color-selected-border); }
 .home-block.drop-before { box-shadow: 0 -4px 0 0 var(--color-focus); }
 .home-block.drop-after { box-shadow: 0 4px 0 0 var(--color-focus); }
+
+/* Data: six blocks that open and close, in a fixed order (they share the Home block style above). */
+.data-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.data-head .inline-actions { gap: 6px; }
+.data-blocks { display: grid; gap: 14px; }
+.align-start { justify-self: start; }
+.empty-state { display: grid; gap: 8px; }
+/* A compact list: one line per item; an income source or an account opens below its line. */
+.compact-list { gap: 4px; }
+.compact-list > li + li { border-top: 1px solid var(--color-border); padding-top: 4px; }
+.item-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-weight: 600; }
+.item-chevron { display: grid; place-items: center; flex-shrink: 0; color: var(--color-text-muted); transition: transform var(--motion-quick) var(--motion-ease); }
+.compact-item.is-open > .line-button .item-chevron { transform: rotate(180deg); }
+.item-detail { display: grid; gap: 10px; margin: 4px 0 8px; padding: 12px; border-radius: 11px; background: var(--color-surface-muted); }
+.item-detail .edit-box { background: var(--color-surface); }
+.item-detail .form-field select { background: var(--color-surface); }
+.payment-list > li { display: grid; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+.payment-list > li:last-child { border-bottom: 0; }
+.payment-state { font-size: 12px; font-weight: 650; color: var(--color-text-muted); }
+.payment-state.is-received { color: var(--color-positive); }
+.usual-amount { display: grid; justify-items: end; }
+.usual-amount small { margin: 0; font-weight: 400; }
+.validity-filter { display: grid; gap: 4px; }
+.validity-filter .segmented { justify-self: start; max-width: 100%; }
+.validity-filter .segmented button { min-height: 40px; padding: 6px 10px; }
+.filter-count { margin-left: 2px; font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.segmented button.is-active .filter-count { color: inherit; }
+.validity-tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 650; line-height: 1.5; background: var(--color-surface-muted); color: var(--color-text-muted); }
+.validity-tag.is-active { background: var(--color-positive-soft); color: var(--color-positive); }
+.validity-tag.is-upcoming { background: var(--color-accent-soft); color: var(--color-selected-text); }
+.item-detail .validity-tag.is-ended { background: var(--color-surface); }
+/* Reports & Backup: three parts inside one block. */
+.sub-block { display: grid; gap: 10px; }
+.sub-block + .sub-block { padding-top: 12px; border-top: 1px solid var(--color-border); }
+.sub-block > .button-secondary { justify-self: start; }
+.sub-block .section-title { font-size: .95rem; }
+.demo-zone { margin-top: 10px; border-style: dashed; }
+@media (prefers-reduced-motion: reduce) { .item-chevron { transition: none; } }
+
+/* Reset Demo asks first. */
+.reset-confirm { display: grid; gap: 8px; }
+.reset-confirm p { margin: 0; font-size: 14px; line-height: 1.5; }
+.demo-banner .reset-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.demo-banner.is-asking > .inline-actions { flex: 1; }
+
+/*
+ * Printing (Home and Data): what is on screen, without the tab row. A
+ * closed block prints only its heading and summary, and takes no room; an
+ * open block may continue on the next page instead of leaving one empty.
+ */
+@media print {
+  .shell { min-height: 0; }
+  .shell-header, .home-month-bar { position: static; }
+  .bottom-nav { display: none; }
+  .shell-main { padding-top: 8px; padding-bottom: 8px; }
+  .shell.has-nav .shell-footer, .shell-footer { padding: 8px var(--space-gutter); }
+  .screen { animation: none; }
+  .fold-block:not(.is-open) > .block-body { display: none; }
+  .fold-block.is-open > .block-body { display: block; }
+  .fold-block > .block-body > .block-body-inner { overflow: visible; }
+  .fold-block.is-open > .block-head { break-after: avoid; page-break-after: avoid; }
+  .block-toggle, .line, .line-button, .stat, .item-detail { break-inside: avoid; }
+}
+/* Data headings have one action (Add …): it stays on the heading's line, even on phones. */
+.data-block > .block-head { flex-wrap: nowrap; }
+.data-block .section-head .block-title { flex: 1 1 0; }
+.item-name > span.validity-tag { flex: none; white-space: nowrap; overflow-wrap: normal; }
+
+/*
+ * Bills: Calendar and List. Phones show a compact grid (day number and
+ * marks) with the chosen day's bills underneath; from 740px each cell also
+ * shows up to three bills. The chosen day has a solid frame and a filled
+ * background; the reference day (today, or the demo's date) a ring around
+ * its number, so neither depends on colour alone.
+ */
+.print-only { display: none; }
+.bills-summary { display: grid; gap: 8px; }
+.bills-summary .section-head .button-small { font-size: 13px; }
+.bills-toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; }
+.bills-calendar-view { display: grid; gap: 12px; }
+.bills-calendar-wrap { display: grid; gap: 8px; }
+.bills-calendar { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 3px; margin: 0 -3px; width: calc(100% + 6px); }
+.bills-calendar th { padding: 2px 0 4px; font-size: 12px; font-weight: 650; color: var(--color-text-muted); text-align: center; }
+.bills-calendar td { padding: 0; vertical-align: top; }
+.cal-cell { position: relative; height: 52px; border: 1px solid var(--color-border); border-radius: var(--radius-small); background: var(--color-surface); }
+.cal-empty { height: 52px; }
+.cal-day {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px;
+  padding: 5px 2px; border: 0; border-radius: inherit; background: transparent; color: var(--color-text); cursor: pointer; font-size: 14px;
+}
+.cal-day:hover { background: var(--color-surface-hover); }
+.cal-day:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 1px; z-index: 2; }
+/* A day reached with the arrow keys is never left under the day bar (about 44px), which sticks over the calendar. */
+.cal-day { scroll-margin-top: 52px; }
+.cal-num { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 2px; border-radius: 999px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-cell.has-bills .cal-num { font-weight: 750; }
+.cal-cell.is-reference .cal-num { box-shadow: inset 0 0 0 2px var(--color-text); }
+.cal-cell.is-selected { border: 2px solid var(--color-selected-border); background: var(--color-selected); }
+.cal-cell.is-selected .cal-day { color: var(--color-selected-text); }
+.cal-marks { display: flex; align-items: center; gap: 2px; height: 10px; }
+.cal-marks i, .cal-key-mark { display: inline-block; width: 7px; height: 7px; border-radius: 999px; box-sizing: border-box; }
+.cal-marks i.is-pending, .cal-key-mark.is-pending { border: 1.5px solid var(--color-text-muted); }
+.cal-marks i.is-paid, .cal-key-mark.is-paid { background: var(--color-positive); }
+.cal-marks small { font-size: 10px; line-height: 1; color: var(--color-text-muted); }
+.cal-chips { display: none; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; font-size: 12px; color: var(--color-text-muted); }
+.cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-key { display: inline-block; width: 14px; height: 14px; border-radius: 4px; box-sizing: border-box; }
+.cal-key.is-selected { border: 2px solid var(--color-selected-border); background: var(--color-selected); }
+.cal-key.is-reference { border-radius: 999px; box-shadow: inset 0 0 0 2px var(--color-text); }
+.cal-day-list { gap: 8px; }
+/*
+ * The day bar: one slim line above the calendar. It sticks under the header
+ * only inside .cal-scope (the bar and the calendar), so a day in the last
+ * rows keeps it in sight, it covers only rows already scrolled past, and it
+ * stops before the day panel.
+ */
+.cal-scope { display: grid; gap: 6px; }
+.cal-daybar {
+  position: sticky; top: var(--sticky-top, 64px); z-index: 3;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 12px;
+  margin: 0 -4px; padding: 2px 4px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+}
+.cal-daybar-text { margin: 0; min-width: 0; font-size: 14px; color: var(--color-text); }
+.cal-daybar-text b { font-weight: 700; }
+.cal-daybar-go {
+  min-height: 40px; padding: 0 2px; border: 0; background: transparent; color: var(--color-selected-text);
+  font-size: 14px; font-weight: 650; white-space: nowrap; cursor: pointer;
+}
+.cal-day-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.cal-day-head .section-title { margin: 0; }
+.cal-day-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.cal-back { font-size: 14px; }
+.cal-added { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-radius: var(--radius-small); background: var(--color-surface-muted); }
+.cal-added p { margin: 0; font-size: 14px; }
+.cal-daybar-go:focus-visible, .cal-day-head .section-title:focus-visible, .cal-added p:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.cal-bill-row { width: 100%; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--color-border); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.cal-day-list li:last-child .cal-bill-row { border-bottom: 0; }
+.cal-bill-row:hover { background: var(--color-surface-hover); }
+.cal-day-list .line-list { gap: 0; }
+.cal-bill-end { display: grid; justify-items: end; gap: 4px; }
+.cal-bill-end b { font-variant-numeric: tabular-nums; }
+.cal-bill-row > .icon { color: var(--color-text-muted); flex-shrink: 0; }
+.status-tag { font-size: 12px; font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
+.status-tag.is-paid { color: var(--color-positive); }
+.bill-list { display: grid; gap: 14px; }
+.bill-list-day { display: grid; gap: 8px; }
+.bill-list-date { margin: 0; font-size: 14px; font-weight: 700; color: var(--color-text-strong); }
+.bill-list .bill-item { padding: 10px 12px; gap: 6px; }
+.cal-bill-row:focus-visible, .cal-chip:focus-visible, .cal-more:focus-visible, .more-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+@media (min-width: 740px) {
+  /* A table cell's height works as a minimum: a day with more bills makes its week taller. */
+  .cal-cell, .cal-empty { height: 104px; }
+  .bills-calendar td.cal-cell { padding: 34px 4px 4px; }
+  .cal-day { align-items: flex-start; padding: 6px; }
+  .cal-marks { display: none; }
+  .cal-chips {
+    position: relative; z-index: 1;
+    display: grid; gap: 3px; margin: 0; padding: 0; list-style: none;
+  }
+  .cal-chip, .cal-more {
+    display: grid; width: 100%; min-width: 0; padding: 2px 5px; border: 1px solid var(--color-border); border-radius: 6px;
+    background: var(--color-surface-muted); color: var(--color-text); font-size: 11px; line-height: 1.25; text-align: left; cursor: pointer;
+  }
+  .cal-chip:hover, .cal-more:hover { border-color: var(--color-selected-border); }
+  .cal-chip.is-paid { background: var(--color-positive-soft); }
+  .cal-chip-name, .cal-chip-amount { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .cal-chip-name { font-weight: 650; }
+  .cal-chip-amount { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .cal-more { background: transparent; font-weight: 650; color: var(--color-selected-text); }
+}
+
+/* Add Bill */
+.bill-form { display: grid; gap: 14px; }
+.month-year-field { margin: 0; padding: 0; border: 0; min-width: 0; }
+.month-year-field legend { padding: 0; margin-bottom: 6px; }
+.month-year-inputs { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 8px; }
+.month-year-inputs select:only-child { grid-column: 1 / -1; }
+.bill-amount-group { display: grid; gap: 4px; }
+.more-toggle {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; justify-self: start; padding: 8px 0; border: 0; background: transparent;
+  color: var(--color-selected-text); font-size: 14px; font-weight: 650; cursor: pointer; text-align: left;
+}
+.more-toggle::before { content: '▸'; display: inline-block; }
+.more-toggle[aria-expanded="true"]::before { content: '▾'; }
+.more-toggle .muted-note { font-weight: 400; }
+.more-options { padding-left: 12px; border-left: 2px solid var(--color-border); }
+.bill-schedule { margin: 0; padding: 10px 12px; border-radius: var(--radius-small); background: var(--color-surface-muted); font-size: 14px; }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block; }
+  table.print-only { display: table; }
+  .bills-print { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .bills-print caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+  .bills-print th, .bills-print td { padding: 4px 6px; border-bottom: 1px solid #ccc; text-align: left; }
+  .bills-print td:last-child, .bills-print th:last-child { text-align: right; }
+  .bills-print tr { break-inside: avoid; }
+}
+.check-help { margin: -10px 0 0 30px; font-weight: 400; }
+/* Bills keeps its three totals on one row, even on phones, so the calendar starts higher. */
+.bills-summary .stat-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bills-summary .stat-grid.three > :last-child { grid-column: auto; }
+.bills-summary .stat { padding: 10px; }
+.bills-summary .stat b { font-size: 1rem; }
+@media (max-width: 420px) { .bills-summary .stat { padding: 8px; } .bills-summary .stat b { font-size: .92rem; } .bills-summary .stat small { font-size: 11px; } }
+@media print {
+  .bills-screen .screen-top .button-small, .bills-screen .month-picker .icon-button { display: none; }
+  .bills-screen .month-picker { grid-template-columns: 1fr; }
+}
+
+/*
+ * History: Year Overview (closed at first), the period and the search,
+ * More Filters with the filters on shown as removable chips, then the
+ * records by month (open and close) and day, a page at a time.
+ */
+.history-screen > .inline-actions { gap: 6px; }
+.history-tools { display: grid; gap: 10px; }
+.history-tools input[type="search"] { width: 100%; }
+.history-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.more-filters-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.more-filters-toggle[aria-expanded="true"] .item-chevron { transform: rotate(180deg); }
+.more-filters-toggle .filter-count { margin-left: 4px; padding: 0 7px; border-radius: 999px; background: var(--color-accent-soft); color: var(--color-selected-text); font-weight: 650; }
+.more-filters { align-items: start; padding: 12px; border-radius: 11px; background: var(--color-surface-muted); }
+.more-filters[hidden] { display: none; }
+@media (max-width: 520px) { .more-filters { grid-template-columns: 1fr; } }
+.more-filters .form-field select { background: var(--color-surface); }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 6px 4px 12px; border: 1px solid var(--color-selected-border);
+  border-radius: 999px; background: var(--color-accent-soft); color: var(--color-selected-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; text-align: left;
+}
+.filter-chip-x { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--color-surface); font-size: 16px; line-height: 1; flex-shrink: 0; }
+.filter-chip:hover .filter-chip-x { background: var(--color-surface-hover); }
+.filter-conflict { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; border-radius: var(--radius-small); background: var(--color-surface-muted); font-size: 14px; }
+.filter-conflict p { flex: 1 1 14rem; margin: 0; line-height: 1.5; }
+.history-results { display: grid; gap: 10px; }
+.history-count-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.history-count-row .inline-actions { gap: 6px; }
+.history-count { margin: 0; font-size: 1rem; font-weight: 700; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.history-count small { font-size: 13px; font-weight: 500; color: var(--color-text-muted); }
+.history-months { display: grid; gap: 8px; }
+.history-month { border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); padding: 4px 12px; }
+.history-month.is-open { padding-bottom: 12px; }
+.history-month-title { margin: 0; font-size: 1rem; }
+.history-month-title .block-toggle { align-items: center; }
+.history-month.is-open .block-chevron { transform: rotate(180deg); }
+.history-month-count { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--color-text-muted); white-space: nowrap; }
+.history-day + .history-day { margin-top: 10px; }
+.history-day-title { margin: 6px 0 4px; font-size: 13px; font-weight: 650; color: var(--color-text-muted); }
+.history-list { gap: 0; }
+.history-list > li { padding: 2px 0; }
+.history-row { display: flex; align-items: center; gap: 4px; }
+.history-row > .history-line { flex: 1; min-width: 0; }
+.history-line[aria-expanded="true"] { background: var(--color-surface-hover); }
+.history-note { font-style: italic; }
+.history-note-label { font-style: normal; font-weight: 650; }
+.history-extras-toggle[aria-expanded="true"] .item-chevron { transform: rotate(180deg); }
+.history-extras { margin: 0 0 6px; padding: 8px 10px; border-radius: var(--radius-small); background: var(--color-surface-muted); font-size: 13px; color: var(--color-text-muted); }
+.history-extras[hidden] { display: none; }
+.history-extras p { margin: 0; line-height: 1.5; }
+.history-edit { display: grid; gap: 8px; margin: 4px 0 8px; }
+.history-more { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border); }
+.history-more small { font-size: 13px; color: var(--color-text-muted); }
+.type-savings, .type-balance { background: var(--color-surface-muted); }
+@media (prefers-reduced-motion: reduce) { .history-month .block-chevron, .more-filters-toggle .item-chevron, .history-extras-toggle .item-chevron { transition: none; } }
+@media print {
+  .history-screen .screen-top { display: block; }
+  .history-print-filters { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+  .history-print td small { font-size: 11px; color: #444; }
+  .history-print td:first-child, .history-print td:nth-child(3) { white-space: nowrap; }
+  .history-print-month th { padding-top: 10px; font-size: 13px; border-bottom: 2px solid #999; break-after: avoid; page-break-after: avoid; }
+  .history-print tbody { break-inside: auto; }
+}
+.filter-chip:focus-visible, #history-search:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }

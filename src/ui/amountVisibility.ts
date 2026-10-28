@@ -52,3 +52,18 @@ export function useBlockAmounts(block: HomeBlock | null, currency: CurrencyCode)
     percent: value => (isHidden ? MASK : value),
   }
 }
+
+/**
+ * Money formatting for screens outside Home that follow Hide All Amounts
+ * (Bills): amounts are hidden only while every Home block is hidden.
+ */
+export function useAllAmounts(currency: CurrencyCode): BlockAmounts {
+  const { hidden } = useAmountVisibility()
+  const isHidden = HOME_BLOCKS.every(block => hidden.has(block))
+  return {
+    hidden: isHidden,
+    money: minor => (isHidden ? MASK : formatAmount(minor, currency)),
+    spoken: minor => (isHidden ? HIDDEN_SPOKEN : formatAmount(minor, currency)),
+    percent: value => (isHidden ? MASK : value),
+  }
+}

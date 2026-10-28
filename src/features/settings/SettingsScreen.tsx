@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../../components/Icon'
+import { ResetDemoConfirm } from '../../components/ResetDemoConfirm'
 import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Theme } from '../../domain/finance/types'
 import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSetup'
@@ -17,7 +18,6 @@ type Props = {
 }
 
 export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo, onResetDemo }: Props) {
-  const [resetDone, setResetDone] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [eraseFailed, setEraseFailed] = useState(false)
   return (
@@ -56,10 +56,9 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
         {isDemo ? <>
           <p className="field-help">The demo uses invented information only. Changes are not saved and disappear when you exit. Reset Demo puts the original example back; your own space is never touched.</p>
           <div className="inline-actions">
-            <button type="button" className="button-secondary" onClick={() => { onResetDemo(); setResetDone(true) }}>Reset Demo</button>
+            <ResetDemoConfirm onReset={onResetDemo} showDone />
             <button type="button" className="button-secondary" onClick={onExitDemo}>Exit Demo</button>
           </div>
-          {resetDone && <p className="muted-note" role="status">The demo is back to the original example.</p>}
         </> : <>
           <PrivacyFacts />
           {!confirming && <button type="button" className="button-danger" onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}

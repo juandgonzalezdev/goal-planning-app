@@ -1,19 +1,50 @@
-import { useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
-import type { YearMonth } from '../../domain/calendar'
-import { deleteIncomeSource, monthIncome, recordIncomeReceived, saveIncomeSource } from '../../domain/finance/income'
-import type { Id, IncomeSource } from '../../domain/finance/types'
+import { yearMonthOf, type YearMonth } from '../../domain/calendar'
+import { deleteIncomeSource, isSourceActiveIn, monthIncome, recordIncomeReceived, saveIncomeSource } from '../../domain/finance/income'
+import type { FinanceData, Id, IncomeSource } from '../../domain/finance/types'
+import { countByValidity, matchesValidity, usableFilter, validityOn } from '../../domain/finance/validity'
 import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
+import { DataBlockFrame } from './DataBlockFrame'
+import { DataBlocksContext, setBlockOpen } from './dataBlocks'
 import type { SectionProps } from './DataScreen'
+import { ValidityFilterBar, ValidityTag } from './ValidityFilterBar'
 
-/** Income and pay days: the usual amount of each source, and what actually arrived each month. */
-export function IncomeSection({ data, months, today, owner, newId, onChange, say }: SectionProps) {
+type SourceForm = { id: Id | null; name: string; amount: string; payDay: string; startMonth: string; endMonth: string; error?: string }
+type ReceivedForm = { sourceId: Id; month: YearMonth; amount: string; date: string; error?: string }
+
+/**
+ * Income and pay days. A compact list of sources first (usual amount,
+ * pay day, months and status); opening one shows its months, with what
+ * was expected and what really arrived, and its actions.
+ */
+export function IncomeSection({ data, months, today, isDemo, owner, newId, onChange, say }: SectionProps) {
+  const { view, onViewChange } = useContext(DataBlocksContext)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
-  const [editing, setEditing] = useState<{ id: Id | null; name: string; amount: string; payDay: string; startMonth: string; endMonth: string; error?: string } | null>(null)
-  const [receiving, setReceiving] = useState<{ sourceId: Id; month: YearMonth; amount: string; date: string; error?: string } | null>(null)
+  const [editing, setEditing] = useState<SourceForm | null>(null)
+  const [receiving, setReceiving] = useState<ReceivedForm | null>(null)
+  const focusField = useRef<string | null>(null)
+  // Status always uses today's month (the demo's date in the demo), never a month chosen to look at a payment.
+  const reference = yearMonthOf(today)
+  const counts = countByValidity(data.incomeSources, reference)
+  const filter = usableFilter(view.incomeFilter, counts)
+  const shown = data.incomeSources.filter(source => matchesValidity(source, reference, filter))
+  const sourceCount = data.incomeSources.length
+
+  useEffect(() => {
+    if (!focusField.current) return
+    document.getElementById(focusField.current)?.focus()
+    focusField.current = null
+  })
+
+  const startNew = () => {
+    onViewChange(setBlockOpen(view, 'income', true))
+    setEditing({ id: null, name: '', amount: '', payDay: '', startMonth: reference, endMonth: '' })
+    focusField.current = 'income-name'
+  }
 
   const saveSource = () => {
     if (!editing) return
@@ -44,69 +75,156 @@ export function IncomeSection({ data, months, today, owner, newId, onChange, say
     say(`Income for ${formatYearMonth(receiving.month)} recorded.`, outcome)
   }
 
-  return (
-    <section className="block" aria-labelledby="data-income">
-      <div className="section-head">
-        <h2 id="data-income" className="section-title">Income</h2>
-        <button type="button" className="button-small" onClick={() => setEditing({ id: null, name: '', amount: '', payDay: '', startMonth: months[0], endMonth: '' })}><Icon name="plus" size={16} /> Add Income</button>
+  const form = editing && (
+    <div className="form-stack edit-box">
+      <Field id="income-name" label="Name" value={editing.name} onChange={name => setEditing({ ...editing, name, error: undefined })} maxLength={60} />
+      <Field id="income-amount" label={`Usual Net Amount per Month (${data.space.currency})`} inputMode="decimal" value={editing.amount} onChange={amount => setEditing({ ...editing, amount, error: undefined })} />
+      <Field id="income-day" label="Pay Day" inputMode="numeric" value={editing.payDay} onChange={payDay => setEditing({ ...editing, payDay, error: undefined })} help="Day of the month it usually arrives." />
+      <Field id="income-start" label="First Month" type="month" value={editing.startMonth} onChange={startMonth => setEditing({ ...editing, startMonth })} />
+      <Field id="income-end" label="Last Month (optional)" type="month" value={editing.endMonth} onChange={endMonth => setEditing({ ...editing, endMonth })} />
+      {editing.error && <p className="field-error" role="alert">{editing.error}</p>}
+      <div className="inline-actions">
+        <button type="button" className="button-small button-small-primary" onClick={saveSource}>Save Income</button>
+        <button type="button" className="button-small" onClick={() => setEditing(null)}>Cancel</button>
       </div>
+    </div>
+  )
+
+  const summary = sourceCount === 0 ? 'No income entered yet'
+    : [`${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`, `${counts.active} active`, ...(counts.upcoming > 0 ? [`${counts.upcoming} upcoming`] : [])].join(' · ')
+
+  return (
+    <DataBlockFrame block="income" summary={summary}
+      actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Income</button>}>
       <p className="field-help">Expected income is a plan. Home shows it as expected until you record what arrived.</p>
-      {data.incomeSources.length === 0 && !editing && <p className="muted-note">No income entered yet.</p>}
-      {editing && (
-        <div className="form-stack edit-box">
-          <Field id="income-name" label="Name" value={editing.name} onChange={name => setEditing({ ...editing, name, error: undefined })} maxLength={60} />
-          <Field id="income-amount" label={`Usual Net Amount per Month (${data.space.currency})`} inputMode="decimal" value={editing.amount} onChange={amount => setEditing({ ...editing, amount, error: undefined })} />
-          <Field id="income-day" label="Pay Day" inputMode="numeric" value={editing.payDay} onChange={payDay => setEditing({ ...editing, payDay, error: undefined })} help="Day of the month it usually arrives." />
-          <Field id="income-start" label="First Month" type="month" value={editing.startMonth} onChange={startMonth => setEditing({ ...editing, startMonth })} />
-          <Field id="income-end" label="Last Month (optional)" type="month" value={editing.endMonth} onChange={endMonth => setEditing({ ...editing, endMonth })} />
-          {editing.error && <p className="field-error" role="alert">{editing.error}</p>}
-          <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={saveSource}>Save Income</button>
-            <button type="button" className="button-small" onClick={() => setEditing(null)}>Cancel</button>
-          </div>
+      {editing?.id === null && form}
+      {sourceCount === 0 && !editing && (
+        <div className="empty-state">
+          <p className="muted-note">No income entered yet. Add what you usually receive each month, such as a salary.</p>
+          <button type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Income</button>
         </div>
       )}
-      {data.incomeSources.map(source => (
-        <div key={source.id} className="record">
-          <div className="bill-line"><b>{source.name}</b><b>{money(source.amount)}</b></div>
-          <small className="muted-note">Pay day {source.payDay} · from {formatYearMonth(source.startMonth)}{source.endMonth ? ` to ${formatYearMonth(source.endMonth)}` : ''}</small>
-          <ul className="line-list">
-            {months.map(m => {
-              const line = monthIncome(data, m).lines.find(l => l.source?.id === source.id)
-              if (!line) return null
-              const isOpen = receiving?.sourceId === source.id && receiving.month === m
-              return (
-                <li key={m}>
-                  <div className="line">
-                    <span>{formatYearMonth(m)}<small>{line.received ? `Received on ${formatDate(line.received.receivedOn)}` : `Expected on ${formatDate(line.payDate!)}`}</small></span>
-                    <b>{line.received ? money(line.received.amount) : `${money(line.expected ?? 0)} expected`}</b>
-                  </div>
-                  {!isOpen
-                    ? <div className="inline-actions">
-                      <button type="button" className="text-button" aria-label={`Record ${source.name} received in ${formatYearMonth(m)}`}
-                        onClick={() => setReceiving({ sourceId: source.id, month: m, amount: amountText(line.received?.amount ?? source.amount), date: line.received?.receivedOn ?? (line.payDate! <= today ? line.payDate! : today) })}>
-                        {line.received ? 'Change' : 'Record Received'}
-                      </button>
-                      {line.received && <button type="button" className="text-button" onClick={() => say(`${formatYearMonth(m)} is expected again.`, onChange(current => recordIncomeReceived(current, source, m, null) ?? current))}>Not Received</button>}
-                    </div>
-                    : <div className="form-stack edit-box">
-                      <Field id="received-amount" label={`Amount Received (${data.space.currency})`} inputMode="decimal" value={receiving.amount} onChange={amount => setReceiving({ ...receiving, amount, error: undefined })} error={receiving.error} />
-                      <Field id="received-date" label="Date Received" type="date" max={today} value={receiving.date} onChange={date => setReceiving({ ...receiving, date, error: undefined })} />
+      {sourceCount > 0 && <>
+        <ValidityFilterBar label="Income sources" value={filter} counts={counts} today={today} isDemo={isDemo}
+          onChange={incomeFilter => onViewChange({ ...view, incomeFilter })} />
+        {shown.length === 0 && <p className="muted-note">No {filter} income sources. Choose All to see every source.</p>}
+        <ul className="line-list compact-list">
+          {shown.map(source => {
+            const open = view.incomeSource === source.id
+            const detailId = `income-source-${source.id}`
+            return (
+              <li key={source.id} className={`compact-item${open ? ' is-open' : ''}`}>
+                <button type="button" className="line line-button" aria-expanded={open} aria-controls={open ? detailId : undefined}
+                  onClick={() => onViewChange({ ...view, incomeSource: open ? null : source.id })}>
+                  <span>
+                    <span className="item-name">{source.name} <ValidityTag validity={validityOn(source, reference)} /></span>
+                    <small>{money(source.amount)} expected each month · Pay day {source.payDay}</small>
+                    <small>{source.endMonth ? `${formatYearMonth(source.startMonth)} to ${formatYearMonth(source.endMonth)}` : `From ${formatYearMonth(source.startMonth)} · no end month`}</small>
+                  </span>
+                  <span className="item-chevron"><Icon name="chevronDown" size={16} /></span>
+                </button>
+                {open && (
+                  <div id={detailId} className="item-detail">
+                    <SourcePayments data={data} source={source} months={months} reference={reference} today={today} money={money}
+                      receiving={receiving} onReceivingChange={setReceiving} onSaveReceived={() => saveReceived(source)}
+                      onNotReceived={m => say(`${formatYearMonth(m)} is expected again.`, onChange(current => recordIncomeReceived(current, source, m, null) ?? current))} />
+                    {editing?.id === source.id ? form : (
                       <div className="inline-actions">
-                        <button type="button" className="button-small button-small-primary" onClick={() => saveReceived(source)}>Save</button>
-                        <button type="button" className="button-small" onClick={() => setReceiving(null)}>Cancel</button>
+                        <button type="button" className="button-small" onClick={() => {
+                          setEditing({ id: source.id, name: source.name, amount: amountText(source.amount), payDay: String(source.payDay), startMonth: source.startMonth, endMonth: source.endMonth ?? '' })
+                          focusField.current = 'income-name'
+                        }}>Edit {source.name}</button>
+                        <button type="button" className="button-small" aria-label={`Remove ${source.name}`}
+                          onClick={() => say(`${source.name} removed. Income already received stays.`, onChange(current => deleteIncomeSource(current, source.id)))}>Remove</button>
                       </div>
-                    </div>}
-                </li>
-              )
-            })}
-          </ul>
-          <div className="inline-actions">
-            <button type="button" className="text-button" onClick={() => setEditing({ id: source.id, name: source.name, amount: amountText(source.amount), payDay: String(source.payDay), startMonth: source.startMonth, endMonth: source.endMonth ?? '' })}>Edit {source.name}</button>
-            <button type="button" className="text-button" onClick={() => say(`${source.name} removed. Income already received stays.`, onChange(current => deleteIncomeSource(current, source.id)))}>Remove</button>
-          </div>
-        </div>
-      ))}
-    </section>
+                    )}
+                    <p className="field-help">Remove takes away the expected income. What already arrived stays in History.</p>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </>}
+    </DataBlockFrame>
   )
+}
+
+type PaymentsProps = {
+  data: FinanceData
+  source: IncomeSource
+  months: YearMonth[]
+  reference: YearMonth
+  today: string
+  money: (minor: number) => string
+  receiving: ReceivedForm | null
+  onReceivingChange: (form: ReceivedForm | null) => void
+  onSaveReceived: () => void
+  onNotReceived: (month: YearMonth) => void
+}
+
+/**
+ * The months of one source in a chosen period: the expected amount and
+ * pay date, and what really arrived and when. Months go up to the last
+ * month the app plans (or the source's first month, if it starts later).
+ */
+function SourcePayments({ data, source, months, reference, today, money, receiving, onReceivingChange, onSaveReceived, onNotReceived }: PaymentsProps) {
+  const lastPlanned = months[months.length - 1] ?? reference
+  const last = source.endMonth !== null && source.endMonth < lastPlanned ? source.endMonth
+    : lastPlanned < source.startMonth ? source.startMonth : lastPlanned
+  const firstYear = Number(source.startMonth.slice(0, 4))
+  const lastYear = Number(last.slice(0, 4))
+  const years = Array.from({ length: Math.max(1, lastYear - firstYear + 1) }, (_, index) => String(firstYear + index))
+  const referenceYear = reference.slice(0, 4)
+  const [period, setPeriod] = useState(years.includes(referenceYear) ? referenceYear : years[years.length - 1])
+  const usedPeriod = period === 'all' || years.includes(period) ? period : years[years.length - 1]
+  const shownYears = usedPeriod === 'all' ? years : [usedPeriod]
+  const rows = shownYears.flatMap(year => Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`))
+    .filter(month => isSourceActiveIn(source, month) && month <= last)
+  const selectId = `income-period-${source.id}`
+
+  return <>
+    <div className="form-field period-field">
+      <label htmlFor={selectId}>Payments of {source.name}</label>
+      <select id={selectId} value={usedPeriod} onChange={event => setPeriod(event.target.value)}>
+        {years.map(year => <option key={year} value={year}>{year}</option>)}
+        {years.length > 1 && <option value="all">All years</option>}
+      </select>
+    </div>
+    {rows.length === 0 && <p className="muted-note">No payments are expected in this period.</p>}
+    <ul className="line-list payment-list">
+      {rows.map(month => {
+        const line = monthIncome(data, month).lines.find(item => item.source?.id === source.id)
+        if (!line) return null
+        const isOpen = receiving?.sourceId === source.id && receiving.month === month
+        return (
+          <li key={month}>
+            <div className="line">
+              <span>{formatYearMonth(month)}
+                <small>Expected: {money(source.amount)} on {formatDate(line.payDate!)}</small>
+                <small>{line.received ? `Received: ${money(line.received.amount)} on ${formatDate(line.received.receivedOn)}` : 'Received: not recorded yet'}</small>
+              </span>
+              <b className={`payment-state${line.received ? ' is-received' : ''}`}>{line.received ? 'Received' : 'Expected'}</b>
+            </div>
+            {!isOpen
+              ? <div className="inline-actions">
+                <button type="button" className="text-button" aria-label={`${line.received ? 'Change' : 'Record Received'}: ${source.name}, ${formatYearMonth(month)}`}
+                  onClick={() => onReceivingChange({ sourceId: source.id, month, amount: amountText(line.received?.amount ?? source.amount), date: line.received?.receivedOn ?? (line.payDate! <= today ? line.payDate! : today) })}>
+                  {line.received ? 'Change' : 'Record Received'}
+                </button>
+                {line.received && <button type="button" className="text-button" aria-label={`Not Received: ${source.name}, ${formatYearMonth(month)}`} onClick={() => onNotReceived(month)}>Not Received</button>}
+              </div>
+              : <div className="form-stack edit-box">
+                <Field id="received-amount" label={`Amount Received (${data.space.currency})`} inputMode="decimal" value={receiving.amount} onChange={amount => onReceivingChange({ ...receiving, amount, error: undefined })} error={receiving.error} />
+                <Field id="received-date" label="Date Received" type="date" max={today} value={receiving.date} onChange={date => onReceivingChange({ ...receiving, date, error: undefined })} />
+                <div className="inline-actions">
+                  <button type="button" className="button-small button-small-primary" onClick={onSaveReceived}>Save</button>
+                  <button type="button" className="button-small" onClick={() => onReceivingChange(null)}>Cancel</button>
+                </div>
+              </div>}
+          </li>
+        )
+      })}
+    </ul>
+  </>
 }

@@ -35,8 +35,8 @@ export function ReportSection({ data, isDemo, months, month, today, getGenerated
   }
 
   return (
-    <section className="block" aria-labelledby="data-report">
-      <h2 id="data-report" className="section-title">Export Report</h2>
+    <section className="sub-block" aria-labelledby="data-report">
+      <h3 id="data-report" className="section-title">Export Report</h3>
       <p className="field-help">A PDF summary to read or print: income, spending by category, pending payments, debts, accounts, savings and goals, and what is missing. It is not a backup and not a bank statement.</p>
       <div className="segmented" role="group" aria-label="Report period">
         {(['month', 'year'] as const).map(option => (

@@ -69,8 +69,13 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    Review guarda el objetivo y la cobertura (~0,2 meses) aparece en Home.
 7. **Metas.** Trip to Japan → Try an Amount or Date: 500 al mes → 17 meses
    (31-5-2028). New Goal sin objetivo se puede crear; con fecha pide objetivo.
-8. **History.** Gráfico de 12 meses; elige August para ver sus categorías.
-   Filtra por tipo, categoría y cuenta; añade un gasto y una transferencia.
+8. **History.** Al entrar: Year Overview cerrado, periodo 2026, December
+   abierto (35 records, Showing 20) y los demás meses cerrados. Busca
+   «christmas»: 7 records en December, November y October, con «Note: Spent on
+   Christmas gifts». More Filters → Type Spending: «1 on» y la etiqueta
+   «Type: Spending ×»; Clear Filters conserva el periodo. Year Overview → July
+   muestra sus categorías. Abre un pago de Credit Card Payment y vuelve: mismo
+   periodo, búsqueda, meses y posición. Añade un gasto y una transferencia.
 9. **Data.** Export Report → One Month / Whole Year → Download PDF, con y sin
    importes. Data Backup → Download Backup.
 10. **Reset Demo** desde la franja, Data o Settings: vuelve todo el año y
@@ -82,7 +87,22 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
     los demás muestran periodo y resumen. Customize Home → Move up / Move down
     o arrastrar por el asa → Done. Reset Layout vuelve al inicio. El mes se
     queda arriba al desplazarse. Bills → January 2027 → Home muestra enero.
-13. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
+13. **Data plegable.** Al entrar los seis bloques están cerrados con un
+    resumen. Income → Salary muestra sus cobros de 2026 (esperado y recibido
+    por separado); Ended muestra Part-time Job y Scholarship. Home → My Money →
+    Edit Balances abre Accounts & Balances con el foco en su encabezado. Reset
+    Demo (franja, Data o Settings) pregunta «Reset demo?»; Cancel no cambia
+    nada. Imprimir Home o Data con Collapse All cabe en una página.
+14. **Bills → Calendar.** Toca el 30 de December (última fila): la página no
+    se mueve y la barra de arriba dice «Wed 30 Dec · No bills». Al bajar, esa
+    barra se queda bajo la cabecera mientras se ve el calendario y nunca tapa
+    el panel. View day details lleva al panel con la fecha visible y el foco
+    en ella; Back to calendar devuelve el foco al día. + Add Bill del panel
+    abre el formulario con Due day 30 y Start month December 2026; Cancel
+    vuelve al mismo sitio; al guardar vuelve al día con «Bill added.». Con el
+    filtro Paid, el aviso dice que el filtro la oculta y ofrece Show All. Abre
+    una factura y vuelve: mismo mes, vista, filtro, día, posición y foco.
+15. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
     de pestañas no tapa el pie de página.
 
 ## Ramas y entregas

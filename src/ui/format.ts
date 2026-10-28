@@ -60,6 +60,18 @@ export function weekdayOf(date: CalendarDate): string {
   return WEEKDAY_NAMES[new Date(Date.UTC(year, month - 1, day)).getUTCDay()]
 }
 
+/** Calendar column headings, Monday first: the short name shown and the full name for screen readers. */
+export const WEEK_HEADINGS: readonly { short: string; full: string }[] = [1, 2, 3, 4, 5, 6, 0].map(index => ({ short: WEEKDAY_NAMES[index].slice(0, 3), full: WEEKDAY_NAMES[index] }))
+
+/** A date in full, for screen readers and headings: '2026-12-22' -> 'Tuesday 22 December 2026'. */
+export function formatLongDate(date: CalendarDate): string {
+  const [year, month, day] = date.split('-').map(Number)
+  return `${weekdayOf(date)} ${day} ${LONG_MONTH_NAMES[month - 1]} ${year}`
+}
+
+/** The twelve month names, for the app's own month pickers (never the browser's language). */
+export const MONTH_NAMES_LONG: readonly string[] = LONG_MONTH_NAMES
+
 export const formatMonths = (count: number) => `${count} ${count === 1 ? 'month' : 'months'}`
 
 /** '2026-10' shown as just the month's name, 'October'. */

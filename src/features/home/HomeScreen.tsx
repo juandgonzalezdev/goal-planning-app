@@ -4,6 +4,7 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { monthEnd } from '../../domain/finance/spending'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import type { BillsChartView } from '../../data/uiPrefs'
+import type { DataBlock } from '../data/dataBlocks'
 import { BLOCK_NAMES, type HomeBlock } from '../../ui/amountVisibility'
 import { AllAmountsToggle } from '../../ui/privacy'
 import type { SaveOutcome } from '../../ui/saveOutcome'
@@ -31,6 +32,8 @@ type Props = {
   onLayoutChange: (layout: HomeLayout) => void
   onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
   onOpen: (screen: 'bills' | 'cards' | 'data' | 'goals' | 'history') => void
+  /** Opens Data on one block (Income, Accounts & Balances), with the focus on its heading. */
+  onOpenDataBlock: (block: DataBlock) => void
   onOpenGoal: (id: Id) => void
   onAddGoal: () => void
   onOpenDebt: (id: Id) => void
@@ -148,12 +151,12 @@ export function HomeScreen(props: Props) {
   }
 
   const blocks: Record<HomeBlock, ReactNode> = {
-    month: <MonthSummary data={data} month={month} today={today} onOpenIncome={() => onOpen('data')} onOpenBills={() => onOpen('bills')} onOpenHistory={() => onOpen('history')} />,
+    month: <MonthSummary data={data} month={month} today={today} onOpenIncome={() => props.onOpenDataBlock('income')} onOpenBills={() => onOpen('bills')} onOpenHistory={() => onOpen('history')} />,
     'left-to-pay': <LeftToPay data={data} month={month} today={today} onOpenBills={() => onOpen('bills')} onOpenBill={props.onOpenBill} />,
     categories: <SpendingByCategory data={data} month={month} today={today} view={props.chartView} onViewChange={props.onChartViewChange} onChange={props.onChange}
       onOpenBill={props.onOpenBill} onOpenExpense={props.onOpenExpense} />,
     debt: <TotalDebt data={data} asOf={asOf} onOpenDebt={props.onOpenDebt} onOpenCards={() => onOpen('cards')} />,
-    money: <HomeMoney data={data} title={name('money')} asOf={asOf} onOpenGoal={props.onOpenGoal} onOpenData={() => onOpen('data')} />,
+    money: <HomeMoney data={data} title={name('money')} asOf={asOf} onOpenGoal={props.onOpenGoal} onOpenData={() => props.onOpenDataBlock('accounts')} />,
     goals: <HomeGoals data={data} title={name('goals')} asOf={asOf} emergencyLater={props.emergencyLater}
       onEmergencyLater={props.onEmergencyLater} onReviewEmergency={props.onReviewEmergency}
       onViewAll={() => onOpen('goals')} onAddGoal={props.onAddGoal} onOpenGoal={props.onOpenGoal} />,

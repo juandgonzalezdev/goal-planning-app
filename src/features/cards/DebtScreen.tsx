@@ -137,8 +137,8 @@ function DebtDetail(props: Props & { debtId: Id }) {
         {payment.changedThisMonth && <p className="field-help">{monthLabel} has its own amount in the bill; other months use the usual payment.</p>}
         {payment.bill
           ? <p className="field-help">The payment is the bill <button type="button" className="text-button inline-link" aria-label={`${payment.bill.name}, ${monthLabel}`}
-            onClick={() => onOpenBill(payment.bill!.id, month)}>{payment.bill.name}</button> ({monthLabel}), counted once in Monthly Bills.</p>
-          : <p className="field-help">No bill pays this {debt.kind === 'card' ? 'card' : 'loan'} yet, so its payment is not in Monthly Bills.</p>}
+            onClick={() => onOpenBill(payment.bill!.id, month)}>{payment.bill.name}</button> ({monthLabel}), counted once in Bills.</p>
+          : <p className="field-help">No bill pays this {debt.kind === 'card' ? 'card' : 'loan'} yet, so its payment is not in Bills.</p>}
         {debt.kind === 'card' && <p className="field-help">The minimum payment is the amount you entered from your statement. The app does not calculate it.</p>}
         <button type="button" className="button-small align-start" onClick={() => { setEditing(true); setMessage('') }}>Edit Details</button>
       </section>

@@ -22,6 +22,8 @@ const stat = (label: string) => text(within(regionOf('This Month')).getByText(la
 const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
 const pickMonth = (month: string) => fireEvent.change(monthSelect(), { target: { value: month } })
 const amount = /\d,\d\d zł/
+/** Bills opens on Calendar; its List keeps the Paid / Pending buttons of each bill. */
+const showBillsList = () => fireEvent.click(within(screen.getByRole('group', { name: 'View' })).getByRole('button', { name: 'List' }))
 const NOVEMBER_PLANNED = '4582,57 zł'
 
 /** Goes back through the browser history until the tabs show again. */
@@ -97,7 +99,7 @@ describe('Alex demo: Home', () => {
     openAlex()
     expect(region('Left to Pay')).toContain('You still have bills to pay in December.')
     fireEvent.click(tab('Bills'))
-    fireEvent.click(button(/Thursday 31 December/))
+    showBillsList()
     fireEvent.click(button('Phone & Internet paid in December 2026'))
     fireEvent.click(tab('Home'))
     expect(region('Left to Pay')).toContain('All your December bills are paid.')
@@ -114,7 +116,7 @@ describe('Alex demo: Home', () => {
     const items = screen.getByRole('list', { name: 'Health in July' })
     expect(text(items)).toContain('Emergency dental treatment8 Jul 2026 · One-off · Credit Card780,00 zł')
     fireEvent.click(within(items).getByRole('button', { name: /Emergency dental treatment/ }))
-    await waitFor(() => expect(heading('Financial History')).toBeTruthy())
+    await waitFor(() => expect(heading('History')).toBeTruthy())
     expect(screen.getByRole('group', { name: 'Change spending' })).toBeTruthy()
     type(/^Amount/, '700')
     fireEvent.click(button('Save Changes'))
@@ -317,16 +319,20 @@ describe('Alex demo: History', () => {
   it('filters by period, type, category and account, and a chart month opens its categories', () => {
     openAlex()
     fireEvent.click(tab('History'))
+    fireEvent.click(button(/^Year Overview/))
     fireEvent.click(screen.getByRole('button', { name: name => name.replace(/\u00a0|\u202f/g, ' ').startsWith('July 2026: income 900,00 zł, spent 3464,92 zł') }))
     fireEvent.change(field('Type'), { target: { value: 'spending' } })
     fireEvent.click(within(screen.getByRole('group', { name: 'Spending by category in July 2026' })).getByRole('button', { name: /^Health/ }))
-    const list = text(document.querySelector('.history-list'))
+    const list = text(document.querySelector('.history-months'))
     expect(list).toContain('Emergency dental treatment')
     expect(list).not.toContain('Pharmacy · ')
     fireEvent.change(field('Account'), { target: { value: 'everyday' } })
-    expect(text(document.querySelector('.history-list'))).not.toContain('Emergency dental treatment')
+    expect(text(document.querySelector('.history-results'))).not.toContain('Emergency dental treatment')
+    // Clear Filters keeps the period chosen (July).
     fireEvent.click(button('Clear Filters'))
-    expect(text(screen.getByRole('heading', { name: /^Records/ }))).toContain('401')
+    expect(text(document.getElementById('history-count'))).toContain('28 records in July 2026')
+    fireEvent.change(field('Period'), { target: { value: 'all' } })
+    expect(text(document.getElementById('history-count'))).toContain('401 records in all time')
   })
 
   it('keeps payments, transfers, savings and balances apart, and adds a purchase to its month only', () => {
@@ -334,9 +340,9 @@ describe('Alex demo: History', () => {
     fireEvent.click(tab('History'))
     fireEvent.change(field('Period'), { target: { value: 'month:2026-09' } })
     fireEvent.change(field('Type'), { target: { value: 'transfer' } })
-    expect(text(document.querySelector('.history-list'))).toContain('Savings Account → Everyday Account · Not income or spending')
+    expect(text(document.querySelector('.history-months'))).toContain('TransferSavings Account → Everyday AccountNot income or spending')
     fireEvent.change(field('Type'), { target: { value: 'bill' } })
-    expect(text(document.querySelector('.history-list'))).toContain('Paid late')
+    expect(text(document.querySelector('.history-months'))).toContain('Paid late')
     fireEvent.click(button(/Add Spending/))
     type('Date', '2026-12-30')
     type(/^Amount/, '45')
@@ -357,6 +363,7 @@ describe('Alex demo: report and backup (12, 13)', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download) })
     openAlex()
     fireEvent.click(tab('Data'))
+    fireEvent.click(button(/^Reports & Backup/))
     expect(heading('Export Report')).toBeTruthy()
     expect(heading('Data Backup')).toBeTruthy()
     fireEvent.click(button('Download PDF'))
@@ -393,7 +400,7 @@ describe('Alex demo: keeping and resetting (15)', () => {
     pickMonth('2026-03')
 
     fireEvent.click(button('Reset Demo'))
-    fireEvent.click(button('Restore Example'))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     expect(monthSelect().value).toBe('2026-12')
     expect(region('Total Debt')).toContain('12 266,98 zł')
     expect(region('Year Summary')).toContain('Income in 202655 998,00 zł')
@@ -404,10 +411,10 @@ describe('Alex demo: keeping and resetting (15)', () => {
     storage.setItem(STORAGE_KEY, '{ saved, but unreadable')
     openAlex(storage)
     fireEvent.click(tab('Bills'))
-    fireEvent.click(button(/Thursday 31 December/))
+    showBillsList()
     fireEvent.click(button('Phone & Internet paid in December 2026'))
     fireEvent.click(button('Reset Demo'))
-    fireEvent.click(button('Restore Example'))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     fireEvent.click(button('Exit Demo'))
     expect(storage.getItem(STORAGE_KEY)).toBe('{ saved, but unreadable')
   })

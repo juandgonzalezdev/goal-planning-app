@@ -53,6 +53,8 @@ function openDemo({ expanded = true } = {}) {
 }
 
 const expandAll = () => fireEvent.click(button('Expand All'))
+/** Bills opens on Calendar; its List keeps the Paid / Pending and Change Amount buttons of each bill. */
+const showBillsList = () => fireEvent.click(within(screen.getByRole('group', { name: 'View' })).getByRole('button', { name: 'List' }))
 
 const saved = (storage: Storage) => JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null')
 
@@ -222,7 +224,7 @@ describe('Demo', () => {
     const { storage } = openDemo()
     fireEvent.click(tab('Bills'))
     pickMonth('2026-11')
-    fireEvent.click(button(/Thursday 5 November/))
+    showBillsList()
     fireEvent.click(button('Furniture Loan paid in November 2026'))
     expect(stat('Left to Pay')).toContain('5300,98 zł')
     expect(storage.length).toBe(0)
@@ -361,8 +363,8 @@ describe('Home', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
     pickMonth('2026-11')
-    fireEvent.click(button(/Sunday 22 November/))
-    fireEvent.click(button('Change Amount for November 2026'))
+    showBillsList()
+    fireEvent.click(button('Change Amount for November 2026: Phone & Internet'))
     type('Amount for November 2026 (PLN)', '90')
     fireEvent.click(button('Save'))
     fireEvent.click(tab('Home'))
@@ -680,7 +682,7 @@ describe('Tab bar', () => {
     expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Home', 'Bills', 'Cards', 'History', 'Data'])
     expect(tab('Home').getAttribute('aria-current')).toBe('page')
     fireEvent.click(tab('History'))
-    expect(heading('Financial History')).toBeTruthy()
+    expect(heading('History')).toBeTruthy()
     expect(tab('History').getAttribute('aria-current')).toBe('page')
     expect(tab('Home').getAttribute('aria-current')).toBeNull()
   })
@@ -698,86 +700,90 @@ describe('Tab bar', () => {
   })
 })
 
-describe('Monthly Bills', () => {
-  it('shows October totals with every date closed', () => {
+describe('Bills', () => {
+  const planned = (label: string) => text(within(screen.getByRole('region', { name: 'Whole month' })).getByText(label).parentElement)
+
+  it('opens on Calendar with the whole month: Planned, Paid and Left to Pay', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
-    expect(heading('Monthly Bills')).toBeTruthy()
-    expect(stat('Monthly Total')).toContain('5571,43 zł')
-    expect(stat('Left to Pay')).toContain('0,00 zł')
-    const dates = screen.getAllByRole('button', { expanded: false })
-    expect(dates).toHaveLength(8)
-    expect(screen.queryByRole('button', { expanded: true })).toBeNull()
-    expect(text(dates[1])).toContain('Wednesday')
-    expect(text(dates[1])).toContain('2 payments due')
-    expect(text(dates[1])).toContain('330,00 zł')
+    expect(heading('Bills')).toBeTruthy()
+    expect(within(screen.getByRole('group', { name: 'View' })).getByRole('button', { name: 'Calendar' }).getAttribute('aria-pressed')).toBe('true')
+    expect(planned('Planned')).toContain('5571,43 zł')
+    expect(planned('Paid')).toContain('5571,43 zł')
+    expect(planned('Left to Pay')).toContain('0,00 zł')
+    // Wednesday 7 October has two bills: 330,00 zł together.
+    expect(button(/^Wednesday 7 October 2026, 2 bills: 2 paid, 0 pending$/)).toBeTruthy()
   })
 
-  it('opens one date at a time', () => {
+  it('shows the bills of the chosen day under the calendar', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
-    fireEvent.click(button(/Monday 5 October/))
-    expect(screen.getByText('Furniture Loan')).toBeTruthy()
-    fireEvent.click(button(/Wednesday 7 October/))
-    expect(screen.queryByText('Furniture Loan')).toBeNull()
-    expect(screen.getByText('Bank Plan')).toBeTruthy()
-    expect(screen.getByText('Language Course')).toBeTruthy()
-    expect(screen.getAllByRole('button', { expanded: true })).toHaveLength(1)
-    fireEvent.click(button(/Wednesday 7 October/))
-    expect(screen.queryByRole('button', { expanded: true })).toBeNull()
+    fireEvent.click(button(/^Monday 5 October 2026/))
+    const list = () => screen.getByRole('region', { name: 'Monday 5 October 2026' })
+    expect(text(list())).toContain('Furniture Loan')
+    fireEvent.click(button(/^Wednesday 7 October 2026/))
+    expect(screen.queryByRole('region', { name: 'Monday 5 October 2026' })).toBeNull()
+    const day = text(screen.getByRole('region', { name: 'Wednesday 7 October 2026' }))
+    expect(day).toContain('Bank Plan')
+    expect(day).toContain('Language Course')
+    expect(button(/^Wednesday 7 October 2026/).getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('closes the open date when the month changes', () => {
+  it('starts again from a useful day when the month changes', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
-    fireEvent.click(button(/Monday 5 October/))
+    fireEvent.click(button(/^Monday 5 October 2026/))
     pickMonth('2026-11')
-    expect(screen.queryByRole('button', { expanded: true })).toBeNull()
     expect(monthSelect().value).toBe('2026-11')
+    // The demo's date (23 October) is not in November: the first day with bills is chosen.
+    const chosen = screen.getAllByRole('button', { pressed: true }).filter(b => b.classList.contains('cal-day'))
+    expect(chosen).toHaveLength(1)
+    expect(chosen[0].getAttribute('aria-label')).toMatch(/^\w+ \d+ November 2026, \d+ bills?:/)
   })
 
-  it('shows an unknown amount as needed, never as a number', () => {
+  it('shows an unknown amount as Unknown, never as a number, and says the totals leave it out', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
     pickMonth('2026-11')
-    expect(screen.getByText('1 bill amount needs to be entered.')).toBeTruthy()
-    expect(stat('Monthly Total')).toContain('5450,98 zł')
-    expect(stat('Left to Pay')).toContain('+ unknown amount')
-    fireEvent.click(button(/Sunday 22 November/))
-    const phone = screen.getByText('Phone & Internet').closest('.bill-item')!
-    expect(phone.textContent).toContain('Amount needed')
+    expect(screen.getByText('1 bill has an unknown amount. The totals include known amounts only.')).toBeTruthy()
+    expect(planned('Planned')).toContain('5450,98 zł')
+    expect(planned('Planned')).toContain('1 unknown')
+    expect(planned('Left to Pay')).toContain('1 unknown')
+    fireEvent.click(button(/^Sunday 22 November 2026/))
+    const phone = within(screen.getByRole('region', { name: 'Sunday 22 November 2026' })).getByRole('button', { name: /^Phone & Internet/ })
+    expect(text(phone)).toContain('Unknown')
+    expect(phone.getAttribute('aria-label')).toContain('unknown amount')
   })
 
-  it('marks one month paid without changing another month', () => {
+  it('marks one month paid in List without changing another month', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
     pickMonth('2026-11')
-    fireEvent.click(button(/Saturday 10 October|Tuesday 10 November/))
+    showBillsList()
     const rent = button('Rent paid in November 2026')
     expect(rent.getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(rent)
     expect(button('Rent paid in November 2026').getAttribute('aria-pressed')).toBe('true')
-    expect(stat('Left to Pay')).toContain('3050,98 zł')
+    expect(planned('Left to Pay')).toContain('3050,98 zł')
 
     pickMonth('2026-10')
-    fireEvent.click(button(/Saturday 10 October/))
     expect(button('Rent paid in October 2026').getAttribute('aria-pressed')).toBe('true')
-    expect(stat('Left to Pay')).toContain('0,00 zł')
+    expect(planned('Left to Pay')).toContain('0,00 zł')
   })
 
   it('records an amount for one month and updates the totals and Home', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
     pickMonth('2026-11')
-    fireEvent.click(button(/Sunday 22 November/))
-    fireEvent.click(button('Change Amount for November 2026'))
+    showBillsList()
+    fireEvent.click(button('Change Amount for November 2026: Phone & Internet'))
     type('Amount for November 2026 (PLN)', 'abc')
     fireEvent.click(button('Save'))
     expect(screen.getByText('Enter an amount such as 120.45.')).toBeTruthy()
     type('Amount for November 2026 (PLN)', '130,55')
     fireEvent.click(button('Save'))
-    expect(stat('Monthly Total')).toContain('5581,53 zł')
-    expect(screen.queryByText('1 bill amount needs to be entered.')).toBeNull()
+    expect(planned('Planned')).toContain('5581,53 zł')
+    expect(screen.queryByText(/has an unknown amount/)).toBeNull()
 
     fireEvent.click(tab('Home'))
     pickMonth('2026-11')
@@ -811,7 +817,7 @@ describe('Keeping information between screens', () => {
     fireEvent.click(button(/Back/))
     await waitFor(() => expect(heading('My Loans & Cards')).toBeTruthy())
     fireEvent.click(tab('Bills'))
-    expect(stat('Monthly Total')).toContain('1000,00 zł')
+    expect(text(within(screen.getByRole('region', { name: 'Whole month' })).getByText('Planned').parentElement)).toContain('1000,00 zł')
     fireEvent.click(tab('Home'))
     expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('12 000,00 zł')
     expect(saved(storage).debts).toMatchObject([{ name: 'Test loan', yearlyInterestBasisPoints: 1200, dueDay: 10 }])
@@ -956,7 +962,7 @@ describe('Back navigation', () => {
     fireEvent.click(tab('Bills'))
     fireEvent.click(tab('Cards'))
     await browserBack()
-    expect(heading('Monthly Bills')).toBeTruthy()
+    expect(heading('Bills')).toBeTruthy()
     await browserBack()
     expect(tab('Home').getAttribute('aria-current')).toBe('page')
   })
@@ -1043,7 +1049,7 @@ describe('Focus', () => {
   it('moves to each tab title', () => {
     openDemo()
     fireEvent.click(tab('Bills'))
-    expect(document.activeElement).toBe(heading('Monthly Bills'))
+    expect(document.activeElement).toBe(heading('Bills'))
     fireEvent.click(tab('Data'))
     expect(document.activeElement).toBe(heading('Manage Your Data'))
   })
@@ -1093,6 +1099,7 @@ describe('Data', () => {
     const { storage } = createIndividualSpace()
     const other = { ...saved(storage), space: { ...saved(storage).space, name: 'Imported', members: [{ id: 'member-1', name: 'Imported', color: '#3B82F6' }] } }
     fireEvent.click(tab('Data'))
+    fireEvent.click(button(/^Reports & Backup/))
     await upload(JSON.stringify(other))
     expect(screen.getByRole('alert').textContent).toContain('Replace everything in this space with “Imported”')
     expect(saved(storage).space.name).toBe('Robin')
@@ -1105,6 +1112,7 @@ describe('Data', () => {
     const { storage } = createIndividualSpace()
     const other = { ...saved(storage), space: { ...saved(storage).space, name: 'Imported' } }
     fireEvent.click(tab('Data'))
+    fireEvent.click(button(/^Reports & Backup/))
     await upload(JSON.stringify(other))
     vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('full') })
     fireEvent.click(button('Replace'))
@@ -1117,6 +1125,7 @@ describe('Data', () => {
   it('refuses a broken file and changes nothing', async () => {
     const { storage } = createIndividualSpace()
     fireEvent.click(tab('Data'))
+    fireEvent.click(button(/^Reports & Backup/))
     await upload('{ "schemaVersion": 1 }')
     expect(screen.getByRole('alert').textContent).toContain('This file cannot be used. Nothing was changed.')
     expect(saved(storage).space.name).toBe('Robin')

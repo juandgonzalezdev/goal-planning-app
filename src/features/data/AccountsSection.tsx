@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { recordBalance } from '../../domain/finance/debts'
@@ -8,16 +8,36 @@ import { MONEY_KINDS } from '../../ui/chartColors'
 import { formatAmount, formatDate } from '../../ui/format'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
+import { DataBlockFrame } from './DataBlockFrame'
+import { DataBlocksContext, setBlockOpen } from './dataBlocks'
 import type { SectionProps } from './DataScreen'
 
 type AccountForm = { id: Id | null; name: string; kind: MoneyAccountKind; balance: string; asOf: string; error?: string }
 
-/** Accounts and their dated balances: add, rename, update a balance or delete. */
+/**
+ * Accounts and their dated balances in a compact list (name, kind, latest
+ * balance and its date). Opening an account shows Update Balance, Edit and
+ * Delete. A balance never entered stays "Not entered", never 0.
+ */
 export function AccountsSection({ data, today, owner, newId, onChange, say }: SectionProps) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const { items } = summarizeMoney(data)
   const [form, setForm] = useState<AccountForm | null>(null)
   const [balanceFor, setBalanceFor] = useState<{ id: Id; amount: string; asOf: string; error?: string } | null>(null)
+  const { view, onViewChange } = useContext(DataBlocksContext)
+  const focusField = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!focusField.current) return
+    document.getElementById(focusField.current)?.focus()
+    focusField.current = null
+  })
+
+  const startNew = () => {
+    onViewChange(setBlockOpen(view, 'accounts', true))
+    setForm({ id: null, name: '', kind: 'savings', balance: '', asOf: today })
+    focusField.current = 'account-name'
+  }
 
   const saveForm = () => {
     if (!form) return
@@ -49,65 +69,92 @@ export function AccountsSection({ data, today, owner, newId, onChange, say }: Se
     say('Balance updated.', outcome)
   }
 
-  return (
-    <section className="block" aria-labelledby="data-accounts">
-      <div className="section-head">
-        <h2 id="data-accounts" className="section-title">Accounts &amp; Balances</h2>
-        <button type="button" className="button-small" onClick={() => setForm({ id: null, name: '', kind: 'savings', balance: '', asOf: today })}><Icon name="plus" size={16} /> Add Account</button>
+  const formBox = form && (
+    <div className="form-stack edit-box">
+      <Field id="account-name" label="Account Name" value={form.name} onChange={name => setForm({ ...form, name, error: undefined })} maxLength={60} />
+      <div className="form-field">
+        <label htmlFor="account-kind">Kind</label>
+        <select id="account-kind" value={form.kind} onChange={e => setForm({ ...form, kind: e.target.value as MoneyAccountKind })}>
+          {MONEY_ACCOUNT_KINDS.map(kind => <option key={kind} value={kind}>{MONEY_KINDS[kind].label}</option>)}
+        </select>
       </div>
+      {form.id === null && <>
+        <Field id="account-balance" label={`Balance (${data.space.currency}, optional)`} inputMode="decimal" value={form.balance} onChange={balance => setForm({ ...form, balance, error: undefined })}
+          help="Leave it empty if you don’t know it yet: it shows as not entered, not as 0." />
+        <Field id="account-date" label="Balance Date" type="date" max={today} value={form.asOf} onChange={asOf => setForm({ ...form, asOf, error: undefined })} />
+      </>}
+      {form.error && <p className="field-error" role="alert">{form.error}</p>}
+      <div className="inline-actions">
+        <button type="button" className="button-small button-small-primary" onClick={saveForm}>Save Account</button>
+        <button type="button" className="button-small" onClick={() => setForm(null)}>Cancel</button>
+      </div>
+    </div>
+  )
+  const missing = items.filter(item => item.balance === null).length
+  const summary = items.length === 0 ? 'No accounts yet'
+    : [`${items.length} ${items.length === 1 ? 'account' : 'accounts'}`, ...(missing > 0 ? [`${missing} without a balance`] : [])].join(' · ')
+
+  return (
+    <DataBlockFrame block="accounts" summary={summary}
+      actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
       <p className="field-help">Balances you read in your bank or count yourself, with their date. A new balance keeps the old one in History.</p>
-      {form && (
-        <div className="form-stack edit-box">
-          <Field id="account-name" label="Account Name" value={form.name} onChange={name => setForm({ ...form, name, error: undefined })} maxLength={60} />
-          <div className="form-field">
-            <label htmlFor="account-kind">Kind</label>
-            <select id="account-kind" value={form.kind} onChange={e => setForm({ ...form, kind: e.target.value as MoneyAccountKind })}>
-              {MONEY_ACCOUNT_KINDS.map(kind => <option key={kind} value={kind}>{MONEY_KINDS[kind].label}</option>)}
-            </select>
-          </div>
-          {form.id === null && <>
-            <Field id="account-balance" label={`Balance (${data.space.currency}, optional)`} inputMode="decimal" value={form.balance} onChange={balance => setForm({ ...form, balance, error: undefined })}
-              help="Leave it empty if you don’t know it yet: it shows as not entered, not as 0." />
-            <Field id="account-date" label="Balance Date" type="date" max={today} value={form.asOf} onChange={asOf => setForm({ ...form, asOf, error: undefined })} />
-          </>}
-          {form.error && <p className="field-error" role="alert">{form.error}</p>}
-          <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={saveForm}>Save Account</button>
-            <button type="button" className="button-small" onClick={() => setForm(null)}>Cancel</button>
-          </div>
+      {form?.id === null && formBox}
+      {items.length === 0 && !form && (
+        <div className="empty-state">
+          <p className="muted-note">No accounts yet. Add the account you spend from, and any savings or investments.</p>
+          <button type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Account</button>
         </div>
       )}
-      {items.length === 0 && !form && <p className="muted-note">No accounts yet.</p>}
-      <ul className="line-list">
-        {items.map(({ account, balance, asOf }) => (
-          <li key={account.id} className="record">
-            <div className="line">
-              <span>{account.name}<small>{MONEY_KINDS[account.kind].label} · {asOf ? `as of ${formatDate(asOf)}` : 'balance not entered'}</small></span>
-              <b>{balance === null ? 'Not entered' : money(balance)}</b>
-            </div>
-            {balanceFor?.id === account.id
-              ? <div className="form-stack edit-box">
-                <Field id="account-new-balance" label={`New Balance of ${account.name} (${data.space.currency})`} inputMode="decimal" value={balanceFor.amount}
-                  onChange={amount => setBalanceFor({ ...balanceFor, amount, error: undefined })} error={balanceFor.error} />
-                <Field id="account-new-date" label="Balance Date" type="date" max={today} value={balanceFor.asOf} onChange={value => setBalanceFor({ ...balanceFor, asOf: value, error: undefined })} />
-                <div className="inline-actions">
-                  <button type="button" className="button-small button-small-primary" onClick={saveBalance}>Save Balance</button>
-                  <button type="button" className="button-small" onClick={() => setBalanceFor(null)}>Cancel</button>
+      <ul className="line-list compact-list">
+        {items.map(({ account, balance, asOf }) => {
+          const open = view.account === account.id
+          const detailId = `account-${account.id}`
+          return (
+            <li key={account.id} className={`compact-item${open ? ' is-open' : ''}`}>
+              <button type="button" className="line line-button" aria-expanded={open} aria-controls={open ? detailId : undefined}
+                onClick={() => onViewChange({ ...view, account: open ? null : account.id })}>
+                <span>
+                  <span className="item-name">{account.name}</span>
+                  <small>{MONEY_KINDS[account.kind].label} · {asOf ? `as of ${formatDate(asOf)}` : 'balance not entered'}</small>
+                </span>
+                <b>{balance === null ? 'Not entered' : money(balance)}</b>
+                <span className="item-chevron"><Icon name="chevronDown" size={16} /></span>
+              </button>
+              {open && (
+                <div id={detailId} className="item-detail">
+                  {balanceFor?.id === account.id
+                    ? <div className="form-stack edit-box">
+                      <Field id="account-new-balance" label={`New Balance of ${account.name} (${data.space.currency})`} inputMode="decimal" value={balanceFor.amount}
+                        onChange={amount => setBalanceFor({ ...balanceFor, amount, error: undefined })} error={balanceFor.error} />
+                      <Field id="account-new-date" label="Balance Date" type="date" max={today} value={balanceFor.asOf} onChange={value => setBalanceFor({ ...balanceFor, asOf: value, error: undefined })} />
+                      <div className="inline-actions">
+                        <button type="button" className="button-small button-small-primary" onClick={saveBalance}>Save Balance</button>
+                        <button type="button" className="button-small" onClick={() => setBalanceFor(null)}>Cancel</button>
+                      </div>
+                    </div>
+                    : form?.id === account.id ? formBox
+                    : <div className="inline-actions">
+                      <button type="button" className="button-small" aria-label={`Update Balance: ${account.name}`} onClick={() => {
+                        setBalanceFor({ id: account.id, amount: amountText(balance), asOf: today })
+                        focusField.current = 'account-new-balance'
+                      }}>Update Balance</button>
+                      <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => {
+                        setForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })
+                        focusField.current = 'account-name'
+                      }}>Edit</button>
+                      <button type="button" className="button-small" aria-label={`Delete: ${account.name}`} onClick={() => {
+                        let refused = false
+                        const outcome = onChange(current => { const next = deleteAccount(current, account.id); refused = next === null; return next ?? current })
+                        if (refused) say(`${account.name} has goal movements, so it stays. You can set its balance instead.`, outcome)
+                        else say(`${account.name} deleted.`, outcome)
+                      }}>Delete</button>
+                    </div>}
                 </div>
-              </div>
-              : <div className="inline-actions">
-                <button type="button" className="text-button" aria-label={`Update ${account.name} balance`} onClick={() => setBalanceFor({ id: account.id, amount: amountText(balance), asOf: today })}>Update Balance</button>
-                <button type="button" className="text-button" aria-label={`Edit ${account.name}`} onClick={() => setForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })}>Edit</button>
-                <button type="button" className="text-button" aria-label={`Delete ${account.name}`} onClick={() => {
-                  let refused = false
-                  const outcome = onChange(current => { const next = deleteAccount(current, account.id); refused = next === null; return next ?? current })
-                  if (refused) say(`${account.name} has goal movements, so it stays. You can set its balance instead.`, outcome)
-                  else say(`${account.name} deleted.`, outcome)
-                }}>Delete</button>
-              </div>}
-          </li>
-        ))}
+              )}
+            </li>
+          )
+        })}
       </ul>
-    </section>
+    </DataBlockFrame>
   )
 }

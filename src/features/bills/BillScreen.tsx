@@ -3,12 +3,11 @@ import { Field } from '../../components/Field'
 import { amountText } from '../../ui/labels'
 import { Icon } from '../../components/Icon'
 import { MonthSwitch } from '../../components/MonthSwitch'
-import type { YearMonth } from '../../domain/calendar'
-import {
-  addBill, billsForMonth, deleteBill, setBillMonthAmount, setBillPaid, setUsualAmountFrom, updateBill, usualAmountFor,
-  type BillFieldError, type BillFields,
-} from '../../domain/finance/bills'
-import { BILL_CATEGORIES, type FinanceData, type Id, type Owner, type RecurringBill } from '../../domain/finance/types'
+import { yearsAround, type YearMonth } from '../../domain/calendar'
+import { MonthYearField } from '../../components/MonthYearField'
+import { BillForm } from './BillForm'
+import { billsForMonth, deleteBill, setBillMonthAmount, setBillPaid, setUsualAmountFrom, usualAmountFor } from '../../domain/finance/bills'
+import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { formatAmount, formatDate, formatDueDay, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
@@ -19,6 +18,8 @@ type Props = {
   data: FinanceData
   /** null: adding a new bill. */
   billId: Id | null
+  /** Adding a bill from a day of the calendar: its due day starts on that day. */
+  dueDate?: CalendarDate | null
   months: YearMonth[]
   month: YearMonth
   onMonthChange: (month: YearMonth) => void
@@ -27,39 +28,9 @@ type Props = {
   newId: () => string
   onBack: () => void
   onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
-  onCreated: (id: Id) => void
+  onCreated: (id: Id, message: string) => void
   onDeleted: () => void
   onOpenDebt: (id: Id) => void
-}
-
-const FIELD_ERRORS: Record<BillFieldError, [keyof BillDraft, string]> = {
-  'name-required': ['name', 'Enter a name, such as Rent.'],
-  'name-too-long': ['name', 'Use 40 characters or fewer.'],
-  'unknown-category': ['category', 'Choose a category.'],
-  'invalid-due-day': ['dueDay', 'Enter a day from 1 to 31.'],
-  'invalid-start': ['startMonth', 'Choose the first month.'],
-  'invalid-end': ['endMonth', 'Choose a month, or leave it empty.'],
-  'ends-before-start': ['endMonth', 'The last month can’t be before the first.'],
-  'note-too-long': ['note', 'Keep the note to 120 characters or fewer.'],
-  'unknown-debt': ['debtId', 'Choose a card or loan from the list.'],
-  'debt-already-paid': ['debtId', 'Another bill already pays this card or loan.'],
-  'starts-after-change': ['startMonth', 'The first month must be before the first change of the usual amount.'],
-}
-
-interface BillDraft { name: string; category: string; dueDay: string; startMonth: string; endMonth: string; note: string; debtId: string; amount: string }
-type DraftErrors = Partial<Record<keyof BillDraft, string>>
-
-const draftOf = (bill: RecurringBill | null, month: YearMonth): BillDraft => ({
-  name: bill?.name ?? '', category: bill?.category ?? 'Other', dueDay: bill ? String(bill.dueDay) : '', startMonth: bill?.startMonth ?? month,
-  endMonth: bill?.endMonth ?? '', note: bill?.note ?? '', debtId: bill?.debtId ?? '', amount: '',
-})
-
-function readDraft(draft: BillDraft, owner: Owner): BillFields {
-  return {
-    name: draft.name, category: draft.category as BillFields['category'], owner,
-    dueDay: /^\d{1,2}$/.test(draft.dueDay.trim()) ? Number(draft.dueDay) : NaN,
-    startMonth: draft.startMonth, endMonth: draft.endMonth === '' ? null : draft.endMonth, note: draft.note, debtId: draft.debtId === '' ? null : draft.debtId,
-  }
 }
 
 /**
@@ -73,8 +44,6 @@ export function BillScreen(props: Props) {
   const currency = data.space.currency
   const money = (minor: number) => formatAmount(minor, currency)
   const [editing, setEditing] = useState(billId === null)
-  const [draft, setDraft] = useState<BillDraft>(() => draftOf(bill, month))
-  const [errors, setErrors] = useState<DraftErrors>({})
   // The amount being typed for one month; another month shows its own amount, not this draft.
   const [monthDraft, setMonthDraft] = useState<{ month: YearMonth; text: string } | null>(null)
   const monthText = monthDraft?.month === month ? monthDraft.text : null
@@ -93,69 +62,14 @@ export function BillScreen(props: Props) {
   }
 
   const occurrence = bill ? billsForMonth(data, month).find(o => o.bill.id === bill.id) ?? null : null
-  const set = (patch: Partial<BillDraft>) => setDraft({ ...draft, ...patch })
-  const availableDebts = data.debts.filter(debt => !data.bills.some(b => b.debtId === debt.id && b.id !== billId))
-
-  const saveDetails = () => {
-    const fields = readDraft(draft, bill?.owner ?? props.owner)
-    let amount: number | null = null
-    if (!bill && draft.amount.trim() !== '') {
-      amount = parseMoneyInput(draft.amount)
-      if (amount === null) { setErrors({ amount: 'Enter an amount such as 700, or leave it empty if you don’t know it yet.' }); return }
-    }
-    const id = bill?.id ?? props.newId()
-    let problems: BillFieldError[] = []
-    const outcome = onChange(current => {
-      const result = bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount)
-      if (result.status === 'ok') return result.data
-      problems = result.errors
-      return current
-    })
-    if (problems.length > 0) {
-      setErrors(Object.fromEntries(problems.map(problem => FIELD_ERRORS[problem])))
-      return
-    }
-    setErrors({})
-    if (!bill) { props.onCreated(id); return }
-    setEditing(false)
-    setMessage(outcomeText('Details updated.', outcome))
-  }
-
   if (editing || !bill) {
     return (
       <div className="tab-screen">
         <button type="button" className="back-link" onClick={() => (bill ? setEditing(false) : onBack())}><Icon name="arrowLeft" size={18} /> {bill ? 'Cancel' : 'Back'}</button>
         <h1 className="tab-title">{bill ? `Edit ${bill.name}` : 'Add Bill'}</h1>
-        <section className="block">
-          <div className="form-stack">
-            <Field id="bill-name" label="Name" value={draft.name} onChange={name => set({ name })} error={errors.name} maxLength={60} />
-            <div className="form-field">
-              <label htmlFor="bill-category">Category</label>
-              <select id="bill-category" value={draft.category} onChange={e => set({ category: e.target.value })}>
-                {BILL_CATEGORIES.map(category => <option key={category}>{category}</option>)}
-              </select>
-            </div>
-            {!bill && <Field id="bill-amount" label={`Usual Amount (${currency})`} inputMode="decimal" value={draft.amount} onChange={amount => set({ amount })} error={errors.amount}
-              help="Leave it empty if it changes and you don’t know it yet. It will show as unknown, never as 0." />}
-            <Field id="bill-due" label="Due Day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Day of the month, 1 to 31. Short months use their last day." />
-            <Field id="bill-start" label="First Month" type="month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} error={errors.startMonth} />
-            <Field id="bill-end" label="Last Month (optional)" type="month" value={draft.endMonth} onChange={endMonth => set({ endMonth })} error={errors.endMonth} help="Leave it empty if the bill has no end." />
-            <div className="form-field">
-              <label htmlFor="bill-debt">Pays a Card or Loan</label>
-              <select id="bill-debt" value={draft.debtId} onChange={e => set({ debtId: e.target.value })} aria-describedby="bill-debt-help">
-                <option value="">No</option>
-                {availableDebts.map(debt => <option key={debt.id} value={debt.id}>{debt.name}</option>)}
-              </select>
-              <p id="bill-debt-help" className="field-help">Then this bill is that card’s or loan’s monthly payment, counted once. Marking it paid never lowers the balance.</p>
-              {errors.debtId && <p className="field-error">{errors.debtId}</p>}
-            </div>
-            <Field id="bill-note" label="Note (optional)" value={draft.note} onChange={note => set({ note })} error={errors.note} maxLength={140} />
-          </div>
-        </section>
-        <div className="inline-actions">
-          <button type="button" className="button-small button-small-primary" onClick={saveDetails}>{bill ? 'Save Changes' : 'Add Bill'}</button>
-          <button type="button" className="button-small" onClick={() => { if (bill) { setDraft(draftOf(bill, month)); setErrors({}); setEditing(false) } else onBack() }}>Cancel</button>
-        </div>
+        <BillForm data={data} bill={bill} month={month} dueDay={props.dueDate ? Number(props.dueDate.slice(8)) : undefined} today={today} owner={props.owner} newId={props.newId} onChange={onChange}
+          onCancel={() => (bill ? setEditing(false) : onBack())} onCreated={props.onCreated}
+          onSaved={done => { setEditing(false); setMessage(done) }} />
       </div>
     )
   }
@@ -197,7 +111,7 @@ export function BillScreen(props: Props) {
           : <>
             <div className="bill-line">
               <span>{occurrence.amountChangedThisMonth ? `Amount for ${monthLabel} only` : 'Amount'}</span>
-              <b>{occurrence.amount === null ? 'Amount needed' : money(occurrence.amount)}</b>
+              <b>{occurrence.amount === null ? 'Unknown' : money(occurrence.amount)}</b>
             </div>
             <div className="bill-line">
               <small>{occurrence.paid ? (paidOn ? `Paid on ${formatDate(paidOn)}` : 'Paid') : `Due ${formatDate(occurrence.dueDate)}`}</small>
@@ -223,12 +137,12 @@ export function BillScreen(props: Props) {
 
       <section className="block" aria-labelledby="bill-usual">
         <h2 id="bill-usual" className="section-title">Usual Amount</h2>
-        <div className="bill-line"><span>From {monthLabel}</span><b>{usualNow === null ? 'Not known' : money(usualNow)}</b></div>
+        <div className="bill-line"><span>From {monthLabel}</span><b>{usualNow === null ? 'Unknown' : money(usualNow)}</b></div>
         {(bill.amountChanges ?? []).length > 0 && (
           <ul className="line-list">
-            <li className="line"><span>From {formatYearMonth(bill.startMonth)}</span><b>{bill.amount === null ? 'Not known' : money(bill.amount)}</b></li>
+            <li className="line"><span>From {formatYearMonth(bill.startMonth)}</span><b>{bill.amount === null ? 'Unknown' : money(bill.amount)}</b></li>
             {bill.amountChanges!.map(change => (
-              <li key={change.from} className="line"><span>From {formatYearMonth(change.from)}</span><b>{change.amount === null ? 'Not known' : money(change.amount)}</b></li>
+              <li key={change.from} className="line"><span>From {formatYearMonth(change.from)}</span><b>{change.amount === null ? 'Unknown' : money(change.amount)}</b></li>
             ))}
           </ul>
         )}
@@ -236,7 +150,8 @@ export function BillScreen(props: Props) {
           ? <button type="button" className="button-small align-start" onClick={() => setUsual({ amount: amountText(usualNow), from: month })}>Change Usual Amount</button>
           : <div className="form-stack">
             <Field id="bill-usual-amount" label={`New Usual Amount (${currency})`} inputMode="decimal" value={usual.amount} onChange={amount => setUsual({ ...usual, amount, error: undefined })} error={usual.error} />
-            <Field id="bill-usual-from" label="From Month" type="month" value={usual.from} onChange={from => setUsual({ ...usual, from, error: undefined })}
+            <MonthYearField id="bill-usual-from" label="From month" value={usual.from} onChange={from => setUsual({ ...usual, from, error: undefined })}
+              years={yearsAround(Number(today.slice(0, 4)))} defaultYear={Number(month.slice(0, 4))}
               help="This month and the months after it change. Earlier months keep their amount, and a month with its own amount keeps it." />
             <div className="inline-actions">
               <button type="button" className="button-small button-small-primary" onClick={saveUsual}>Save Usual Amount</button>
@@ -260,7 +175,7 @@ export function BillScreen(props: Props) {
           <div><dt>Pays</dt><dd>{debt ? <button type="button" className="text-button inline-link" onClick={() => props.onOpenDebt(debt.id)}>{debt.name}</button> : 'No card or loan'}</dd></div>
         </dl>
         <div className="inline-actions">
-          <button type="button" className="button-small" onClick={() => { setDraft(draftOf(bill, month)); setEditing(true); setMessage('') }}>Edit Details</button>
+          <button type="button" className="button-small" onClick={() => { setEditing(true); setMessage('') }}>Edit Details</button>
           {!confirmDelete && <button type="button" className="button-small" onClick={() => setConfirmDelete(true)}>Delete Bill</button>}
         </div>
         {confirmDelete && (

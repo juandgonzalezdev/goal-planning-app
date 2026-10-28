@@ -67,3 +67,25 @@ export function daysBetween(from: CalendarDate, to: CalendarDate): number {
 export function countWeeklyOpportunities(today: CalendarDate, deadline: CalendarDate): number {
   return Math.max(0, Math.floor(daysBetween(today, deadline) / DAYS_PER_WEEK))
 }
+
+/** Day of the week of a date, Monday = 0 … Sunday = 6. Read in UTC, so the time zone can never change it. */
+export function weekdayIndexMondayFirst(date: CalendarDate): number {
+  const [year, month, day] = date.split('-').map(Number)
+  return (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7
+}
+
+/**
+ * The weeks of a month for a calendar that starts on Monday: each week has
+ * seven places, and places before the 1st or after the last day are null.
+ */
+export function monthWeeks(month: YearMonth): (CalendarDate | null)[][] {
+  const last = daysInMonth(Number(month.slice(0, 4)), Number(month.slice(5, 7)))
+  const days: (CalendarDate | null)[] = Array.from({ length: weekdayIndexMondayFirst(`${month}-01`) }, () => null)
+  for (let day = 1; day <= last; day++) days.push(`${month}-${pad(day, 2)}`)
+  while (days.length % DAYS_PER_WEEK !== 0) days.push(null)
+  return Array.from({ length: days.length / DAYS_PER_WEEK }, (_, week) => days.slice(week * DAYS_PER_WEEK, (week + 1) * DAYS_PER_WEEK))
+}
+
+/** The years around `year` (five before and five after by default), for a month picker. */
+export const yearsAround = (year: number, before = 5, after = 5): number[] =>
+  Array.from({ length: before + after + 1 }, (_, index) => year - before + index)
