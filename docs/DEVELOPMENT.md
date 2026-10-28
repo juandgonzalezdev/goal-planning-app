@@ -30,9 +30,19 @@ Ejecuta las tres antes de entregar un cambio:
 `npm run test:watch` repite las pruebas al guardar. Para una sola carpeta:
 `npx vitest run src/report`.
 
-`npm run build` avisa de que el paquete JS supera 500 kB (unos 507 kB, 135 kB
-comprimido): la mayor parte del aumento son los 401 registros del año de Alex.
-Es un aviso, no un error.
+### Avisos conocidos (no son errores)
+
+- `npm run build` avisa de que el paquete JS supera 500 kB: en octubre de 2026
+  son unos 570 kB, que el navegador descarga comprimidos como unos 156 kB. La parte
+  mayor es React DOM; después, los 401 registros del año de Alex
+  (`src/data/fixtures/demoAlex.ts`). No se sube el límite del aviso para
+  esconderlo. Si el paquete pasa de unos 200 kB comprimidos, la demo y el
+  informe PDF se pueden cargar solo al abrirlos (`import()`).
+- `npm test` escribe varias veces «Not implemented: Window's scrollTo()
+  method». Lo dice jsdom, el navegador simulado de las pruebas, que no sabe
+  desplazar la página. Viene de `App.tsx`, que devuelve la posición al volver
+  de una factura o una meta a Bills o History. Las pruebas pasan y ese
+  regreso se comprueba con un espía en `src/BillsCalendar.test.tsx`.
 
 ### Escribir pruebas
 

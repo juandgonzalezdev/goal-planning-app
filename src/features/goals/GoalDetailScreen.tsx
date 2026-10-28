@@ -7,7 +7,8 @@ import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Goal, MovementEffect } from '../../domain/finance/types'
 import { formatAmount, formatDate } from '../../ui/format'
 import { EFFECT_NAMES } from '../../ui/labels'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { useEditBase, useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { GoalFormFields } from './GoalFormFields'
 import { draftFromGoal, NOTE_MAX_LENGTH, readGoalDraft, readMovementDraft, type GoalDraft, type GoalDraftErrors, type MovementDraft, type MovementDraftErrors } from './goalDraft'
 import { GoalExplore } from './GoalExplore'
@@ -22,8 +23,9 @@ type Props = {
   isDemo: boolean
   newId: () => string
   onBack: () => void
-  onChange: (data: FinanceData) => SaveOutcome
-  onDeleted: (data: FinanceData) => void
+  /** Saves the changed records; `base` is the revision the edit started on. */
+  onChange: (data: FinanceData, base?: number) => Promise<SaveOutcome>
+  onDeleted: (data: FinanceData, base?: number) => Promise<SaveOutcome>
   onReviewEmergency: () => void
 }
 
@@ -63,6 +65,18 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
   const [editing, setEditing] = useState<GoalDraft | null>(null)
   const [editErrors, setEditErrors] = useState<GoalDraftErrors>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const { revision } = useWriteStatus()
+  const blocked = useWriteBlocked()
+  // The revision this screen (Add or Take Out) and the goal editor were opened on.
+  const base = useEditBase()
+  const [editBase, setEditBase] = useState(revision)
+  const [sending, setSending] = useState<'movement' | 'edit' | 'delete' | null>(null)
+  const [refusal, setRefusal] = useState<{ what: 'edit' | 'delete'; text: string } | null>(null)
+  /** Saves one change; what was typed stays when it is not kept. */
+  const send = async (what: NonNullable<typeof sending>, run: () => Promise<SaveOutcome>) => {
+    setSending(what)
+    return run().finally(() => setSending(null))
+  }
 
   const errorText = (error: MovementError) => {
     const account = savingsAccounts.find(a => a.id === accountId)
@@ -78,7 +92,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
     }
   }
 
-  const saveMovement = () => {
+  const saveMovement = async () => {
     setSavedMessage('')
     const read = readMovementDraft(movement, today)
     if (read.status === 'invalid') { setMovementErrors(read.errors); return }
@@ -88,21 +102,29 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
       ...(needsAccount ? { accountId } : {}),
     })
     if (result.status === 'rejected') { setMovementErrors({ amount: errorText(result.error) }); return }
-    const outcome = onChange(result.data)
+    const outcome = await send('movement', () => onChange(result.data, base))
+    setSavedMessage(outcomeText(`${movement.kind === 'contribution' ? 'Added' : 'Took out'} ${money(read.amount)} (${EFFECT_NAMES[effect].toLowerCase()}).`, outcome))
+    if (!isKept(outcome)) return
     setMovementErrors({})
     setMovement(emptyMovement(movement.kind))
-    setSavedMessage(outcomeText(`${movement.kind === 'contribution' ? 'Added' : 'Took out'} ${money(read.amount)} (${EFFECT_NAMES[effect].toLowerCase()}).`, outcome))
   }
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editing) return
     const read = readGoalDraft(editing, { today, owner: goal.owner, currentDeadline: goal.deadline })
     if (read.status === 'invalid') { setEditErrors(read.errors); return }
     const result = updateGoal(data, goal.id, read.fields)
     if (result.status !== 'valid') return
-    onChange(result.data)
+    setRefusal(null)
+    const outcome = await send('edit', () => onChange(result.data, editBase))
+    if (!isKept(outcome)) { setRefusal({ what: 'edit', text: outcomeText('', outcome) }); return }
     setEditing(null)
     setEditErrors({})
+  }
+  const remove = async () => {
+    setRefusal(null)
+    const outcome = await send('delete', () => onDeleted(deleteGoal(data, goal.id), base))
+    if (!isKept(outcome)) setRefusal({ what: 'delete', text: outcomeText('', outcome) })
   }
 
   const kindButton = (kind: MovementKind, label: string) => (
@@ -193,8 +215,8 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
             {fieldError('move-note-error', movementErrors.note)}
           </div>
         </div>
-        <button type="button" className="button-small button-small-primary align-start" onClick={saveMovement}>
-          Save {movement.kind === 'contribution' ? 'Contribution' : 'Withdrawal'}
+        <button type="button" className="button-small button-small-primary align-start" aria-disabled={blocked || undefined} onClick={() => void saveMovement()}>
+          {sending === 'movement' ? 'Saving…' : `Save ${movement.kind === 'contribution' ? 'Contribution' : 'Withdrawal'}`}
         </button>
         <p className="muted-note" role="status">{savedMessage}</p>
         <p className="muted-note">This records the change. No money is moved between accounts and nothing is paid automatically.</p>
@@ -205,13 +227,14 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
         {editing
           ? <>
             <GoalFormFields idPrefix="edit-goal" draft={editing} errors={editErrors} currency={currency} onChange={setEditing} />
+            {refusal?.what === 'edit' && <p className="field-error" role="alert">{refusal.text}</p>}
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-primary" onClick={saveEdit}>Save Changes</button>
+              <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveEdit()}>{sending === 'edit' ? 'Saving…' : 'Save Changes'}</button>
               <button type="button" className="button-small" onClick={() => { setEditing(null); setEditErrors({}) }}>Cancel</button>
             </div>
           </>
           : <div className="inline-actions">
-            {!isEmergency && <button type="button" className="button-small" onClick={() => { setEditing(draftFromGoal(goal)); setConfirmDelete(false) }}>Change Name, Target or Date</button>}
+            {!isEmergency && <button type="button" className="button-small" onClick={() => { setEditBase(revision); setRefusal(null); setEditing(draftFromGoal(goal)); setConfirmDelete(false) }}>Change Name, Target or Date</button>}
             {!confirmDelete && <button type="button" className="button-small" onClick={() => setConfirmDelete(true)}>Delete {isEmergency ? 'Emergency Fund' : 'Goal'}</button>}
           </div>}
         {confirmDelete && !editing && (
@@ -219,9 +242,10 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
             <p>Delete “{goal.name}”{activity.length > 0 && ` and its ${activity.length} ${activity.length === 1 ? 'entry' : 'entries'}`}? This cannot be undone.
               {progress.saved > 0 ? ` Its ${money(progress.saved)} go back to unassigned savings; no balance changes.` : ' No other information changes.'}</p>
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-danger" onClick={() => onDeleted(deleteGoal(data, goal.id))}>Delete {isEmergency ? 'Emergency Fund' : 'Goal'}</button>
+              <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined} onClick={() => void remove()}>{sending === 'delete' ? 'Saving…' : `Delete ${isEmergency ? 'Emergency Fund' : 'Goal'}`}</button>
               <button type="button" className="button-small" onClick={() => setConfirmDelete(false)}>Keep {isEmergency ? 'It' : 'Goal'}</button>
             </div>
+            {refusal?.what === 'delete' && <p className="field-error" role="alert">{refusal.text}</p>}
           </div>
         )}
       </section>

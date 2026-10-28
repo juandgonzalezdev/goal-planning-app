@@ -2,7 +2,6 @@ import { addMonthsToYearMonth, yearMonthOf, type YearMonth } from '../calendar'
 import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
 import { sumMinor } from '../money'
-import { divideRoundingUp } from '../monthlyPlanEvaluation'
 import { isWithinBillDates, usualAmountFor } from './bills'
 import { latestBalance } from './balances'
 import { linkedBill } from './debts'
@@ -168,10 +167,6 @@ export function coverMonths(saved: MoneyAmount, monthlyEssentials: MoneyAmount |
   if (monthlyEssentials === null || monthlyEssentials <= 0) return null
   return Math.floor((Math.max(saved, 0) * 10) / monthlyEssentials) / 10
 }
-
-/** Months to reach a target saving a given amount each month (rounded up), or null. Only an illustration. */
-export const monthsToReach = (remaining: MoneyAmount, perMonth: MoneyAmount): number | null =>
-  remaining <= 0 ? 0 : perMonth > 0 ? divideRoundingUp(remaining, perMonth) : null
 
 export interface EmergencyDraft {
   /** null: create the fund without a target. */

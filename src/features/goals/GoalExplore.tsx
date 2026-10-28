@@ -6,13 +6,14 @@ import { updateGoal, type GoalProgress } from '../../domain/finance/goals'
 import type { FinanceData, Goal } from '../../domain/finance/types'
 import { formatAmount, formatDate, formatMonths, referenceDay } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 
 type Props = {
   data: FinanceData; goal: Goal; progress: GoalProgress; today: CalendarDate
   /** The demo works from its own fixed date, so the text never calls it "today". */
   isDemo: boolean
-  onChange: (data: FinanceData) => SaveOutcome
+  onChange: (data: FinanceData, base?: number) => Promise<SaveOutcome>
 }
 
 /**
@@ -27,6 +28,11 @@ export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: P
   const [confirmDate, setConfirmDate] = useState(false)
   const [message, setMessage] = useState('')
   const panelId = useId()
+  const { revision } = useWriteStatus()
+  const blocked = useWriteBlocked()
+  // The revision the date was confirmed on.
+  const [base, setBase] = useState(revision)
+  const [sending, setSending] = useState(false)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const from = referenceDay(today, isDemo)
   if (!progress.hasTarget || progress.remaining <= 0) return null
@@ -35,10 +41,13 @@ export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: P
   const monthlyTry = perMonth === null ? null : tryMonthlyAmount(progress.remaining, perMonth, today, goal.deadline)
   const dateTry = isCalendarDate(date) ? tryDate(progress.remaining, date, today) : null
 
-  const useDate = () => {
+  const applyDate = async () => {
     const result = updateGoal(data, goal.id, { name: goal.name, owner: goal.owner, target: goal.target, deadline: date })
     if (result.status !== 'valid') return
-    setMessage(outcomeText(`The target date is now ${formatDate(date)}.`, onChange(result.data)))
+    setSending(true)
+    const outcome = await onChange(result.data, base).finally(() => setSending(false))
+    setMessage(outcomeText(`The target date is now ${formatDate(date)}.`, outcome))
+    if (!isKept(outcome)) return
     setConfirmDate(false)
     setDate('')
   }
@@ -83,10 +92,10 @@ export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: P
                 {date !== goal.deadline && (confirmDate
                   ? <div className="inline-actions">
                     <span>Set {formatDate(date)} as the target date?</span>
-                    <button type="button" className="button-small button-small-primary" onClick={useDate}>Yes, Use This Date</button>
+                    <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void applyDate()}>{sending ? 'Saving…' : 'Yes, Use This Date'}</button>
                     <button type="button" className="button-small" onClick={() => setConfirmDate(false)}>Cancel</button>
                   </div>
-                  : <button type="button" className="button-small align-start" onClick={() => setConfirmDate(true)}>Use This Date</button>)}
+                  : <button type="button" className="button-small align-start" onClick={() => { setBase(revision); setConfirmDate(true) }}>Use This Date</button>)}
               </>}
             </div>
           )}

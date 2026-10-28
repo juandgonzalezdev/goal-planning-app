@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 import type { Id } from '../../domain/finance/types'
 import type { ValidityFilter } from '../../domain/finance/validity'
 
@@ -51,9 +51,3 @@ export interface DataBlocksControl {
 }
 
 export const DataBlocksContext = createContext<DataBlocksControl>({ view: INITIAL_DATA_VIEW, onViewChange: () => {} })
-
-/** Opens `block` (if closed) from a button next to its heading, such as Add Income. */
-export function useOpenBlock(block: DataBlock) {
-  const { view, onViewChange } = useContext(DataBlocksContext)
-  return () => { if (!isBlockOpen(view, block)) onViewChange(setBlockOpen(view, block, true)) }
-}

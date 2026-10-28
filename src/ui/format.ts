@@ -3,13 +3,6 @@ import type { CalendarDate } from '../domain/goalTime'
 import type { YearMonth } from '../domain/calendar'
 import type { CurrencyCode } from '../domain/money'
 
-const moneyFormat = new Intl.NumberFormat('en-GB', {
-  style: 'currency', currency: 'PLN', minimumFractionDigits: 2, maximumFractionDigits: 2,
-})
-
-/** Grosze shown as PLN, e.g. 32_167 -> 'PLN 321.67'. */
-export const formatMoney = (grosze: MoneyAmount) => moneyFormat.format(grosze / 100)
-
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**

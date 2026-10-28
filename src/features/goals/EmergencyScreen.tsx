@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useEditBase, useSaver } from '../../app/writeStatus'
+import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -18,7 +20,8 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
-  onSave: (data: FinanceData) => void
+  /** Saves the fund; `base` is the revision the draft was opened on. Says what happened. */
+  onSave: (data: FinanceData, base: number) => Promise<SaveOutcome>
   onOpenGoal: (id: Id) => void
 }
 
@@ -54,6 +57,15 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
   const [setAside, setSetAside] = useState('')
   const [error, setError] = useState('')
   const [done, setDone] = useState<Id | null>(null)
+  const base = useEditBase()
+  const saver = useSaver()
+  const [sendingWith, setSendingWith] = useState<boolean | null>(null)
+  /** The fund shows as saved only once it is kept; otherwise the draft stays, with the reason. */
+  const send = async (next: FinanceData, id: Id, withTarget: boolean) => {
+    setSendingWith(withTarget)
+    const outcome = await saver.save(() => onSave(next, base)).finally(() => setSendingWith(null))
+    if (isKept(outcome)) setDone(id)
+  }
 
   const confirmed = estimate.lines.map(line => ({ key: line.key, essential: lines[line.key].essential, monthly: parseMoneyInput(lines[line.key].text) }))
   const total = confirmedEssentials(confirmed)
@@ -77,6 +89,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
   }
 
   const save = (withTarget: boolean) => {
+    saver.clearRefusal()
     setError('')
     const chosenTarget = withTarget ? target : null
     if (withTarget && chosenTarget === null) { setError('Complete the essential costs and the months first, or save without a target.'); return }
@@ -84,8 +97,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
     if (fund) {
       const next = reviewEmergencyFund(data, fund.id, chosenTarget, fundBasis)
       if (!next) { setError('This review could not be saved.'); return }
-      onSave(next)
-      setDone(fund.id)
+      void send(next, fund.id, withTarget)
       return
     }
     const aside = setAside.trim() === '' ? 0 : parseMoneyInput(setAside)
@@ -103,8 +115,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
         ? `You can count at most ${money(available)}.` : 'This draft could not be saved.')
       return
     }
-    onSave(created.data)
-    setDone(created.goalId)
+    void send(created.data, created.goalId, withTarget)
   }
 
   const groups: { title: string; kinds: EssentialLine['kind'][] }[] = [
@@ -218,11 +229,12 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
       </details>
 
       {error && <p className="field-error" role="alert">{error}</p>}
+      {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" disabled={target === null} onClick={() => save(true)}>
-          {fund ? 'Save Review' : 'Create Emergency Fund'}
+        <button type="button" className="button-small button-small-primary" disabled={target === null} aria-disabled={saver.blocked || undefined} onClick={() => save(true)}>
+          {sendingWith === true ? 'Saving…' : fund ? 'Save Review' : 'Create Emergency Fund'}
         </button>
-        <button type="button" className="button-small" onClick={() => save(false)}>{fund ? 'Save Without a Target' : 'Create Without a Target'}</button>
+        <button type="button" className="button-small" aria-disabled={saver.blocked || undefined} onClick={() => save(false)}>{sendingWith === false ? 'Saving…' : fund ? 'Save Without a Target' : 'Create Without a Target'}</button>
         <button type="button" className="button-small" onClick={onBack}>Cancel</button>
       </div>
     </div>

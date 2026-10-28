@@ -3,7 +3,7 @@ import { ResetDemoConfirm } from '../../components/ResetDemoConfirm'
 import type { YearMonth } from '../../domain/calendar'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
 import { AccountsSection } from './AccountsSection'
 import { BillsSection } from './BillsSection'
 import { DataBlockFrame } from './DataBlockFrame'
@@ -25,8 +25,8 @@ export type DataScreenProps = {
   /** Open blocks, filters and the item shown in detail: kept while moving around the app. */
   view: DataView
   onViewChange: (view: DataView) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
-  onReplace: (data: FinanceData) => SaveOutcome
+  onChange: ChangeSpace
+  onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome>
   onOpenBill: (id: Id | null) => void
   onOpenDebt: (id: Id | null) => void
   onOpenGoal: (id: Id) => void
@@ -63,11 +63,11 @@ export function DataScreen(props: DataScreenProps) {
       <p className="muted-note" role="status">{message}</p>
       <DataBlocksContext.Provider value={{ view, onViewChange }}>
         <div className="data-blocks">
-          <IncomeSection {...props} say={say} />
+          <IncomeSection {...props} say={say} tell={setMessage} />
           <BillsSection {...props} />
           <DebtsSection {...props} />
-          <AccountsSection {...props} say={say} />
-          <GoalsSection {...props} say={say} />
+          <AccountsSection {...props} say={say} tell={setMessage} />
+          <GoalsSection {...props} say={say} tell={setMessage} />
           <DataBlockFrame block="reports" summary={isDemo ? 'PDF report and backup file' : 'PDF report, backup file and restore'}>
             <ReportSection data={data} isDemo={isDemo} months={props.months} month={props.month} today={props.today} />
             <ExchangeSection data={data} isDemo={isDemo} onReplace={props.onReplace} />
@@ -85,5 +85,5 @@ export function DataScreen(props: DataScreenProps) {
   )
 }
 
-/** What each section gets: the screen's props, and `say` to show a message after a change. */
-export type SectionProps = DataScreenProps & { say: (done: string, outcome: SaveOutcome) => void }
+/** What each section gets: the screen's props, `say` to show a message after a change, and `tell` for a message with no change. */
+export type SectionProps = DataScreenProps & { say: (done: string, outcome: SaveOutcome) => void; tell: (text: string) => void }

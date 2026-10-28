@@ -10,14 +10,15 @@ import { CATEGORY_COLORS } from '../../ui/chartColors'
 import { formatAmount, formatYearMonth, monthName } from '../../ui/format'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
+import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { Donut } from './Donut'
 
 type Props = {
   data: FinanceData
   month: YearMonth
   view: BillsChartView
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   onOpenBill: (id: Id) => void
 }
 
@@ -87,11 +88,17 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
   const [error, setError] = useState(false)
   const { money } = useBlockAmounts('categories', data.space.currency)
   const inputId = `quick-${bill.id}`
+  const { revision } = useWriteStatus()
+  const saver = useSaver()
+  // The revision the amount editor was opened on.
+  const [base, setBase] = useState(revision)
 
-  const save = () => {
+  const save = async () => {
     const value = parseMoneyInput(text ?? '')
     if (value === null) { setError(true); return }
-    const outcome = onChange(current => setBillMonthAmount(current, bill.id, month, value))
+    const outcome = await saver.save(() => onChange(current => setBillMonthAmount(current, bill.id, month, value), base))
+    // Not kept: the editor stays open as typed, with the reason.
+    if (!isKept(outcome)) return
     setText(null)
     onSaved(outcomeText(`${bill.name} for ${monthName(month)} is now ${formatAmount(value, data.space.currency)}.`, outcome))
   }
@@ -107,15 +114,16 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
       </div>
       {text === null
         ? <button type="button" className="text-button" aria-label={`Change ${bill.name} amount for ${formatYearMonth(month)}`}
-          onClick={() => { setText(amountText(amount)); setError(false); onSaved('') }}>Change amount</button>
+          onClick={() => { setBase(revision); saver.clearRefusal(); setText(amountText(amount)); setError(false); onSaved('') }}>Change amount</button>
         : <div className="amount-editor">
           <label className="form-field" htmlFor={inputId}>{bill.name} for {formatYearMonth(month)} ({data.space.currency})</label>
           <input id={inputId} className="quick-input" inputMode="decimal" value={text} aria-invalid={error} aria-describedby={`${inputId}-help`}
             onChange={event => { setText(event.target.value); setError(false) }} />
           {error && <p className="field-error">Enter an amount such as 750 or 120.45.</p>}
+          {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
           <p id={`${inputId}-help`} className="field-help">Only {formatYearMonth(month)} changes. To change the usual amount for the months ahead, open {bill.name}.</p>
           <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={save}>Save</button>
+            <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined} onClick={() => void save()}>{saver.sending ? 'Saving…' : 'Save'}</button>
             <button type="button" className="button-small" onClick={() => { setText(null); setError(false) }}>Cancel</button>
           </div>
         </div>}

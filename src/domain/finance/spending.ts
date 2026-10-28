@@ -149,14 +149,6 @@ export function incomeReceived(data: Pick<FinanceData, 'income'>, month: YearMon
   }
 }
 
-export type BillPaymentState = 'paid' | 'paid-late' | 'due' | 'overdue'
-
-/** A bill's state on `today`: paid (on time or late), not due yet, or overdue (its due date has passed). */
-export function billPaymentState(occurrence: BillOccurrence, record: { paidOn?: CalendarDate } | undefined, today: CalendarDate): BillPaymentState {
-  if (occurrence.paid) return record?.paidOn && record.paidOn > occurrence.dueDate ? 'paid-late' : 'paid'
-  return occurrence.dueDate < today ? 'overdue' : 'due'
-}
-
 export interface PendingBill {
   occurrence: BillOccurrence
   state: 'due' | 'overdue'

@@ -3,6 +3,7 @@ import { Icon, type IconName } from '../../components/Icon'
 import { MEMBER_NAME_MAX_LENGTH, validateSetup, type SetupError } from '../../domain/finance/space'
 import type { SpaceMode, Theme } from '../../domain/finance/types'
 import { CURRENCIES, type CurrencyCode } from '../../domain/money'
+import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { setupFromDraft, type SetupDraft } from './setupDraft'
 
 const STEPS = ['Your Profile', 'Your Plan', 'Your Preferences', 'Privacy & Terms'] as const
@@ -21,10 +22,19 @@ const ERROR_TEXT: Record<SetupError, string> = {
   'mode-not-available': 'This option is not available yet.',
 }
 
-type Props = { draft: SetupDraft; onChange: (draft: SetupDraft) => void; onBack: () => void; onFinish: () => void }
+type Props = {
+  draft: SetupDraft
+  onChange: (draft: SetupDraft) => void
+  onBack: () => void
+  onFinish: () => void
+  /** The space is being created: Create My Space says so and is not sent twice. */
+  saving?: boolean
+  /** Why the space was not created, if it was not. The steps keep what was entered. */
+  outcome?: SaveOutcome | null
+}
 
 /** Welcome Setup: four steps that create the user's own, empty space on this device. */
-export function WelcomeSetup({ draft, onChange, onBack, onFinish }: Props) {
+export function WelcomeSetup({ draft, onChange, onBack, onFinish, saving = false, outcome = null }: Props) {
   const [showErrors, setShowErrors] = useState(false)
   const set = (change: Partial<SetupDraft>) => onChange({ ...draft, ...change })
   const errors = validateSetup(setupFromDraft(draft))
@@ -32,6 +42,7 @@ export function WelcomeSetup({ draft, onChange, onBack, onFinish }: Props) {
   const errorFor = (prefix: 'name' | 'second-name') => (showErrors ? stepErrors.find(error => error.startsWith(`${prefix}-`)) : undefined)
 
   const next = () => {
+    if (saving) return
     if (stepErrors.length > 0) { setShowErrors(true); return }
     setShowErrors(false)
     if (draft.step < STEPS.length - 1) set({ step: draft.step + 1 })
@@ -107,9 +118,12 @@ export function WelcomeSetup({ draft, onChange, onBack, onFinish }: Props) {
         <p className="screen-note">This is not a legal agreement. Terms of Service and a Privacy Policy will be available before real accounts exist.</p>
       </>}
 
+      {draft.step === STEPS.length - 1 && outcome && <p className="field-error" role="alert">{outcome === 'conflict'
+        ? 'Not created: this device already has a space, started in another tab. Go back to Welcome to open it.'
+        : outcomeText('', outcome)}</p>}
       <div className="screen-actions">
-        <button type="button" className="button-primary" onClick={next}>
-          {draft.step < STEPS.length - 1 ? <>Continue <Icon name="arrowRight" size={18} /></> : 'Create My Space'}
+        <button type="button" className="button-primary" onClick={next} aria-disabled={saving || undefined}>
+          {draft.step < STEPS.length - 1 ? <>Continue <Icon name="arrowRight" size={18} /></> : saving ? 'Saving…' : 'Create My Space'}
         </button>
       </div>
     </div>

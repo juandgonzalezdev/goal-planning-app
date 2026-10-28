@@ -1,11 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
-import { alexDemo, useSpace, type DemoFixture } from './app/useSpace'
+import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
+import { WriteStatusContext } from './app/writeStatus'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { ResetDemoConfirm } from './components/ResetDemoConfirm'
 import { browserStorage } from './data/localStore'
+import type { SpaceStore } from './data/spaceStore'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
@@ -36,6 +38,8 @@ import { AuthPreview } from './features/welcome/AuthPreview'
 import { Welcome } from './features/welcome/Welcome'
 import { EMPTY_SETUP, setupFromDraft, type SetupDraft } from './features/welcome/setupDraft'
 import { WelcomeSetup } from './features/welcome/WelcomeSetup'
+import { Opening } from './features/welcome/Opening'
+import { isKept, type SaveOutcome } from './ui/saveOutcome'
 import { todayString } from './app/today'
 import './styles/tokens.css'
 import './styles/app.css'
@@ -49,6 +53,8 @@ type Props = {
   storage?: Storage | null
   /** The invented data Explore the App opens: Alex's Individual demo. Tests may pass another. */
   createDemo?: () => DemoFixture
+  /** Where the own space is saved: the browser's database, with the older copy in `storage`. Tests may pass another. */
+  createStore?: (storage: Storage | null) => SpaceStore
 }
 
 /**
@@ -59,8 +65,8 @@ type Props = {
  * them through `space.update`, so Home, Bills, Cards, Data, History and
  * the goals always agree.
  */
-function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo }: Props) {
-  const space = useSpace(storage, getToday, createDemo)
+function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo, createStore = browserSpaceStore }: Props) {
+  const space = useSpace(storage, getToday, createDemo, undefined, createStore)
   const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
@@ -132,7 +138,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // screen reader users know where they are.
   // A link to one Data block (Edit Balances) moves the view and the focus to that block's heading instead.
   useEffect(() => {
-    if (firstScreen.current) { firstScreen.current = false; return }
+    // The first screen (and the one shown when the space has opened) is not a move: the focus stays where the browser put it.
+    if (firstScreen.current) { if (!space.opening) firstScreen.current = false; return }
     // Back to Bills from a bill opened there: the same place, with the focus on the button that opened it
     // (or the "Bill added" notice), else the chosen day, else the title.
     const billsBack = screen === 'bills' ? billsReturn.current : null
@@ -170,7 +177,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading) return
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
-  }, [screen])
+  }, [screen, space.opening])
 
   const homeLayout = !open ? DEFAULT_LAYOUT
     : open.kind === 'demo' ? demoLayout
@@ -229,10 +236,15 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
   }, [screen, open?.kind])
 
-  const finishSetup = () => {
-    const created = createSpaceData(setupFromDraft(setupDraft))
+  // What happened when the space could not be started: the setup stays as typed.
+  const [setupOutcome, setSetupOutcome] = useState<SaveOutcome | null>(null)
+  const finishSetup = async () => {
+    const created = createSpaceData(setupFromDraft(setupDraft), newId())
     if (created.status !== 'created') return
-    space.startOwnSpace(created.data)
+    setSetupOutcome(null)
+    const outcome = await space.startOwnSpace(created.data)
+    if (outcome === 'stale') return
+    if (outcome !== 'saved') { setSetupOutcome(outcome); return }
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
@@ -240,10 +252,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const exitDemo = () => { space.closeDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false); replace('welcome') }
   // Reset Demo puts the whole example back: the records, the Home layout, Data's closed blocks, History's first view, and everything planned or chosen on top of them.
   const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false) }
-  const erase = () => {
-    const erased = space.eraseOwnSpace()
-    if (erased) { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
-    return erased
+  /**
+   * Erase in Settings. The space is closed when it no longer opens, also when a copy was left behind
+   * (Welcome then says that the erase is not finished); an answer for a space no longer open changes nothing.
+   */
+  const erase = async (): Promise<EraseOutcome> => {
+    const outcome = await space.eraseOwnSpace()
+    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
+    return outcome
   }
   const openGoal = (id: Id) => { setGoalId(id); go('goal') }
   const openDebt = (id: Id | null) => { setDebtId(id); go('debt') }
@@ -310,6 +326,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (screen !== start) go(start)
   }
 
+  const writeStatus = useMemo(() => ({ saving: space.saving, canWrite: space.canWrite, revision: space.revision }), [space.saving, space.canWrite, space.revision])
+
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
   const showNav = !!open && isTab(screen)
 
@@ -333,18 +351,38 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </span>
         </div>
       )}
-      {space.saveFailed && <div className="save-warning" role="alert">This browser did not save your latest changes. They will be lost when you close the page.</div>}
+      {open?.kind === 'own' && space.problem?.kind === 'read-only' && (space.problem.takenOver ? (
+        <div className="save-warning" role="alert">
+          <p><b>Read-only.</b> A newer version of the app was opened in another tab, so nothing more is saved here. Anything you typed stays on screen: copy what you need, then reload this page. You can still use Download Backup in Data.</p>
+        </div>
+      ) : (
+        <div className="save-warning" role="alert">
+          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup in Data.</p>
+          <button type="button" className="button-small" onClick={() => void space.reload()}>Try Again</button>
+        </div>
+      ))}
+      {open?.kind === 'own' && space.problem?.kind === 'conflict' && (
+        <div className="save-warning" role="alert">
+          <p>This space changed in another tab, so nothing more is saved here until it is opened again. Anything you typed stays on screen: copy what you need first.</p>
+          <button type="button" className="button-small" onClick={() => void space.reload()}>Open Latest Version</button>
+        </div>
+      )}
       {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} />}
-      <main className="shell-main" ref={mainRef}>
-        {shows('welcome') && <div className="screen" data-screen="welcome">
-          <Welcome unreadable={space.unreadable} onCreateAccount={() => go('sign-up')} onLogIn={() => go('log-in')}
-            onExplore={() => { space.openDemo(); go('home') }} onEraseUnreadable={() => space.eraseOwnSpace()} />
+      <WriteStatusContext.Provider value={writeStatus}>
+      <main className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
+        {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
+        {!open && space.opening && <div className="screen" data-screen="opening">
+          <Opening onRetry={() => void space.reload()} />
+        </div>}
+        {!space.opening && shows('welcome') && <div className="screen" data-screen="welcome">
+          <Welcome problem={space.problem} busy={space.saving} onCreateAccount={() => go('sign-up')} onLogIn={() => go('log-in')}
+            onExplore={() => { space.openDemo(); go('home') }} onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} />
         </div>}
         {(shows('sign-up') || shows('log-in')) && <div className="screen" data-screen={screen}>
           <AuthPreview key={screen} mode={screen === 'sign-up' ? 'sign-up' : 'log-in'} onBack={back} onContinue={() => go('setup')} />
         </div>}
         {shows('setup') && <div className="screen" data-screen="setup">
-          <WelcomeSetup draft={setupDraft} onChange={setSetupDraft} onBack={back} onFinish={finishSetup} />
+          <WelcomeSetup draft={setupDraft} onChange={setSetupDraft} onBack={back} onFinish={() => void finishSetup()} saving={space.saving} outcome={setupOutcome} />
         </div>}
 
         {open && <>
@@ -381,24 +419,34 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
             <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} isDemo={open.kind === 'demo'} newId={newId} onBack={back}
-              onChange={data => space.update(() => data)}
-              onDeleted={data => { space.update(() => data); setGoalId(null); back() }} onReviewEmergency={() => go('emergency')} />
+              onChange={(data, base) => space.update(() => data, base)}
+              onDeleted={async (data, base) => {
+                const outcome = await space.update(() => data, base)
+                if (isKept(outcome)) { setGoalId(null); back() }
+                return outcome
+              }} onReviewEmergency={() => go('emergency')} />
           </div>}
           {shows('new-goal') && <div className="screen" data-screen="new-goal">
             <NewGoalScreen data={open.data} today={space.today} owner={newGoalOwner} state={newGoal} onStateChange={setNewGoal} onCancel={back}
-              onCreate={fields => {
+              onCreate={async (fields, base) => {
                 const id = newId()
                 const created = createGoal(open.data, id, fields, space.today)
-                if (created.status !== 'valid') return
-                space.update(() => created.data)
+                if (created.status !== 'valid') return 'not-saved'
+                const outcome = await space.update(() => created.data, base)
+                if (!isKept(outcome)) return outcome
                 setNewGoal(EMPTY_NEW_GOAL)
                 setGoalId(id)
                 replace('goal')
+                return outcome
               }} />
           </div>}
           {shows('emergency') && <div className="screen" data-screen="emergency">
             <EmergencyScreen data={open.data} today={space.today} owner={newGoalOwner} newId={newId} onBack={back}
-              onSave={data => { space.update(() => data); emergencyLaterChange(false) }} onOpenGoal={id => { setGoalId(id); replace('goal') }} />
+              onSave={async (data, base) => {
+                const outcome = await space.update(() => data, base)
+                if (isKept(outcome)) emergencyLaterChange(false)
+                return outcome
+              }} onOpenGoal={id => { setGoalId(id); replace('goal') }} />
           </div>}
           {shows('history') && <div className="screen" data-screen="history">
             <AmountVisibilityProvider value={visibility}>
@@ -416,10 +464,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onResetDemo={resetDemo} onErase={erase}
-              onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} />
+              onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} canErase={space.problem === null} />
           </div>}
         </>}
       </main>
+      </WriteStatusContext.Provider>
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'
           : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved · No account, no bank connection'

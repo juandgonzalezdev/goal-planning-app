@@ -7,6 +7,8 @@ import { formatAmount, formatDate } from '../../ui/format'
 import { GoalFormFields } from './GoalFormFields'
 import { readGoalDraft, type GoalDraftErrors, type NewGoalState } from './goalDraft'
 import { GoalPace } from './GoalPace'
+import { useEditBase, useSaver } from '../../app/writeStatus'
+import type { SaveOutcome } from '../../ui/saveOutcome'
 
 type Props = {
   data: FinanceData
@@ -15,7 +17,8 @@ type Props = {
   state: NewGoalState
   onStateChange: (state: NewGoalState) => void
   onCancel: () => void
-  onCreate: (fields: GoalFields) => void
+  /** Creates the goal; `base` is the revision the form was opened on. Says what happened. */
+  onCreate: (fields: GoalFields, base: number) => Promise<SaveOutcome>
 }
 
 /**
@@ -26,6 +29,8 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
   const [errors, setErrors] = useState<GoalDraftErrors>({})
   const read = readGoalDraft(state.draft, { today, owner })
   const money = (minor: number) => formatAmount(minor, data.space.currency)
+  const base = useEditBase()
+  const saver = useSaver()
 
   if (state.step === 'confirm' && read.status === 'valid') {
     const { fields } = read
@@ -46,8 +51,10 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
         </section>
         <GoalPace progress={preview} currency={data.space.currency} />
         <p className="muted-note">This creates a goal that starts at 0. To count money you already saved, add it to the goal afterwards as savings you already have. You never have to commit a monthly amount. No money is moved and nothing is paid automatically.</p>
+        {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
         <div className="inline-actions">
-          <button type="button" className="button-small button-small-primary" onClick={() => onCreate(fields)}>Create Goal</button>
+          <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined}
+            onClick={() => void saver.save(() => onCreate(fields, base))}>{saver.sending ? 'Saving…' : 'Create Goal'}</button>
           <button type="button" className="button-small" onClick={() => onStateChange({ ...state, step: 'form' })}>Edit</button>
         </div>
       </div>

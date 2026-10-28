@@ -19,6 +19,15 @@ export function importFinanceData(text: string): ImportResult {
   } catch {
     return { status: 'rejected', errors: ['The file is not valid JSON.'] }
   }
+  return readFinanceData(parsed)
+}
+
+/**
+ * The same checks for data that is already an object (for example, read
+ * back from the browser's database): older versions are brought up to
+ * date, then everything is checked. The value given is never changed.
+ */
+export function readFinanceData(parsed: unknown): ImportResult {
   const migrated = migrateToCurrent(parsed)
   switch (migrated.status) {
     case 'not-data': return { status: 'rejected', errors: ['The file does not contain app data.'] }

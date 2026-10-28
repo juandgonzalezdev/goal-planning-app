@@ -9,7 +9,8 @@ import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { AllAmountsToggle } from '../../ui/privacy'
-import type { SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, type ChangeSpace } from '../../ui/saveOutcome'
+import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { LeftToPayMessage } from '../home/LeftToPay'
 import { MonthSwitch } from '../../components/MonthSwitch'
 import { BillsCalendar } from './BillsCalendar'
@@ -25,7 +26,7 @@ type Props = {
   view: BillsView
   onViewChange: (view: BillsView) => void
   onMonthChange: (month: YearMonth) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   /** Opens a bill; `returnKey` names the button that opened it (data-return-key), which gets the focus back on return. */
   onOpenBill: (id: Id, returnKey: string) => void
   /** Add Bill at the top: an empty form. */
@@ -291,16 +292,21 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
   const [text, setText] = useState('')
   const [error, setError] = useState(false)
   const monthName = formatYearMonth(month)
+  const { revision } = useWriteStatus()
+  const saver = useSaver()
+  // The revision the amount editor was opened on.
+  const [base, setBase] = useState(revision)
 
-  const startEditing = () => { setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setEditing(true) }
-  const saveAmount = (value: number | null | undefined) => {
-    onChange(current => setBillMonthAmount(current, bill.id, month, value))
-    setEditing(false)
+  const startEditing = () => { setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setBase(revision); saver.clearRefusal(); setEditing(true) }
+  // The editor closes only once the change is kept; otherwise it stays open with what was typed.
+  const saveAmount = async (value: number | null | undefined) => {
+    const outcome = await saver.save(() => onChange(current => setBillMonthAmount(current, bill.id, month, value), base))
+    if (isKept(outcome)) setEditing(false)
   }
   const saveTyped = () => {
     const value = parseMoneyInput(text)
     if (value === null) { setError(true); return }
-    saveAmount(value)
+    void saveAmount(value)
   }
 
   return (
@@ -312,7 +318,7 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
       <div className="bill-line">
         <small>{bill.category} · {ownerName(data.space, bill.owner)}{amountChangedThisMonth && ' · Changed for this month'}</small>
         <button type="button" className={`paid-toggle${paid ? ' is-paid' : ''}`} aria-pressed={paid} aria-label={`${bill.name} paid in ${monthName}`}
-          onClick={() => onChange(current => setBillPaid(current, bill.id, month, !paid, today))}>
+          aria-disabled={saver.blocked || undefined} onClick={() => void saver.save(() => onChange(current => setBillPaid(current, bill.id, month, !paid, today)))}>
           {paid ? '✓ Paid' : '○ Pending'}
         </button>
       </div>
@@ -329,14 +335,15 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
           </label>
           {error && <p id={`amount-error-${bill.id}`} className="field-error">Enter an amount such as 120.45.</p>}
           <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={saveTyped}>Save</button>
-            <button type="button" className="button-small" onClick={() => saveAmount(null)}>Not Known Yet</button>
-            {amountChangedThisMonth && <button type="button" className="button-small" onClick={() => saveAmount(undefined)}>Use Usual Amount</button>}
+            <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined} onClick={saveTyped}>{saver.sending ? 'Saving…' : 'Save'}</button>
+            <button type="button" className="button-small" aria-disabled={saver.blocked || undefined} onClick={() => void saveAmount(null)}>Not Known Yet</button>
+            {amountChangedThisMonth && <button type="button" className="button-small" aria-disabled={saver.blocked || undefined} onClick={() => void saveAmount(undefined)}>Use Usual Amount</button>}
             <button type="button" className="button-small" onClick={() => setEditing(false)}>Cancel</button>
           </div>
           <p className="field-help">Only {monthName} changes. To change the usual amount for the months ahead, open Details. Paying a loan bill never changes the loan balance.</p>
         </div>
       )}
+      {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
     </div>
   )
 }

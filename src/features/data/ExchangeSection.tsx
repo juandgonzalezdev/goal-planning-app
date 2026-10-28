@@ -1,15 +1,20 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { exportFinanceData, importFinanceData } from '../../data/exchange'
 import type { FinanceData } from '../../domain/finance/types'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { useSaver, useWriteStatus } from '../../app/writeStatus'
 
 /**
  * Data Backup: download everything as a JSON file; Restore Backup: read it
  * back. This is the copy that can be restored (the PDF report cannot).
  * Restoring never replaces anything until the user confirms.
  */
-export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDemo: boolean; onReplace: (data: FinanceData) => SaveOutcome }) {
+export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData; isDemo: boolean; onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome> }) {
   const [pending, setPending] = useState<FinanceData | null>(null)
+  const { revision } = useWriteStatus()
+  const saver = useSaver()
+  // The revision on screen when the file was chosen: Replace never writes over changes opened since.
+  const [base, setBase] = useState(revision)
   const [errors, setErrors] = useState<string[]>([])
   const [done, setDone] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
@@ -29,7 +34,7 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
     setDone('')
     if (!file) return
     const result = importFinanceData(await file.text())
-    if (result.status === 'imported') { setErrors([]); setPending(result.data) }
+    if (result.status === 'imported') { setErrors([]); setBase(revision); saver.clearRefusal(); setPending(result.data) }
     else { setPending(null); setErrors(result.errors) }
   }
 
@@ -59,8 +64,15 @@ export function ExchangeSection({ data, isDemo, onReplace }: { data: FinanceData
           {pending && (
             <div className="callout" role="alert">
               <p>Replace everything in this space with “{pending.space.name}” from the file? This cannot be undone. Download a backup first if you want a copy.</p>
+              {saver.refusal && <p className="field-error">{saver.refusal}</p>}
               <div className="inline-actions">
-                <button type="button" className="button-small button-small-primary" onClick={() => { setDone(outcomeText('Your space was replaced with the file.', onReplace(pending))); setPending(null) }}>Replace</button>
+                <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined} onClick={async () => {
+                  const outcome = await saver.save(() => onReplace(pending, base))
+                  // Not kept: the question stays, with the reason, so nothing looks replaced.
+                  if (!isKept(outcome)) return
+                  setDone(outcomeText('Your space was replaced with the file.', outcome))
+                  setPending(null)
+                }}>{saver.sending ? 'Saving…' : 'Replace'}</button>
                 <button type="button" className="button-small" onClick={() => setPending(null)}>Cancel</button>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useEditBase, useWriteBlocked } from '../../app/writeStatus'
 import { Field } from '../../components/Field'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -33,13 +34,34 @@ type FormProps<T> = {
   /** The record to change, or null to add one with `newId`. */
   record: T | null
   newId: () => string
-  onSave: (result: (data: FinanceData) => RecordResult) => RecordError[]
+  /**
+   * Saves the record, on the revision the form was opened on (`base`).
+   * Answers with what is wrong in the record, or why it was not saved
+   * (`refusal`); the form stays as typed in both cases.
+   */
+  onSave: (result: (data: FinanceData) => RecordResult, base: number) => Promise<{ errors: RecordError[]; refusal: string }>
   onCancel: () => void
 }
 
-function Errors({ errors }: { errors: RecordError[] }) {
-  if (errors.length === 0) return null
-  return <p className="field-error" role="alert">{[...new Set(errors)].map(error => ERROR_TEXT[error]).join(' ')}</p>
+/** A record form's save: its errors, why it was not saved, and "Saving…". */
+function useRecordSave(onSave: FormProps<unknown>['onSave']) {
+  const base = useEditBase()
+  const blocked = useWriteBlocked()
+  const [errors, setErrors] = useState<RecordError[]>([])
+  const [refusal, setRefusal] = useState('')
+  const [sending, setSending] = useState(false)
+  const run = async (make: (data: FinanceData) => RecordResult) => {
+    setSending(true)
+    const answer = await onSave(make, base).finally(() => setSending(false))
+    setErrors(answer.errors)
+    setRefusal(answer.refusal)
+  }
+  return { run, errors, refusal, sending, blocked }
+}
+
+function Errors({ errors, refusal = '' }: { errors: RecordError[]; refusal?: string }) {
+  if (errors.length === 0 && !refusal) return null
+  return <p className="field-error" role="alert">{[...[...new Set(errors)].map(error => ERROR_TEXT[error]), refusal].filter(Boolean).join(' ')}</p>
 }
 
 export function ExpenseForm({ data, today, record, newId, onSave, onCancel }: FormProps<Expense>) {
@@ -50,13 +72,14 @@ export function ExpenseForm({ data, today, record, newId, onSave, onCancel }: Fo
   const [description, setDescription] = useState(record?.description ?? '')
   const [accountId, setAccountId] = useState<Id>(record?.accountId ?? paying[0]?.id ?? '')
   const [nature, setNature] = useState<SpendingNature>(record?.nature ?? 'regular')
-  const [errors, setErrors] = useState<RecordError[]>([])
+  const saving = useRecordSave(onSave)
+  // The new record's id, kept so a second try after a refusal adds the same record, not a second one.
+  const [newRecordId] = useState(() => record?.id ?? newId())
   const prefix = `expense-${record?.id ?? 'new'}`
 
   const save = () => {
     const minor = parseMoneyInput(amount)
-    const id = record?.id ?? newId()
-    setErrors(onSave(current => saveExpense(current, id, { date, amount: minor ?? 0, category, description, accountId, nature }, today)))
+    void saving.run(current => saveExpense(current, newRecordId, { date, amount: minor ?? 0, category, description, accountId, nature }, today))
   }
   return (
     <div className="record-form" role="group" aria-label={record ? 'Change spending' : 'Add spending'}>
@@ -82,9 +105,9 @@ export function ExpenseForm({ data, today, record, newId, onSave, onCancel }: Fo
           {SPENDING_NATURES.map(n => <option key={n} value={n}>{NATURE_NAMES[n]}</option>)}
         </select>
       </div>
-      <Errors errors={errors} />
+      <Errors errors={saving.errors} refusal={saving.refusal} />
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" onClick={save}>{record ? 'Save Changes' : 'Add Spending'}</button>
+        <button type="button" className="button-small button-small-primary" aria-disabled={saving.blocked || undefined} onClick={save}>{saving.sending ? 'Saving…' : record ? 'Save Changes' : 'Add Spending'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -98,13 +121,13 @@ export function TransferForm({ data, today, record, newId, onSave, onCancel }: F
   const [fromAccountId, setFrom] = useState<Id>(record?.fromAccountId ?? accounts[0]?.id ?? '')
   const [toAccountId, setTo] = useState<Id>(record?.toAccountId ?? accounts[1]?.id ?? accounts[0]?.id ?? '')
   const [note, setNote] = useState(record?.note ?? '')
-  const [errors, setErrors] = useState<RecordError[]>([])
+  const saving = useRecordSave(onSave)
+  const [newRecordId] = useState(() => record?.id ?? newId())
   const prefix = `transfer-${record?.id ?? 'new'}`
 
   const save = () => {
     const minor = parseMoneyInput(amount)
-    const id = record?.id ?? newId()
-    setErrors(onSave(current => saveTransfer(current, id, { date, amount: minor ?? 0, fromAccountId, toAccountId, note }, today)))
+    void saving.run(current => saveTransfer(current, newRecordId, { date, amount: minor ?? 0, fromAccountId, toAccountId, note }, today))
   }
   return (
     <div className="record-form" role="group" aria-label={record ? 'Change transfer' : 'Add transfer'}>
@@ -120,9 +143,9 @@ export function TransferForm({ data, today, record, newId, onSave, onCancel }: F
         </div>
       ))}
       <Field id={`${prefix}-note`} label="Note (optional)" value={note} maxLength={DESCRIPTION_MAX_LENGTH} onChange={setNote} />
-      <Errors errors={errors} />
+      <Errors errors={saving.errors} refusal={saving.refusal} />
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" onClick={save}>{record ? 'Save Changes' : 'Add Transfer'}</button>
+        <button type="button" className="button-small button-small-primary" aria-disabled={saving.blocked || undefined} onClick={save}>{saving.sending ? 'Saving…' : record ? 'Save Changes' : 'Add Transfer'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -132,20 +155,20 @@ export function TransferForm({ data, today, record, newId, onSave, onCancel }: F
 export function IncomeForm({ data, today, record, onSave, onCancel }: Omit<FormProps<IncomeEntry>, 'record' | 'newId'> & { record: IncomeEntry }) {
   const [date, setDate] = useState(record.receivedOn)
   const [amount, setAmount] = useState(amountText(record.amount))
-  const [errors, setErrors] = useState<RecordError[]>([])
+  const saving = useRecordSave(onSave)
   const prefix = `income-${record.id}`
   const save = () => {
     const minor = parseMoneyInput(amount)
-    setErrors(onSave(current => updateIncomeEntry(current, record.id, minor ?? -1, date, today)))
+    void saving.run(current => updateIncomeEntry(current, record.id, minor ?? -1, date, today))
   }
   return (
     <div className="record-form" role="group" aria-label="Change income">
       <Field id={`${prefix}-date`} label="Date Received" type="date" max={today} value={date} onChange={setDate} />
       <Field id={`${prefix}-amount`} label={`Amount Received (${data.space.currency})`} inputMode="decimal" value={amount} onChange={setAmount}
         help="It still counts for the same month." />
-      <Errors errors={errors} />
+      <Errors errors={saving.errors} refusal={saving.refusal} />
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" onClick={save}>Save Changes</button>
+        <button type="button" className="button-small button-small-primary" aria-disabled={saving.blocked || undefined} onClick={save}>{saving.sending ? 'Saving…' : 'Save Changes'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </div>

@@ -7,7 +7,7 @@ import type { BillsChartView } from '../../data/uiPrefs'
 import type { DataBlock } from '../data/dataBlocks'
 import { BLOCK_NAMES, type HomeBlock } from '../../ui/amountVisibility'
 import { AllAmountsToggle } from '../../ui/privacy'
-import type { SaveOutcome } from '../../ui/saveOutcome'
+import type { ChangeSpace } from '../../ui/saveOutcome'
 import { LeftToPay } from './LeftToPay'
 import { MonthSummary } from './MonthSummary'
 import { SpendingByCategory } from './SpendingByCategory'
@@ -30,7 +30,7 @@ type Props = {
   /** Block order and open blocks (own space: remembered on this device; demo: while it is open). */
   layout: HomeLayout
   onLayoutChange: (layout: HomeLayout) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   onOpen: (screen: 'bills' | 'cards' | 'data' | 'goals' | 'history') => void
   /** Opens Data on one block (Income, Accounts & Balances), with the focus on its heading. */
   onOpenDataBlock: (block: DataBlock) => void

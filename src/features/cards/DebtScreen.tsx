@@ -10,7 +10,8 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { compareExtraPayments } from '../../domain/loanPayoff'
 import { formatAmount, formatDate, formatDueDay, formatRate, formatYearMonth, referenceDay } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
+import { useEditBase, useSaver, useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { amountText, DEBT_KIND_NAMES } from '../../ui/labels'
 import { applyDebtForm, draftFromDebt, emptyDebtDraft, readDebtDraft, type DebtDraft, type DebtDraftErrors } from './debtDraft'
 
@@ -27,7 +28,7 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   onCreated: (id: Id) => void
   onDeleted: () => void
   /** Opens the bill that pays this debt, on the month whose payment was chosen. */
@@ -65,21 +66,33 @@ function DebtDetail(props: Props & { debtId: Id }) {
   const [balanceForm, setBalanceForm] = useState<{ amount: string; asOf: string; error?: string } | null>(null)
   const [deleting, setDeleting] = useState<'keep-bill' | 'delete-bill' | null>(null)
   const [message, setMessage] = useState('')
+  const { revision } = useWriteStatus()
+  const blocked = useWriteBlocked()
+  // The revision the balance form was opened on, and which change is being saved.
+  const [balanceBase, setBalanceBase] = useState(revision)
+  const [sending, setSending] = useState<'balance' | 'delete' | null>(null)
+  const save = async (what: NonNullable<typeof sending>, done: string, change: (data: FinanceData) => FinanceData, base?: number): Promise<SaveOutcome> => {
+    setSending(what)
+    const outcome = await onChange(change, base).finally(() => setSending(null))
+    setMessage(outcomeText(done, outcome))
+    return outcome
+  }
 
   if (editing) {
     return <DebtForm {...props} draftStart={draftFromDebt(data, debt, month, today)}
       onDone={done => { setEditing(false); if (done) setMessage(done) }} />
   }
 
-  const saveBalance = () => {
+  const saveBalance = async () => {
     if (!balanceForm) return
     const amount = parseMoneyInput(balanceForm.amount)
     if (amount === null) { setBalanceForm({ ...balanceForm, error: 'Enter an amount such as 1800 or 0.' }); return }
     if (!balanceForm.asOf || balanceForm.asOf > today) { setBalanceForm({ ...balanceForm, error: 'Choose a date that is not after today.' }); return }
     const id = props.newId()
-    const outcome = onChange(current => recordBalance(current, id, debtId, amount, balanceForm.asOf) ?? current)
-    setBalanceForm(null)
-    setMessage(outcomeText('Remaining Balance updated.', outcome))
+    const asOf = balanceForm.asOf
+    const outcome = await save('balance', 'Remaining Balance updated.', current => recordBalance(current, id, debtId, amount, asOf) ?? current, balanceBase)
+    // Not kept: the form stays as typed; the message says why.
+    if (isKept(outcome)) setBalanceForm(null)
   }
 
   // The estimate uses the planned (usual) payment, the same every month; a one-month amount would distort it.
@@ -104,7 +117,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
         <span>{item.asOf ? `As of ${formatDate(item.asOf)} · the latest balance you entered` : 'Enter the balance from your bank or statement.'}</span>
       </section>
       {!balanceForm
-        ? <button type="button" className="button-small align-start" onClick={() => setBalanceForm({ amount: amountText(item.balance), asOf: today })}>Update Balance</button>
+        ? <button type="button" className="button-small align-start" onClick={() => { setBalanceBase(revision); setBalanceForm({ amount: amountText(item.balance), asOf: today }) }}>Update Balance</button>
         : <section className="block" aria-label="Update Balance">
           <div className="form-stack">
             <Field id="debt-balance" label={`Remaining Balance (${currency})`} inputMode="decimal" value={balanceForm.amount}
@@ -113,7 +126,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
               help="The day this balance was true, e.g. the date on your statement." onChange={asOf => setBalanceForm({ ...balanceForm, asOf, error: undefined })} />
           </div>
           <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={saveBalance}>Save Balance</button>
+            <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveBalance()}>{sending === 'balance' ? 'Saving…' : 'Save Balance'}</button>
             <button type="button" className="button-small" onClick={() => setBalanceForm(null)}>Cancel</button>
           </div>
           <p className="field-help">The earlier balance stays in History. Paying a bill never changes this balance by itself.</p>
@@ -177,7 +190,8 @@ function DebtDetail(props: Props & { debtId: Id }) {
               </fieldset>
             )}
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-danger" onClick={() => { onChange(current => deleteDebt(current, debtId, deleting)); props.onDeleted() }}>Delete</button>
+              <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined}
+                onClick={async () => { if (isKept(await save('delete', '', current => deleteDebt(current, debtId, deleting)))) props.onDeleted() }}>{sending === 'delete' ? 'Saving…' : 'Delete'}</button>
               <button type="button" className="button-small" onClick={() => setDeleting(null)}>Cancel</button>
             </div>
           </div>}
@@ -230,18 +244,17 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
   const linked = debt ? debtPayment(data, debt, draft.paymentFrom).bill : null
   const set = (patch: Partial<DebtDraft>) => setDraft({ ...draft, ...patch })
   const cancel = () => (onDone ? onDone(null) : onBack())
+  const base = useEditBase()
+  const saver = useSaver()
 
-  const save = () => {
+  const save = async () => {
     const read = readDebtDraft(draft, debt?.owner ?? owner, { isNew, today })
     if (read.status === 'invalid') { setErrors(read.errors); return }
     const ids = { debt: newId(), bill: newId(), balance: newId() }
-    let applied = false
-    const outcome = onChange(current => {
-      const next = applyDebtForm(current, debtId, read.value, draft, ids)
-      applied = next !== null
-      return next ?? current
-    })
-    if (!applied) { setErrors({ name: 'This could not be saved. Check the details.' }); return }
+    if (applyDebtForm(data, debtId, read.value, draft, ids) === null) { setErrors({ name: 'This could not be saved. Check the details.' }); return }
+    const outcome = await saver.save(() => onChange(current => applyDebtForm(current, debtId, read.value, draft, ids) ?? current, base))
+    // Not kept: the form stays as typed, with the reason.
+    if (!isKept(outcome)) return
     if (isNew) onCreated(ids.debt)
     else onDone?.(outcomeText('Details updated.', outcome))
   }
@@ -288,8 +301,9 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
           </>}
         </div>
       </section>
+      {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" onClick={save}>{isNew ? 'Add' : 'Save Changes'}</button>
+        <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined} onClick={() => void save()}>{saver.sending ? 'Saving…' : isNew ? 'Add' : 'Save Changes'}</button>
         <button type="button" className="button-small" onClick={cancel}>Cancel</button>
       </div>
       <p className="muted-note">Nothing changes until you save. No bank is contacted.</p>

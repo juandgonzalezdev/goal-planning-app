@@ -5,9 +5,10 @@ import {
 } from '../../domain/finance/subscriptions'
 import { SUBSCRIPTION_RATINGS, type FinanceData, type RecurringBill, type SubscriptionRating } from '../../domain/finance/types'
 import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
+import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 
-type Props = { data: FinanceData; bill: RecurringBill; today: CalendarDate; onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome; onMessage: (text: string) => void }
+type Props = { data: FinanceData; bill: RecurringBill; today: CalendarDate; onChange: ChangeSpace; onMessage: (text: string) => void }
 
 const RATING_NAMES: Record<SubscriptionRating, string> = { needed: 'Needed', adjustable: 'Could adjust', optional: 'Optional' }
 const KNOWN = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'unknown', label: 'Not sure' }] as const
@@ -22,21 +23,33 @@ const fromKnown = (value: string) => (value === 'yes' ? true : value === 'no' ? 
  */
 export function SubscriptionSection({ data, bill, today, onChange, onMessage }: Props) {
   const [simulation, setSimulation] = useState<Simulation | null>(null)
+  const { revision } = useWriteStatus()
+  const blocked = useWriteBlocked()
+  // The revision the simulation was made on: confirming it later never writes over newer changes.
+  const [base, setBase] = useState(revision)
+  const [sending, setSending] = useState(false)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const info = bill.subscription
   const next = upcomingCharges(data, bill, today, 3)
   const ended = bill.endMonth !== null && bill.endMonth < today.slice(0, 7)
   const periodName = bill.frequency === 'yearly' ? 'yearly' : 'monthly'
 
-  const simulate = (kind: SimulationKind) => setSimulation(simulateSubscription(data, bill.id, kind, today, 3))
-  const confirm = () => {
+  const simulate = (kind: SimulationKind) => { setBase(revision); setSimulation(simulateSubscription(data, bill.id, kind, today, 3)) }
+  const save = async (done: string, change: (data: FinanceData) => FinanceData, from?: number): Promise<SaveOutcome> => {
+    setSending(true)
+    const outcome = await onChange(change, from).finally(() => setSending(false))
+    onMessage(outcomeText(done, outcome))
+    return outcome
+  }
+  // The simulation closes only once the change is kept; otherwise it stays, with the reason.
+  const confirm = async () => {
     if (!simulation) return
     const sim = simulation
-    const outcome = onChange(current => (sim.kind === 'pause' ? applyPause(current, sim) : applyCancel(current, sim)))
-    setSimulation(null)
-    onMessage(outcomeText(sim.kind === 'pause'
+    const outcome = await save(sim.kind === 'pause'
       ? `${bill.name} is paused for ${sim.charges.map(c => formatYearMonth(c.month)).join(', ')}. Payments already made stay.`
-      : `${bill.name} ends after ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}: the last month due is the one before. Payments already made stay.`, outcome))
+      : `${bill.name} ends after ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}: the last month due is the one before. Payments already made stay.`,
+    current => (sim.kind === 'pause' ? applyPause(current, sim) : applyCancel(current, sim)), base)
+    if (isKept(outcome)) setSimulation(null)
   }
 
   return (
@@ -53,7 +66,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
         <legend>How do you see it?</legend>
         {SUBSCRIPTION_RATINGS.map(rating => (
           <label key={rating}>
-            <input type="radio" name="sub-rating" checked={info?.rating === rating} onChange={() => onMessage(outcomeText('Saved.', onChange(current => rateSubscription(current, bill.id, rating))))} />
+            <input type="radio" name="sub-rating" checked={info?.rating === rating} aria-disabled={blocked || undefined} onChange={() => void save('Saved.', current => rateSubscription(current, bill.id, rating))} />
             {RATING_NAMES[rating]}
           </label>
         ))}
@@ -63,7 +76,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
         {(['canPause', 'canCancel'] as const).map(key => (
           <div key={key} className="form-field">
             <label htmlFor={`sub-${key}`}>{key === 'canPause' ? 'Can it be paused?' : 'Can it be cancelled?'}</label>
-            <select id={`sub-${key}`} value={known(info?.[key])} onChange={e => onMessage(outcomeText('Saved.', onChange(current => setSubscriptionOptions(current, bill.id, { [key]: fromKnown(e.target.value) }))))}>
+            <select id={`sub-${key}`} value={known(info?.[key])} aria-disabled={blocked || undefined} onChange={e => { const value = fromKnown(e.target.value); void save('Saved.', current => setSubscriptionOptions(current, bill.id, { [key]: value })) }}>
               {KNOWN.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
@@ -96,7 +109,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
           <p className="field-help">Payments already made never change. Money not spent is not added to Savings by itself: record it as savings if you set it aside.</p>
           <div className="inline-actions">
             {simulation.charges.length > 0 && simulation.allowed !== false && (
-              <button type="button" className="button-small button-small-primary" onClick={confirm}>Confirm {simulation.kind === 'pause' ? 'Pause' : 'Cancellation'}</button>
+              <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void confirm()}>{sending ? 'Saving…' : `Confirm ${simulation.kind === 'pause' ? 'Pause' : 'Cancellation'}`}</button>
             )}
             <button type="button" className="button-small" onClick={() => setSimulation(null)}>Cancel</button>
           </div>

@@ -6,8 +6,10 @@ import { exportFinanceData, importFinanceData } from './exchange'
  * localStorage. This is a prototype convenience, not secure storage:
  * anyone who can use this browser can read it. The demo is never saved.
  *
- * Everything the app saves goes through this one place, so it can later
- * be replaced by a server without changing the screens.
+ * Everything the app saves goes through this one place. Saving here is
+ * immediate and either works or fails; a store on a server would answer
+ * later and can also fail or be refused, so replacing this one also
+ * changes `useSpace` and the "Saved" messages the screens show.
  */
 export const STORAGE_KEY = 'goal-planning-app.my-space'
 

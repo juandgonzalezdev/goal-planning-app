@@ -7,7 +7,8 @@ import { addBill, updateBill, validateBillFields, type BillFieldError, type Bill
 import { BILL_CATEGORIES, type FinanceData, type Id, type Owner, type RecurringBill } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
+import { useEditBase, useSaver } from '../../app/writeStatus'
 
 type Props = {
   data: FinanceData
@@ -21,7 +22,7 @@ type Props = {
   owner: Owner
   newId: () => string
   onCancel: () => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   /** A new bill was saved; `message` says what happened to the save, e.g. "Bill added. Saved on this device." */
   onCreated: (id: Id, message: string) => void
   onSaved: (message: string) => void
@@ -81,6 +82,8 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   const [moreOpen, setMoreOpen] = useState(() => !!(bill?.endMonth || bill?.debtId || bill?.note))
   // A save in progress: a second tap (or Enter) before the screen changes must not add a second bill.
   const saving = useRef(false)
+  const base = useEditBase()
+  const saver = useSaver()
   const focusField = useRef<DraftField | null>(null)
   const years = yearsAround(Number(today.slice(0, 4)))
   const startYear = isYearMonth(draft.startMonth) ? Number(draft.startMonth.slice(0, 4)) : Number(yearMonthOf(today).slice(0, 4))
@@ -109,7 +112,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     focusField.current = first
   }
 
-  const save = () => {
+  const save = async () => {
     if (saving.current) return
     const fields = readDraft(draft, bill?.owner ?? owner)
     const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
@@ -123,27 +126,24 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     }
     if (Object.keys(found).length > 0) { showErrors(found); return }
 
-    saving.current = true
     const id = bill?.id ?? newId()
-    let problems: BillFieldError[] = []
-    const outcome = onChange(current => {
-      const result = bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount)
-      if (result.status === 'ok') return result.data
-      problems = result.errors
-      return current
-    })
-    if (problems.length > 0) {
-      saving.current = false
-      showErrors(Object.fromEntries(problems.map(problem => FIELD_ERRORS[problem])))
-      return
-    }
-    if (!bill) { onCreated(id, outcomeText('Bill added.', outcome)); return }
+    const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount))
+    const checked = apply(data)
+    if (checked.status !== 'ok') { showErrors(Object.fromEntries(checked.errors.map(problem => FIELD_ERRORS[problem]))); return }
+    saving.current = true
+    const outcome = await saver.save(() => onChange(current => {
+      const result = apply(current)
+      return result.status === 'ok' ? result.data : current
+    }, base))
     saving.current = false
+    // Not kept: the form stays as typed, with the reason (`saver.refusal`).
+    if (!isKept(outcome)) return
+    if (!bill) { onCreated(id, outcomeText('Bill added.', outcome)); return }
     onSaved(outcomeText('Details updated.', outcome))
   }
 
   return (
-    <form className="bill-form" noValidate onSubmit={event => { event.preventDefault(); save() }}>
+    <form className="bill-form" noValidate onSubmit={event => { event.preventDefault(); void save() }}>
       <section className="block">
         <div className="form-stack">
           <Field id="bill-name" label="Bill name" value={draft.name} onChange={name => set({ name })} error={errors.name} maxLength={60} />
@@ -192,8 +192,9 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
         </div>
       </section>
       {sentence && <p className="bill-schedule">{sentence}</p>}
+      {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
       <div className="inline-actions">
-        <button type="submit" className="button-small button-small-primary">{bill ? 'Save Changes' : 'Add Bill'}</button>
+        <button type="submit" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined}>{saver.sending ? 'Saving…' : bill ? 'Save Changes' : 'Add Bill'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </form>

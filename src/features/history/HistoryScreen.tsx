@@ -15,7 +15,8 @@ import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
 import { AllAmountsToggle } from '../../ui/privacy'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
+import { useWriteBlocked } from '../../app/writeStatus'
 import {
   firstFilter, isNarrowed, tagOf, openMonthsOf, periodLabel, plural, secondaryFilters, setAllMonths, showMore, shownIn, toggleMonth, TYPE_NAMES, withFilter,
   type HistoryView,
@@ -34,7 +35,7 @@ type Props = {
   /** Period, search, filters, open months and records shown: kept by the app for the session. */
   view: HistoryView
   onViewChange: (view: HistoryView) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   /** Opens a bill on the month of the payment chosen. */
   onOpenBill: (id: Id, month: YearMonth) => void
   onOpenGoal: (id: Id) => void
@@ -95,19 +96,22 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
     onViewChange(withFilter(view, updated, groupByMonth(filterActivity(log, updated))))
   }
   const clearFilters = () => change({ search: '', type: 'all', category: 'all', accountId: 'all' })
-  const save = (done: string) => (make: (current: FinanceData) => RecordResult): RecordError[] => {
+  const blocked = useWriteBlocked()
+  /** Saves a record form. Not kept: the form stays open as typed, and says why. */
+  const save = (done: string) => async (make: (current: FinanceData) => RecordResult, base: number): Promise<{ errors: RecordError[]; refusal: string }> => {
     const result = make(data)
-    if (result.status === 'invalid') return result.errors
-    const outcome = onChange(() => result.data)
+    if (result.status === 'invalid') return { errors: result.errors, refusal: '' }
+    const outcome = await onChange(current => { const again = make(current); return again.status === 'invalid' ? current : again.data }, base)
+    if (!isKept(outcome)) return { errors: [], refusal: outcomeText('', outcome) }
     setEditing(null)
     setMessage(outcomeText(done, outcome))
-    return []
+    return { errors: [], refusal: '' }
   }
-  const remove = (entry: ActivityEntry) => {
+  const remove = async (entry: ActivityEntry) => {
     const ref = entry.ref
-    const outcome = onChange(current => (ref.kind === 'expense' ? deleteExpense(current, ref.id) : ref.kind === 'transfer' ? deleteTransfer(current, ref.id) : current))
-    setConfirmDelete(null)
+    const outcome = await onChange(current => (ref.kind === 'expense' ? deleteExpense(current, ref.id) : ref.kind === 'transfer' ? deleteTransfer(current, ref.id) : current))
     setMessage(outcomeText(`${entry.label} deleted.`, outcome))
+    if (isKept(outcome)) setConfirmDelete(null)
   }
   const openEntry = (entry: ActivityEntry) => {
     const ref = entry.ref
@@ -266,7 +270,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
                     {editing.kind !== 'income' && (confirmDelete === entry.key
                       ? <div className="inline-actions">
                         <span>Delete this record? Only this one changes.</span>
-                        <button type="button" className="button-small button-small-danger" onClick={() => remove(entry)}>Delete</button>
+                        <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined} onClick={() => void remove(entry)}>Delete</button>
                         <button type="button" className="button-small" onClick={() => setConfirmDelete(null)}>Keep It</button>
                       </div>
                       : <button type="button" className="text-button" onClick={() => setConfirmDelete(entry.key)}>Delete {entry.type === 'transfer' ? 'Transfer' : 'Spending'}</button>)}

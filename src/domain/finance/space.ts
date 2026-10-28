@@ -40,13 +40,18 @@ export function validateSetup(setup: SpaceSetup): SetupError[] {
  * The user's own space, as Welcome Setup creates it: the members and
  * preferences, and nothing else. No income, bills, loans, accounts or
  * goals are added: the space starts empty.
+ *
+ * `spaceId`: the app gives every new space a random id (`newId()`), so no
+ * two spaces share one, on this device or later on a server. Spaces made
+ * before keep `my-space`. Members only need to differ inside their space,
+ * so they stay `member-1` and `member-2`.
  */
-export function createSpaceData(setup: SpaceSetup): { status: 'created'; data: FinanceData } | { status: 'invalid'; errors: SetupError[] } {
+export function createSpaceData(setup: SpaceSetup, spaceId = 'my-space'): { status: 'created'; data: FinanceData } | { status: 'invalid'; errors: SetupError[] } {
   const errors = validateSetup(setup)
   if (errors.length > 0) return { status: 'invalid', errors }
   const names = setup.names.slice(0, MEMBER_COUNT[setup.mode]).map(name => name.trim())
   const space: Space = {
-    id: 'my-space',
+    id: spaceId,
     name: names.join(' & '),
     mode: setup.mode,
     currency: setup.currency,

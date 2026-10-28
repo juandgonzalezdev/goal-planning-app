@@ -11,7 +11,7 @@ import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatYearMonth, monthName } from '../../ui/format'
 import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
-import type { SaveOutcome } from '../../ui/saveOutcome'
+import type { ChangeSpace } from '../../ui/saveOutcome'
 import { billsByCategory } from '../../domain/finance/home'
 import { Donut } from './Donut'
 import { HomeBlockFrame } from './HomeBlock'
@@ -23,7 +23,7 @@ type Props = {
   today: CalendarDate
   view: BillsChartView
   onViewChange: (view: BillsChartView) => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   onOpenBill: (id: Id) => void
   onOpenExpense: (id: Id) => void
 }

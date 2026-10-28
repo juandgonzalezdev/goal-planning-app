@@ -11,7 +11,8 @@ import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { formatAmount, formatDate, formatDueDay, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
+import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { SubscriptionSection } from './SubscriptionSection'
 
 type Props = {
@@ -27,7 +28,7 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
-  onChange: (change: (data: FinanceData) => FinanceData) => SaveOutcome
+  onChange: ChangeSpace
   onCreated: (id: Id, message: string) => void
   onDeleted: () => void
   onOpenDebt: (id: Id) => void
@@ -51,6 +52,19 @@ export function BillScreen(props: Props) {
   const [usual, setUsual] = useState<{ amount: string; from: string; error?: string } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [message, setMessage] = useState('')
+  const { revision } = useWriteStatus()
+  const blocked = useWriteBlocked()
+  // Which change is being saved ("Saving…"), and the revision each editor was opened on.
+  const [sending, setSending] = useState<'month' | 'usual' | 'paid' | 'delete' | null>(null)
+  const [monthBase, setMonthBase] = useState(revision)
+  const [usualBase, setUsualBase] = useState(revision)
+  /** Saves one change and says what happened; an editor closes only when the change is kept. */
+  const save = async (what: NonNullable<typeof sending>, done: string, change: (data: FinanceData) => FinanceData, base?: number): Promise<SaveOutcome> => {
+    setSending(what)
+    const outcome = await onChange(change, base).finally(() => setSending(null))
+    setMessage(outcomeText(done, outcome))
+    return outcome
+  }
 
   if (billId && !bill) {
     return (
@@ -79,19 +93,18 @@ export function BillScreen(props: Props) {
   const monthLabel = formatYearMonth(month)
   const paidOn = data.billMonths.find(record => record.billId === bill.id && record.month === month)?.paidOn
 
-  const saveMonthAmount = (value: number | null | undefined, done: string) => {
-    const outcome = onChange(current => setBillMonthAmount(current, bill.id, month, value))
-    setMonthText(null)
-    setMessage(outcomeText(done, outcome))
+  const saveMonthAmount = async (value: number | null | undefined, done: string) => {
+    const outcome = await save('month', done, current => setBillMonthAmount(current, bill.id, month, value), monthBase)
+    if (isKept(outcome)) setMonthText(null)
   }
-  const saveUsual = () => {
+  const saveUsual = async () => {
     if (!usual) return
     const amount = usual.amount.trim() === '' ? null : parseMoneyInput(usual.amount)
     if (usual.amount.trim() !== '' && amount === null) { setUsual({ ...usual, error: 'Enter an amount such as 750, or leave it empty for unknown.' }); return }
     if (!/^\d{4}-\d{2}$/.test(usual.from) || usual.from < bill.startMonth) { setUsual({ ...usual, error: `Choose ${formatYearMonth(bill.startMonth)} or later.` }); return }
-    const outcome = onChange(current => setUsualAmountFrom(current, bill.id, usual.from, amount))
-    setUsual(null)
-    setMessage(outcomeText(`Usual amount changed from ${formatYearMonth(usual.from)} on.`, outcome))
+    const from = usual.from
+    const outcome = await save('usual', `Usual amount changed from ${formatYearMonth(from)} on.`, current => setUsualAmountFrom(current, bill.id, from, amount), usualBase)
+    if (isKept(outcome)) setUsual(null)
   }
 
   return (
@@ -116,18 +129,18 @@ export function BillScreen(props: Props) {
             <div className="bill-line">
               <small>{occurrence.paid ? (paidOn ? `Paid on ${formatDate(paidOn)}` : 'Paid') : `Due ${formatDate(occurrence.dueDate)}`}</small>
               <button type="button" className={`paid-toggle${occurrence.paid ? ' is-paid' : ''}`} aria-pressed={occurrence.paid} aria-label={`${bill.name} paid in ${monthLabel}`}
-                onClick={() => { const outcome = onChange(current => setBillPaid(current, bill.id, month, !occurrence.paid, today)); setMessage(outcomeText(occurrence.paid ? 'Marked as not paid.' : 'Marked as paid.', outcome)) }}>
+                aria-disabled={blocked || undefined} onClick={() => void save('paid', occurrence.paid ? 'Marked as not paid.' : 'Marked as paid.', current => setBillPaid(current, bill.id, month, !occurrence.paid, today))}>
                 {occurrence.paid ? '✓ Paid' : '○ Pending'}
               </button>
             </div>
             {monthText === null
-              ? <button type="button" className="text-button" onClick={() => setMonthText(amountText(occurrence.amount))}>Change Amount for {monthLabel}</button>
+              ? <button type="button" className="text-button" onClick={() => { setMonthBase(revision); setMonthText(amountText(occurrence.amount)) }}>Change Amount for {monthLabel}</button>
               : <div className="amount-editor">
                 <Field id="bill-month-amount" label={`Amount for ${monthLabel} (${currency})`} inputMode="decimal" value={monthText} onChange={setMonthText} />
                 <div className="inline-actions">
-                  <button type="button" className="button-small button-small-primary" onClick={() => { const v = parseMoneyInput(monthText); if (v !== null) saveMonthAmount(v, `${monthLabel} amount saved.`) }}>Save</button>
-                  <button type="button" className="button-small" onClick={() => saveMonthAmount(null, `${monthLabel} amount marked as not known.`)}>Not Known Yet</button>
-                  {occurrence.amountChangedThisMonth && <button type="button" className="button-small" onClick={() => saveMonthAmount(undefined, 'Back to the usual amount.')}>Use Usual Amount</button>}
+                  <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => { const v = parseMoneyInput(monthText); if (v !== null) void saveMonthAmount(v, `${monthLabel} amount saved.`) }}>{sending === 'month' ? 'Saving…' : 'Save'}</button>
+                  <button type="button" className="button-small" aria-disabled={blocked || undefined} onClick={() => void saveMonthAmount(null, `${monthLabel} amount marked as not known.`)}>Not Known Yet</button>
+                  {occurrence.amountChangedThisMonth && <button type="button" className="button-small" aria-disabled={blocked || undefined} onClick={() => void saveMonthAmount(undefined, 'Back to the usual amount.')}>Use Usual Amount</button>}
                   <button type="button" className="button-small" onClick={() => setMonthText(null)}>Cancel</button>
                 </div>
                 <p className="field-help">Only {monthLabel} changes.</p>
@@ -147,14 +160,14 @@ export function BillScreen(props: Props) {
           </ul>
         )}
         {!usual
-          ? <button type="button" className="button-small align-start" onClick={() => setUsual({ amount: amountText(usualNow), from: month })}>Change Usual Amount</button>
+          ? <button type="button" className="button-small align-start" onClick={() => { setUsualBase(revision); setUsual({ amount: amountText(usualNow), from: month }) }}>Change Usual Amount</button>
           : <div className="form-stack">
             <Field id="bill-usual-amount" label={`New Usual Amount (${currency})`} inputMode="decimal" value={usual.amount} onChange={amount => setUsual({ ...usual, amount, error: undefined })} error={usual.error} />
             <MonthYearField id="bill-usual-from" label="From month" value={usual.from} onChange={from => setUsual({ ...usual, from, error: undefined })}
               years={yearsAround(Number(today.slice(0, 4)))} defaultYear={Number(month.slice(0, 4))}
               help="This month and the months after it change. Earlier months keep their amount, and a month with its own amount keeps it." />
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-primary" onClick={saveUsual}>Save Usual Amount</button>
+              <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveUsual()}>{sending === 'usual' ? 'Saving…' : 'Save Usual Amount'}</button>
               <button type="button" className="button-small" onClick={() => setUsual(null)}>Cancel</button>
             </div>
           </div>}
@@ -182,7 +195,8 @@ export function BillScreen(props: Props) {
           <div className="callout callout-warning" role="alert">
             <p>Delete “{bill.name}” and what was recorded for it each month? This cannot be undone.{debt ? ` “${debt.name}” stays in Cards, without a monthly payment.` : ''}</p>
             <div className="inline-actions">
-              <button type="button" className="button-small button-small-danger" onClick={() => { onChange(current => deleteBill(current, bill.id)); props.onDeleted() }}>Delete Bill</button>
+              <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined}
+                onClick={async () => { if (isKept(await save('delete', '', current => deleteBill(current, bill.id)))) props.onDeleted() }}>{sending === 'delete' ? 'Saving…' : 'Delete Bill'}</button>
               <button type="button" className="button-small" onClick={() => setConfirmDelete(false)}>Cancel</button>
             </div>
           </div>
