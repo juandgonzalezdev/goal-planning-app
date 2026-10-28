@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ALEX_DEMO_TODAY, createAlexDemo } from '../data/fixtures/demoAlex'
 import { createIndexedDbStore } from '../data/indexedDbStore'
 import { browserStorage } from '../data/localStore'
-import type { LoadResult, SaveResult, SpaceStore, UnreadableReason } from '../data/spaceStore'
+import type { LoadResult, RecoveryCopies, SaveResult, SpaceStore, UnreadableReason } from '../data/spaceStore'
 import { stampNewRecords } from '../domain/finance/records'
 import type { FinanceData } from '../domain/finance/types'
 import type { CalendarDate } from '../domain/goalTime'
@@ -53,6 +53,18 @@ export type SpaceProblem =
   | { kind: 'partly-erased' }
   /** Another tab changed or erased the space: nothing more is saved until it is opened again. */
   | { kind: 'conflict' }
+  /**
+   * Another tab erased the space while changes typed here were not saved: nothing can be saved,
+   * and the space stays on screen so they can be copied, until the user discards them.
+   */
+  | { kind: 'erased-elsewhere' }
+
+/**
+ * Something another tab did, for a short notice. `updated`: its changes are shown (nothing typed
+ * here was waiting). `erased`: it erased the space, which is closed here. `older-copy-changed`:
+ * an older version of the app, open in another tab, is still saving to the older copy.
+ */
+export type SpaceNotice = 'updated' | 'erased' | 'older-copy-changed'
 
 export type EraseOutcome = 'erased' | 'partly-erased' | 'failed' | 'read-only' | 'busy' | 'stale'
 
@@ -73,7 +85,8 @@ type Store = SpaceStore & { close?: () => void }
  *   it from landing on another space.
  */
 export function useSpace(storage: Storage | null = browserStorage(), getToday: () => CalendarDate, createDemo: () => DemoFixture = alexDemo,
-  getNow: () => string = isoNow, createStore: (storage: Storage | null) => SpaceStore = browserSpaceStore) {
+  getNow: () => string = isoNow, createStore: (storage: Storage | null) => SpaceStore = browserSpaceStore,
+  hasUnsaved: () => boolean = () => false) {
   const store: Store = useMemo(() => createStore(storage), [createStore, storage])
   const [opening, setOpening] = useState(true)
   const [open, setOpen] = useState<OpenSpace | null>(null)
@@ -82,6 +95,9 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   // Which session is saving (null: none). Only the open session's save is shown and holds the other controls.
   const [savingIn, setSavingIn] = useState<number | null>(null)
   const [session, setSession] = useState(0)
+  // Goes up each time the own space is read again from the store: the screens start again from it.
+  const [generation, setGeneration] = useState(0)
+  const [notice, setNotice] = useState<SpaceNotice | null>(null)
 
   // The same values for the callbacks, so an answer is checked against what is open now, not when it started.
   const openRef = useRef(open)
@@ -93,6 +109,10 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   const floor = useRef(0)
   /** A newer version of the app took the database over: nothing can be read or saved here any more. */
   const takenOver = useRef(false)
+  /** The space is being opened (first opening, Try Again, Open Latest Version): checks for other tabs wait. */
+  const openingRef = useRef(true)
+  const hasUnsavedRef = useRef(hasUnsaved)
+  useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
 
   const show = useCallback((next: OpenSpace | null) => { openRef.current = next; setOpen(next) }, [])
   const report = useCallback((next: SpaceProblem | null) => { problemRef.current = next; setProblem(next) }, [])
@@ -121,6 +141,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
 
   /** Shows what `load` found. Unreadable or read-only data is never shown as an empty device. */
   const apply = useCallback((result: LoadResult) => {
+    setGeneration(value => value + 1)
     if (result.status === 'loaded') {
       floor.current = result.space.revision
       show({ kind: 'own', data: result.space.data, revision: result.space.revision })
@@ -141,18 +162,114 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
 
   /** Reads the own space and shows it, unless another session started meanwhile. A store that throws is read-only, never empty. */
   const load = useCallback(async (mine: number, isCurrent: () => boolean = () => true) => {
-    const result = await store.load().catch((): LoadResult => ({ status: 'read-only', space: null, mayBeOutdated: true }))
+    let result: LoadResult
+    do {
+      // A write still being saved is answered first, so what is read is never older than it.
+      await writing.current
+      result = await store.load().catch((): LoadResult => ({ status: 'read-only', space: null, mayBeOutdated: true }))
+    } while (writing.current && sessionRef.current === mine)
     if (sessionRef.current !== mine || !isCurrent()) return
     apply(result)
+    openingRef.current = false
     setOpening(false)
   }, [store, apply])
 
-  // A newer version of the app in another tab took the database over: what is shown stays, nothing more is saved.
+  /** Closes the own space after another tab erased it: Welcome says so. */
+  const closeErased = useCallback(() => {
+    newSession()
+    floor.current = 0
+    show(null)
+    report(null)
+    setNotice('erased')
+  }, [newSession, show, report])
+
+  /**
+   * Another tab may have changed the space: reads it again and decides. Nothing typed here and not
+   * saved is ever replaced: with unsaved changes (or a problem to decide on) it only stops saving and
+   * says so. A write being saved is answered first. After reading, the session, the space on screen
+   * (its id and revision), the writes and the unsaved changes are checked again before anything is shown.
+   */
+  const checkOnce = useCallback(async (): Promise<'again' | 'done'> => {
+    while (writing.current) await writing.current
+    if (openingRef.current || takenOver.current) return 'done'
+    const mine = sessionRef.current
+    const before = openRef.current
+    const problemBefore = problemRef.current
+    if (before?.kind === 'demo') return 'done'
+    const result = await store.load().catch(() => null)
+    if (!result || result.status === 'read-only') return 'done'
+    if (sessionRef.current !== mine || openRef.current !== before || problemRef.current !== problemBefore || writing.current || openingRef.current) return 'again'
+    const editing = hasUnsavedRef.current()
+
+    if (before?.kind === 'own') {
+      const sameSpace = result.status === 'loaded' && result.space.data.space.id === before.data.space.id
+      if (sameSpace && result.space.revision <= before.revision) return 'done'
+      if (problemBefore?.kind === 'read-only' || problemBefore?.kind === 'erased-elsewhere') return 'done'
+      if (result.status === 'empty') {
+        if (editing) { report({ kind: 'erased-elsewhere' }); setNotice(null) } else closeErased()
+        return 'done'
+      }
+      // Newer changes, another space, or a space that no longer opens.
+      if (editing || problemBefore) {
+        if (!problemBefore) report({ kind: 'conflict' })
+        setNotice(null)
+        return 'done'
+      }
+      apply(result)
+      setNotice(result.status === 'loaded' ? 'updated' : null)
+      return 'done'
+    }
+
+    // Nothing open here (Welcome, setup, the recovery screen).
+    if (editing || problemBefore?.kind === 'partly-erased' || problemBefore?.kind === 'read-only') return 'done'
+    const shown = problemBefore?.kind === 'unreadable' ? 'unreadable' : 'empty'
+    if (result.status === shown && result.status === 'empty') return 'done'
+    if (result.status === 'unreadable' && problemBefore?.kind === 'unreadable' && problemBefore.reason === result.reason && problemBefore.source === result.source) return 'done'
+    apply(result)
+    setNotice(result.status === 'loaded' ? 'updated' : null)
+    return 'done'
+  }, [store, apply, report, closeErased])
+
+  // One check at a time; a notice that comes during one runs another after it.
+  const checking = useRef(false)
+  const checkAgain = useRef(false)
+  const check = useCallback(async () => {
+    if (checking.current) { checkAgain.current = true; return }
+    checking.current = true
+    try {
+      do {
+        checkAgain.current = false
+        if (await checkOnce() === 'again') checkAgain.current = true
+      } while (checkAgain.current)
+    } finally {
+      checking.current = false
+    }
+  }, [checkOnce])
+
+  // What other tabs do. Only notices: the revision check keeps the data safe without them.
   useEffect(() => store.watch(change => {
-    if (change.kind !== 'closed') return
-    takenOver.current = true
-    report({ kind: 'read-only', withCopy: openRef.current?.kind === 'own', takenOver: true })
-  }), [store, report])
+    if (change.kind === 'closed') {
+      // A newer version of the app in another tab took the database over: what is shown stays, nothing more is saved.
+      takenOver.current = true
+      report({ kind: 'read-only', withCopy: openRef.current?.kind === 'own', takenOver: true })
+    } else if (change.kind === 'older-copy-changed') {
+      setNotice('older-copy-changed')
+    } else {
+      void check()
+    }
+  }), [store, report, check])
+
+  // Back to this tab (or the page shown again from the browser's cache): a notice may have been missed, as on an iPhone in the background.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const onVisible = () => { if (document.visibilityState === 'visible') void check() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onVisible)
+    }
+  }, [check])
 
   // The first opening.
   useEffect(() => {
@@ -164,6 +281,8 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   /** Opens the own space again from the store, after any write being saved has finished. */
   const reload = useCallback(async () => {
     const mine = newSession()
+    openingRef.current = true
+    setNotice(null)
     setOpening(true)
     await writing.current
     await load(mine)
@@ -215,7 +334,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   /** Starts the own space. Refused if this device already has one (another tab may have made it). */
   const startOwnSpace = useCallback(async (data: FinanceData): Promise<SaveOutcome> => {
     if (problemRef.current?.kind === 'read-only') return 'read-only'
-    if (problemRef.current?.kind === 'unreadable' || problemRef.current?.kind === 'conflict') return 'conflict'
+    if (problemRef.current?.kind === 'unreadable' || problemRef.current?.kind === 'conflict' || problemRef.current?.kind === 'erased-elsewhere') return 'conflict'
     const done = await write<SaveResult>(() => store.create(data), { status: 'failed' })
     if (done === 'busy') return 'busy'
     if (!done.current) return 'stale'
@@ -247,6 +366,29 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   /** Puts the original example back. Only the demo changes: the own space is never read or touched. */
   const resetDemo = useCallback(() => { if (openRef.current?.kind === 'demo') openDemo() }, [openDemo])
 
+  /** After another tab erased the space, the user chose to discard what was typed here: Welcome. */
+  const discardErased = useCallback(() => {
+    if (problemRef.current?.kind === 'erased-elsewhere') closeErased()
+  }, [closeErased])
+
+  /**
+   * "Use Older Copy" on the recovery screen, after the user confirmed: the copy that cannot be opened
+   * is set aside (never deleted) and the older copy opens. Refused when anything changed since.
+   */
+  const restoreOlderCopy = useCallback(async (): Promise<SaveOutcome> => {
+    if (problemRef.current?.kind !== 'unreadable' || !problemRef.current.olderCopy) return 'not-saved'
+    const done = await write<SaveResult>(() => store.useOlderCopy(), { status: 'failed' })
+    if (done === 'busy') return 'busy'
+    if (!done.current) return 'stale'
+    if (done.result.status === 'failed') return 'not-saved'
+    // Saved, or something changed meanwhile: either way, what the device has now is opened.
+    await reload()
+    return done.result.status === 'saved' ? 'saved' : 'conflict'
+  }, [store, write, reload])
+
+  /** Every copy as stored, for "Download Both Copies". Only reads. */
+  const exportCopies = useCallback((): Promise<RecoveryCopies> => store.exportCopies(), [store])
+
   /** Erases the own space from this device. Says how far it got: an erase is never reported as done while a copy is left. */
   const eraseOwnSpace = useCallback(async (): Promise<EraseOutcome> => {
     if (problemRef.current?.kind === 'read-only') return 'read-only'
@@ -256,6 +398,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     if (done.result.status === 'failed') return 'failed'
     newSession()
     floor.current = 0
+    setNotice(null)
     if (openRef.current?.kind === 'own') show(null)
     report(done.result.status === 'erased' ? null : { kind: 'partly-erased' })
     return done.result.status
@@ -267,5 +410,8 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   const canWrite = open?.kind === 'demo' || (open?.kind === 'own' && problem === null)
   const revision = open?.kind === 'own' ? open.revision : 0
 
-  return { opening, open, problem, saving, canWrite, revision, today, update, replaceData, startOwnSpace, openDemo, closeDemo, resetDemo, eraseOwnSpace, reload }
+  return {
+    opening, open, problem, notice, generation, saving, canWrite, revision, today, update, replaceData, startOwnSpace, openDemo, closeDemo, resetDemo,
+    eraseOwnSpace, reload, discardErased, restoreOlderCopy, exportCopies, dismissNotice: useCallback(() => setNotice(null), []),
+  }
 }

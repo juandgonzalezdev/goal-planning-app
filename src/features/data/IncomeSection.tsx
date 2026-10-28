@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { yearMonthOf, type YearMonth } from '../../domain/calendar'
@@ -34,6 +35,11 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   const [editBase, setEditBase] = useState(revision)
   const [receivingBase, setReceivingBase] = useState(revision)
   const [sending, setSending] = useState<'source' | 'received' | null>(null)
+  useUnsavedChanges(editing?.id ? 'Edit income' : 'Add income', editing ? {
+    'Name': editing.name, 'Usual amount': editing.amount, 'Pay day': editing.payDay, 'Start month': editing.startMonth, 'End month': editing.endMonth,
+  } : null)
+  useUnsavedChanges(`Income received: ${data.incomeSources.find(source => source.id === receiving?.sourceId)?.name ?? ''}`,
+    receiving ? { 'Month': receiving.month, 'Amount': receiving.amount, 'Date': receiving.date } : null)
   /** Saves one change and says what happened. */
   const save = async (done: string, change: (data: FinanceData) => FinanceData, base?: number, what: typeof sending = null): Promise<SaveOutcome> => {
     setSending(what)

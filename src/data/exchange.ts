@@ -5,6 +5,12 @@ import { validateFinanceData } from './validate'
 /** The file a user exports: everything they entered, nothing calculated. */
 export const exportFinanceData = (data: FinanceData): string => JSON.stringify(data, null, 2)
 
+/** What "Download Both Copies" saves: every copy as it was stored. Never read back as a backup. */
+export const RECOVERY_KIND = 'goal-planning-recovery'
+
+const isRecoveryFile = (value: unknown): boolean =>
+  typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === RECOVERY_KIND
+
 export type ImportResult = { status: 'imported'; data: FinanceData } | { status: 'rejected'; errors: string[] }
 
 /**
@@ -19,6 +25,7 @@ export function importFinanceData(text: string): ImportResult {
   } catch {
     return { status: 'rejected', errors: ['The file is not valid JSON.'] }
   }
+  if (isRecoveryFile(parsed)) return { status: 'rejected', errors: ['This is a recovery file, not a backup. It cannot be restored here.'] }
   return readFinanceData(parsed)
 }
 

@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
 import { goalProgress, type GoalFields } from '../../domain/finance/goals'
 import type { FinanceData, Owner } from '../../domain/finance/types'
 import { formatAmount, formatDate } from '../../ui/format'
 import { GoalFormFields } from './GoalFormFields'
-import { readGoalDraft, type GoalDraftErrors, type NewGoalState } from './goalDraft'
+import { EMPTY_NEW_GOAL, readGoalDraft, type GoalDraft, type GoalDraftErrors, type NewGoalState } from './goalDraft'
 import { GoalPace } from './GoalPace'
 import { useEditBase, useSaver } from '../../app/writeStatus'
 import type { SaveOutcome } from '../../ui/saveOutcome'
@@ -25,12 +26,16 @@ type Props = {
  * Create a Goal (I5): the short v5.9 form, then a short confirmation.
  * Nothing is saved until Create Goal is pressed, and the goal starts at 0.
  */
+const typedGoal = (draft: GoalDraft) => ({ 'Name': draft.name, 'Target': draft.target, 'Has a date': draft.dated, 'Date': draft.dated ? draft.deadline : '' })
+
 export function NewGoalScreen({ data, today, owner, state, onStateChange, onCancel, onCreate }: Props) {
   const [errors, setErrors] = useState<GoalDraftErrors>({})
   const read = readGoalDraft(state.draft, { today, owner })
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const base = useEditBase()
   const saver = useSaver()
+  // The draft stays while the user looks elsewhere: it counts as long as it is not empty.
+  useUnsavedChanges('New Goal', typedGoal(state.draft), typedGoal(EMPTY_NEW_GOAL.draft))
 
   if (state.step === 'confirm' && read.status === 'valid') {
     const { fields } = read

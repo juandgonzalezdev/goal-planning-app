@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { MonthYearField } from '../../components/MonthYearField'
 import { isYearMonth, yearMonthOf, yearsAround, type YearMonth } from '../../domain/calendar'
@@ -84,6 +85,11 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   const saving = useRef(false)
   const base = useEditBase()
   const saver = useSaver()
+  useUnsavedChanges(bill ? 'Edit Bill Details' : 'Add Bill', {
+    'Name': draft.name, 'Category': draft.category, 'Usual amount': bill ? undefined : draft.amountUnknown ? 'Not known yet' : draft.amount,
+    'Due day': draft.dueDay, 'Start month': draft.startMonth, 'End month': draft.endMonth,
+    'Pays a card or loan': data.debts.find(debt => debt.id === draft.debtId)?.name, 'Note': draft.note,
+  })
   const focusField = useRef<DraftField | null>(null)
   const years = yearsAround(Number(today.slice(0, 4)))
   const startYear = isYearMonth(draft.startMonth) ? Number(draft.startMonth.slice(0, 4)) : Number(yearMonthOf(today).slice(0, 4))

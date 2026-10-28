@@ -27,6 +27,8 @@ export type DataScreenProps = {
   onViewChange: (view: DataView) => void
   onChange: ChangeSpace
   onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome>
+  /** While the space can only be shown: "Download Both Copies". */
+  onDownloadCopies?: () => Promise<boolean>
   onOpenBill: (id: Id | null) => void
   onOpenDebt: (id: Id | null) => void
   onOpenGoal: (id: Id) => void
@@ -70,7 +72,7 @@ export function DataScreen(props: DataScreenProps) {
           <GoalsSection {...props} say={say} tell={setMessage} />
           <DataBlockFrame block="reports" summary={isDemo ? 'PDF report and backup file' : 'PDF report, backup file and restore'}>
             <ReportSection data={data} isDemo={isDemo} months={props.months} month={props.month} today={props.today} />
-            <ExchangeSection data={data} isDemo={isDemo} onReplace={props.onReplace} />
+            <ExchangeSection data={data} isDemo={isDemo} onReplace={props.onReplace} onDownloadCopies={props.onDownloadCopies} />
           </DataBlockFrame>
         </div>
       </DataBlocksContext.Provider>

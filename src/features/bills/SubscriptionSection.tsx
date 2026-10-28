@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
   applyCancel, applyPause, rateSubscription, setSubscriptionOptions, simulateSubscription, upcomingCharges, type Simulation, type SimulationKind,
@@ -28,6 +29,8 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   // The revision the simulation was made on: confirming it later never writes over newer changes.
   const [base, setBase] = useState(revision)
   const [sending, setSending] = useState(false)
+  // A simulation waiting for Confirm is a change not made yet.
+  useUnsavedChanges(`Subscription: ${bill.name}`, simulation ? { 'Simulation': simulation.kind === 'pause' ? 'Pause' : 'Cancel' } : null, {})
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const info = bill.subscription
   const next = upcomingCharges(data, bill, today, 3)

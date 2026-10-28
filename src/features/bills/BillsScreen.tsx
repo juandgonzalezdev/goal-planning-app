@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { YearMonth } from '../../domain/calendar'
 import { billsForMonth, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills, type BillOccurrence } from '../../domain/finance/bills'
@@ -296,6 +297,7 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
   const saver = useSaver()
   // The revision the amount editor was opened on.
   const [base, setBase] = useState(revision)
+  useUnsavedChanges(`Amount for ${monthName}: ${bill.name}`, editing ? { 'Amount': text } : null)
 
   const startEditing = () => { setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setBase(revision); saver.clearRefusal(); setEditing(true) }
   // The editor closes only once the change is kept; otherwise it stays open with what was typed.

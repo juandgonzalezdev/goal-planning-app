@@ -19,6 +19,13 @@
 }
 .save-warning { background: var(--color-warning-soft); color: var(--color-warning-text); }
 .save-warning p { margin: 0; }
+/* What was typed here and not saved (another tab changed or erased the space): listed, to copy before anything is dropped. */
+.unsaved-forms, .discard-question { flex-basis: 100%; display: grid; gap: 6px; }
+.unsaved-forms textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; }
+.update-notice {
+  margin: 0; padding: 6px max(var(--space-gutter), calc((100vw - var(--column-wide)) / 2 + var(--space-gutter)));
+  font-size: 13px; background: var(--color-accent-soft); color: var(--color-text);
+}
 
 /* Tab bar: fixed at the bottom on phones, a row under the header on wide screens (as in v5.9). */
 /*

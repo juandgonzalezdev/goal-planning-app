@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { amountText } from '../../ui/labels'
 import type { YearMonth } from '../../domain/calendar'
 import { setBillMonthAmount, type BillOccurrence } from '../../domain/finance/bills'
@@ -92,6 +93,7 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
   const saver = useSaver()
   // The revision the amount editor was opened on.
   const [base, setBase] = useState(revision)
+  useUnsavedChanges(`Amount for this month: ${bill.name}`, text === null ? null : { 'Amount': text })
 
   const save = async () => {
     const value = parseMoneyInput(text ?? '')

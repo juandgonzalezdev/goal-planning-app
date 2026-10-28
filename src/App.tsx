@@ -1,8 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
 import { WriteStatusContext } from './app/writeStatus'
+import { UnsavedChangesContext, useUnsavedRegistry } from './app/unsavedChanges'
+import { ConfirmDiscard, UnsavedForms } from './components/UnsavedForms'
+import { Recovery } from './features/recovery/Recovery'
+import { recoveryFile, recoveryFileName } from './data/recovery'
+import { downloadFile } from './ui/download'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
 import { ResetDemoConfirm } from './components/ResetDemoConfirm'
@@ -66,7 +71,11 @@ type Props = {
  * the goals always agree.
  */
 function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo, createStore = browserSpaceStore }: Props) {
-  const space = useSpace(storage, getToday, createDemo, undefined, createStore)
+  // Forms with changes that are not saved: another tab's changes never replace them, and they are never dropped without asking.
+  const unsaved = useUnsavedRegistry()
+  const space = useSpace(storage, getToday, createDemo, undefined, createStore, unsaved.hasUnsaved)
+  // Asking before what was typed is dropped: to open the latest version (or try again), or to close a space erased in another tab.
+  const [confirming, setConfirming] = useState<'reload' | 'discard-erased' | null>(null)
   const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
@@ -129,6 +138,22 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (billsView.added && screen !== 'bills' && screen !== 'bill') setBillsView({ ...billsView, added: null })
   }
   const open = space.open
+  // Another tab erased the space: nothing chosen in it stays (the screen falls back to Welcome by itself).
+  const [seenNotice, setSeenNotice] = useState(space.notice)
+  if (seenNotice !== space.notice) {
+    setSeenNotice(space.notice)
+    if (space.notice === 'erased') { setGoalId(null); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); setBillDay(null); setChosenMonth(null); setConfirming(null) }
+  }
+  // While nothing can be saved, a form closed with changes keeps them in the list, to copy before discarding.
+  const savingBlocked = open?.kind === 'own' && space.problem !== null
+  useEffect(() => { unsaved.setKeepClosed(savingBlocked) }, [unsaved, savingBlocked])
+  // A short notice that this tab now shows what another tab saved.
+  const { notice, dismissNotice } = space
+  useEffect(() => {
+    if (notice !== 'updated') return
+    const timer = setTimeout(dismissNotice, 6000)
+    return () => clearTimeout(timer)
+  }, [notice, dismissNotice])
 
   // Appearance: the open space's choice, or the device's setting before a space is open.
   const theme = open?.data.preferences.theme ?? 'system'
@@ -178,6 +203,41 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
   }, [screen, space.opening])
+
+  // After the space is read again (changes from another tab), the screens start again from the new records.
+  // The screen, the month and the views stay; the focus and the scroll position are put back where they were, when that place is still there.
+  const lastFocus = useRef<number[] | null>(null)
+  const lastScroll = useRef(0)
+  useEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+    const onFocus = (event: FocusEvent) => {
+      const path: number[] = []
+      for (let node = event.target as Element | null; node && node !== main; node = node.parentElement) {
+        if (!node.parentElement) return
+        path.unshift([...node.parentElement.children].indexOf(node))
+      }
+      lastFocus.current = path
+    }
+    const onScroll = () => { lastScroll.current = window.scrollY }
+    main.addEventListener('focusin', onFocus)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { main.removeEventListener('focusin', onFocus); window.removeEventListener('scroll', onScroll) }
+  }, [])
+  const shownGeneration = useRef(space.generation)
+  useLayoutEffect(() => {
+    if (shownGeneration.current === space.generation) return
+    const first = shownGeneration.current === 0
+    shownGeneration.current = space.generation
+    if (first || notice !== 'updated') return
+    const path = lastFocus.current
+    if (path && document.activeElement === document.body) {
+      let node: Element | undefined = mainRef.current ?? undefined
+      for (const index of path) node = node?.children[index]
+      if (node instanceof HTMLElement) node.focus({ preventScroll: true })
+    }
+    window.scrollTo?.(0, lastScroll.current)
+  }, [space.generation, notice])
 
   const homeLayout = !open ? DEFAULT_LAYOUT
     : open.kind === 'demo' ? demoLayout
@@ -249,6 +309,29 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     replace('home')
   }
   const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); historyScroll.current = null; billsReturn.current = null; setBillDay(null) }
+  /** Open Latest Version and Try Again read the space again: what was typed here and not saved is dropped only after a yes. */
+  const requestReload = () => {
+    if (unsaved.hasUnsaved()) { setConfirming('reload'); return }
+    void space.reload()
+  }
+  const discardTyped = () => { unsaved.discardAll(); setNewGoal(EMPTY_NEW_GOAL); setConfirming(null) }
+  const reloadDiscarding = () => { discardTyped(); void space.reload() }
+  /** After another tab erased the space: the user discarded what was typed here, and the space closes. */
+  const closeErased = () => {
+    discardTyped()
+    resetGoals(); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null)
+    space.discardErased()
+    replace('welcome')
+  }
+  const downloadCopies = async (): Promise<boolean> => {
+    try {
+      const createdAt = new Date().toISOString()
+      downloadFile(recoveryFile(await space.exportCopies(), createdAt), recoveryFileName(createdAt))
+      return true
+    } catch {
+      return false
+    }
+  }
   const exitDemo = () => { space.closeDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false); replace('welcome') }
   // Reset Demo puts the whole example back: the records, the Home layout, Data's closed blocks, History's first view, and everything planned or chosen on top of them.
   const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false) }
@@ -357,27 +440,53 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         </div>
       ) : (
         <div className="save-warning" role="alert">
-          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup in Data.</p>
-          <button type="button" className="button-small" onClick={() => void space.reload()}>Try Again</button>
+          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup or Download Both Copies in Data.</p>
+          <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+          {confirming === 'reload'
+            ? <ConfirmDiscard question="Trying again closes the forms you changed here. What you typed cannot be brought back." confirm="Discard and Try Again" onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={requestReload}>Try Again</button>}
         </div>
       ))}
       {open?.kind === 'own' && space.problem?.kind === 'conflict' && (
         <div className="save-warning" role="alert">
-          <p>This space changed in another tab, so nothing more is saved here until it is opened again. Anything you typed stays on screen: copy what you need first.</p>
-          <button type="button" className="button-small" onClick={() => void space.reload()}>Open Latest Version</button>
+          <p>This space changed in another tab, so nothing more is saved here until it is opened again. {unsaved.forms.length > 0 ? 'Your changes here are not saved yet. Copy what you need, then Open Latest Version.' : 'Anything you typed stays on screen: copy what you need first.'}</p>
+          <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+          {confirming === 'reload'
+            ? <ConfirmDiscard question="Opening the latest version closes the forms you changed here. What you typed cannot be brought back." confirm="Discard and Open Latest Version" onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={requestReload}>Open Latest Version</button>}
         </div>
       )}
+      {open?.kind === 'own' && space.problem?.kind === 'erased-elsewhere' && (
+        <div className="save-warning" role="alert">
+          <p><b>This space was erased in another tab.</b> Nothing here can be saved. Copy what you typed, then discard it to close the space.</p>
+          <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+          {confirming === 'discard-erased'
+            ? <ConfirmDiscard question="Discard what you typed and close this space? It cannot be brought back." confirm="Discard and Close" onConfirm={closeErased} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={() => setConfirming('discard-erased')}>Discard and Close…</button>}
+        </div>
+      )}
+      {notice === 'older-copy-changed' && (
+        <div className="save-warning" role="alert">
+          <p>An older version of the app is open in another tab. Close it so nothing is lost: what it saves is not part of this space.</p>
+          <button type="button" className="button-small" onClick={dismissNotice}>OK</button>
+        </div>
+      )}
+      {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
       {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} />}
       <WriteStatusContext.Provider value={writeStatus}>
+      <UnsavedChangesContext.Provider value={unsaved.registry}>
       <main className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
           <Opening onRetry={() => void space.reload()} />
         </div>}
-        {!space.opening && shows('welcome') && <div className="screen" data-screen="welcome">
-          <Welcome problem={space.problem} busy={space.saving} onCreateAccount={() => go('sign-up')} onLogIn={() => go('log-in')}
+        {!space.opening && shows('welcome') && (space.problem?.kind === 'unreadable' ? <div className="screen" data-screen="recovery">
+          <Recovery problem={space.problem} busy={space.saving} onDownload={downloadCopies} onUseOlderCopy={space.restoreOlderCopy}
+            onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} onExplore={() => { space.openDemo(); go('home') }} />
+        </div> : <div className="screen" data-screen="welcome">
+          <Welcome problem={space.problem} busy={space.saving} onCreateAccount={() => go('sign-up')} onLogIn={() => go('log-in')} erasedElsewhere={notice === 'erased'}
             onExplore={() => { space.openDemo(); go('home') }} onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} />
-        </div>}
+        </div>)}
         {(shows('sign-up') || shows('log-in')) && <div className="screen" data-screen={screen}>
           <AuthPreview key={screen} mode={screen === 'sign-up' ? 'sign-up' : 'log-in'} onBack={back} onContinue={() => go('setup')} />
         </div>}
@@ -385,7 +494,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           <WelcomeSetup draft={setupDraft} onChange={setSetupDraft} onBack={back} onFinish={() => void finishSetup()} saving={space.saving} outcome={setupOutcome} />
         </div>}
 
-        {open && <>
+        {open && <Fragment key={space.generation}>
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
               <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} today={space.today}
@@ -415,6 +524,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onCreated={billCreated} onDeleted={() => { setBillId(null); back() }} />
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
+            {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
             <GoalsScreen data={open.data} today={space.today} onBack={back} onNew={() => go('new-goal')} onOpenGoal={openGoal} />
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
@@ -459,15 +569,16 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('data') && <div className="screen" data-screen="data">
             <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today} owner={newGoalOwner} newId={newId}
               view={dataView} onViewChange={changeDataView}
-              onChange={space.update} onReplace={space.replaceData} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
+              onChange={space.update} onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
               onAddGoal={() => go('new-goal')} onReviewEmergency={() => go('emergency')} onResetDemo={resetDemo} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onResetDemo={resetDemo} onErase={erase}
               onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} canErase={space.problem === null} />
           </div>}
-        </>}
+        </Fragment>}
       </main>
+      </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'

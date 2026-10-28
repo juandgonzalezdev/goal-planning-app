@@ -74,6 +74,29 @@ export type EraseResult =
  */
 export type StoreChange = { kind: 'saved'; spaceId: string; revision: number } | { kind: 'erased' } | { kind: 'older-copy-changed' } | { kind: 'closed' }
 
+/**
+ * Every copy this device keeps, exactly as it is stored, for "Download Both Copies": the current
+ * space, the older copy and whatever was set aside. Nothing is checked, fixed or changed, so a copy
+ * that cannot be opened is in it too. It is not a backup: Restore Backup does not take it.
+ */
+export interface RecoveryCopies {
+  /** The browser's database, or null when it cannot be read (`databaseError` says why). */
+  database: {
+    currentSpace: unknown
+    /** `migrated` or `erased` when the older copy was dealt with. */
+    legacy: unknown
+    lastRevision: unknown
+    spaces: { id: string; stored: unknown }[]
+    quarantine: { key: string; stored: unknown }[]
+  } | null
+  databaseError?: string
+  /** The older copy in localStorage, as text, untouched (null: none). */
+  olderCopy: string | null
+  olderCopyError?: string
+  /** This device has the mark that the own space was erased. */
+  erasedMark: boolean
+}
+
 export interface SpaceStore {
   load(): Promise<LoadResult>
   /**
@@ -91,6 +114,8 @@ export interface SpaceStore {
    * over) and the older copy becomes the space.
    */
   useOlderCopy(): Promise<SaveResult>
+  /** Reads every copy as it is stored, in a read-only transaction: nothing is ever changed. */
+  exportCopies(): Promise<RecoveryCopies>
   /** Calls `onChange` when another tab changes the space. Returns a function that stops it. */
   watch(onChange: (change: StoreChange) => void): () => void
 }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { LoadResult, SpaceStore, StoredSpace } from '../data/spaceStore'
+import type { LoadResult, SpaceStore, StoreChange, StoredSpace } from '../data/spaceStore'
 import { createSpaceData } from '../domain/finance/space'
 import type { FinanceData } from '../domain/finance/types'
 import { memoryStorage } from '../test/memoryStorage'
@@ -26,6 +26,7 @@ function storeThatLoads(result: LoadResult | (() => Promise<LoadResult>)) {
     save: vi.fn(async () => ({ status: 'failed' as const })),
     erase: vi.fn(async () => ({ status: 'failed' as const })),
     useOlderCopy: vi.fn(async () => ({ status: 'failed' as const })),
+    exportCopies: async () => ({ database: null, olderCopy: null, erasedMark: false }),
     watch: () => () => {},
   }
   return store
@@ -305,5 +306,93 @@ describe('answers that come after leaving', () => {
     // An edit started on the erased space (revision 1) never lands on the new one.
     expect(await act(() => result.current.update(renamed('From Old Form'), 1))).toBe('outdated')
     expect((await storedData())?.space.name).toBe('New Space')
+  })
+})
+
+describe('changes from another tab (05)', () => {
+  /** The real store with the notices handed over by the test, and every call holdable. */
+  function watchedStore() {
+    const held = heldStore()
+    let listener: ((change: StoreChange) => void) | null = null
+    const store: SpaceStore = { ...held.store, watch: onChange => { listener = onChange; return () => { listener = null } } }
+    return { ...held, store, notify: (change: StoreChange) => act(() => { listener?.(change) }) }
+  }
+  async function otherTabRenames(name: string) {
+    const other = browserSpaceStore(memoryStorage())
+    const loaded = await other.load()
+    if (loaded.status !== 'loaded') throw new Error('nothing saved')
+    const saved = await other.save(renamed(name)(loaded.space.data), loaded.space.revision)
+    return { kind: 'saved' as const, spaceId: loaded.space.data.space.id, revision: saved.status === 'saved' ? saved.revision : 0 }
+  }
+  const tick = () => act(async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 0)) })
+
+  it('shows what another tab saved when nothing is waiting here, at its revision', async () => {
+    const tab = watchedStore()
+    await tab.store.create(robin())
+    const { result } = await openWith(tab.store)
+    tab.notify(await otherTabRenames('Other'))
+    await waitFor(() => expect(result.current.open?.data.space.name).toBe('Other'))
+    expect(result.current).toMatchObject({ revision: 2, notice: 'updated', problem: null })
+  })
+
+  it('reads it again, but shows nothing, when a form was changed while it was being read', async () => {
+    const tab = watchedStore()
+    await tab.store.create(robin())
+    let editing = false
+    const hook = renderHook(() => useSpace(memoryStorage(), () => '2026-10-25', undefined, undefined, () => tab.store, () => editing))
+    await waitFor(() => expect(hook.result.current.opening).toBe(false))
+    const notice = await otherTabRenames('Other')
+    tab.hold()
+    tab.notify(notice)
+    await tick()
+    editing = true
+    await tab.release()
+    await tick()
+    expect(hook.result.current.open?.data.space.name).toBe('Robin')
+    expect(hook.result.current.problem).toEqual({ kind: 'conflict' })
+  })
+
+  it('shows nothing it read for a session that ended meanwhile (the demo was opened)', async () => {
+    const tab = watchedStore()
+    await tab.store.create(robin())
+    const { result } = await openWith(tab.store)
+    const notice = await otherTabRenames('Other')
+    tab.hold()
+    tab.notify(notice)
+    await tick()
+    act(() => result.current.openDemo())
+    await tab.release()
+    await tick()
+    expect(result.current.open?.kind).toBe('demo')
+    expect(result.current.notice).toBeNull()
+  })
+
+  it('reads again when the space on screen changed while it was being read, and never goes back to an older revision', async () => {
+    const tab = watchedStore()
+    await tab.store.create(robin())
+    const { result } = await openWith(tab.store)
+    // A notice about revision 1 (old), then this tab saves revision 2 itself: nothing older is ever shown.
+    tab.notify({ kind: 'saved', spaceId: result.current.open!.data.space.id, revision: 1 })
+    expect(await act(() => result.current.update(renamed('Mine')))).toBe('saved')
+    await tick()
+    expect(result.current.open).toMatchObject({ revision: 2, data: { space: { name: 'Mine' } } })
+    expect(result.current.notice).toBeNull()
+  })
+
+  it('with unsaved changes, an erase in another tab blocks every save and keeps the space on screen until discarded', async () => {
+    const tab = watchedStore()
+    await tab.store.create(robin())
+    const hook = renderHook(() => useSpace(memoryStorage(), () => '2026-10-25', undefined, undefined, () => tab.store, () => true))
+    await waitFor(() => expect(hook.result.current.opening).toBe(false))
+    await browserSpaceStore(memoryStorage()).erase()
+    tab.notify({ kind: 'erased' })
+    await waitFor(() => expect(hook.result.current.problem).toEqual({ kind: 'erased-elsewhere' }))
+    expect(hook.result.current.open?.data.space.name).toBe('Robin')
+    expect(hook.result.current.canWrite).toBe(false)
+    expect(await act(() => hook.result.current.update(renamed('Changed')))).toBe('conflict')
+    expect(await act(() => hook.result.current.startOwnSpace(robin()))).toBe('conflict')
+    expect(await storedSpace()).toBeNull()
+    act(() => hook.result.current.discardErased())
+    expect(hook.result.current).toMatchObject({ open: null, problem: null, notice: 'erased' })
   })
 })

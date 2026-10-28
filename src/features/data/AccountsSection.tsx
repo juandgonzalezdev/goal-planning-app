@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { recordBalance } from '../../domain/finance/debts'
@@ -34,6 +35,9 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
   const [formBase, setFormBase] = useState(revision)
   const [balanceBase, setBalanceBase] = useState(revision)
   const [sending, setSending] = useState<'form' | 'balance' | null>(null)
+  useUnsavedChanges(form?.id ? 'Edit account' : 'Add account', form ? { 'Name': form.name, 'Kind': form.kind, 'Balance': form.balance, 'As of': form.asOf } : null)
+  useUnsavedChanges(`Update balance: ${data.moneyAccounts.find(account => account.id === balanceFor?.id)?.name ?? ''}`,
+    balanceFor ? { 'Balance': balanceFor.amount, 'As of': balanceFor.asOf } : null)
   /** Saves one change and says what happened. */
   const save = async (done: string, change: (data: FinanceData) => FinanceData, base?: number, what: typeof sending = null): Promise<SaveOutcome> => {
     setSending(what)

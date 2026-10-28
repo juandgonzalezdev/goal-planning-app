@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
 import { addGoalMovement, deleteGoal, goalMovementsOf, goalProgress, updateGoal, type MovementError, type MovementKind } from '../../domain/finance/goals'
@@ -72,6 +73,13 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
   const [editBase, setEditBase] = useState(revision)
   const [sending, setSending] = useState<'movement' | 'edit' | 'delete' | null>(null)
   const [refusal, setRefusal] = useState<{ what: 'edit' | 'delete'; text: string } | null>(null)
+  // A movement counts once something is typed in it; the goal's edit form, once it differs from the goal.
+  const typedMovement = movement.amount.trim() !== '' || movement.note.trim() !== ''
+  useUnsavedChanges(`Goal movement: ${goal.name}`, typedMovement ? {
+    'Kind': movement.kind, 'Amount': movement.amount, 'Date': movement.date, 'Note': movement.note,
+    'Account': savingsAccounts.find(account => account.id === accountId)?.name,
+  } : null, {})
+  useUnsavedChanges(`Edit goal: ${goal.name}`, editing ? { 'Name': editing.name, 'Target': editing.target, 'Has a date': editing.dated, 'Date': editing.dated ? editing.deadline : '' } : null)
   /** Saves one change; what was typed stays when it is not kept. */
   const send = async (what: NonNullable<typeof sending>, run: () => Promise<SaveOutcome>) => {
     setSending(what)

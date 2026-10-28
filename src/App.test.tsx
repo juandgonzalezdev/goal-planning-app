@@ -196,14 +196,16 @@ describe('Returning to the app', () => {
     expect(screen.getByText('Robin · Individual')).toBeTruthy()
   })
 
-  it('says so when saved information cannot be opened, and blocks creating a new space until it is erased', async () => {
+  it('says so when saved information cannot be opened, and offers no new space until it is erased, after a yes', async () => {
     const storage = memoryStorage()
     storage.setItem(STORAGE_KEY, '{ broken')
     await start(storage)
     expect(screen.getByRole('alert').textContent).toContain('could not be opened')
-    expect((button(/Create Account/) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: /Create Account/ })).toBeNull()
     expect(storage.getItem(STORAGE_KEY)).toBe('{ broken')
-    await fire.click(button('Erase Saved Information'))
+    await fire.click(button('Erase Saved Information…'))
+    expect(storage.getItem(STORAGE_KEY)).toBe('{ broken')
+    await fire.click(button('Erase Everything'))
     expect((button(/Create Account/) as HTMLButtonElement).disabled).toBe(false)
     expect(storage.getItem(STORAGE_KEY)).toBeNull()
   })

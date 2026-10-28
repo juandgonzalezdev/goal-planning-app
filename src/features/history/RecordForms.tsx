@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useEditBase, useWriteBlocked } from '../../app/writeStatus'
+import { useUnsavedChanges, type TypedFields } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -44,8 +45,9 @@ type FormProps<T> = {
 }
 
 /** A record form's save: its errors, why it was not saved, and "Saving…". */
-function useRecordSave(onSave: FormProps<unknown>['onSave']) {
+function useRecordSave(onSave: FormProps<unknown>['onSave'], title: string, fields: TypedFields) {
   const base = useEditBase()
+  useUnsavedChanges(title, fields)
   const blocked = useWriteBlocked()
   const [errors, setErrors] = useState<RecordError[]>([])
   const [refusal, setRefusal] = useState('')
@@ -72,7 +74,10 @@ export function ExpenseForm({ data, today, record, newId, onSave, onCancel }: Fo
   const [description, setDescription] = useState(record?.description ?? '')
   const [accountId, setAccountId] = useState<Id>(record?.accountId ?? paying[0]?.id ?? '')
   const [nature, setNature] = useState<SpendingNature>(record?.nature ?? 'regular')
-  const saving = useRecordSave(onSave)
+  const saving = useRecordSave(onSave, record ? 'Change expense' : 'Add expense', {
+    'Date': date, 'Amount': amount, 'Category': category, 'Description': description,
+    'Paid with': paying.find(account => account.id === accountId)?.name, 'Kind': nature,
+  })
   // The new record's id, kept so a second try after a refusal adds the same record, not a second one.
   const [newRecordId] = useState(() => record?.id ?? newId())
   const prefix = `expense-${record?.id ?? 'new'}`
@@ -121,7 +126,10 @@ export function TransferForm({ data, today, record, newId, onSave, onCancel }: F
   const [fromAccountId, setFrom] = useState<Id>(record?.fromAccountId ?? accounts[0]?.id ?? '')
   const [toAccountId, setTo] = useState<Id>(record?.toAccountId ?? accounts[1]?.id ?? accounts[0]?.id ?? '')
   const [note, setNote] = useState(record?.note ?? '')
-  const saving = useRecordSave(onSave)
+  const saving = useRecordSave(onSave, record ? 'Change transfer' : 'Add transfer', {
+    'Date': date, 'Amount': amount, 'From': accounts.find(account => account.id === fromAccountId)?.name,
+    'To': accounts.find(account => account.id === toAccountId)?.name, 'Note': note,
+  })
   const [newRecordId] = useState(() => record?.id ?? newId())
   const prefix = `transfer-${record?.id ?? 'new'}`
 
@@ -155,7 +163,7 @@ export function TransferForm({ data, today, record, newId, onSave, onCancel }: F
 export function IncomeForm({ data, today, record, onSave, onCancel }: Omit<FormProps<IncomeEntry>, 'record' | 'newId'> & { record: IncomeEntry }) {
   const [date, setDate] = useState(record.receivedOn)
   const [amount, setAmount] = useState(amountText(record.amount))
-  const saving = useRecordSave(onSave)
+  const saving = useRecordSave(onSave, 'Change income', { 'Date': date, 'Amount': amount })
   const prefix = `income-${record.id}`
   const save = () => {
     const minor = parseMoneyInput(amount)

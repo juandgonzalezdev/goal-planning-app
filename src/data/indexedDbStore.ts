@@ -4,7 +4,7 @@ import {
   ERASED_KEY, isErasedMarked, makeEnvelope, OLDER_COPY_KEY, readData, readEnvelope, readOlderCopy, sameRecords,
   type Reading,
 } from './savedCopies'
-import type { EraseResult, LoadResult, SaveResult, SpaceStore, StoreChange, StoredSpace, UnreadableReason } from './spaceStore'
+import type { EraseResult, LoadResult, RecoveryCopies, SaveResult, SpaceStore, StoreChange, StoredSpace, UnreadableReason } from './spaceStore'
 
 /**
  * The own space in the browser's database (IndexedDB).
@@ -386,6 +386,37 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     return result
   }
 
+  async function exportCopies(): Promise<RecoveryCopies> {
+    let olderCopy: string | null = null
+    let olderCopyError: string | undefined
+    try {
+      olderCopy = storage ? storage.getItem(OLDER_COPY_KEY) : null
+    } catch {
+      olderCopyError = 'This browser does not allow reading the older copy.'
+    }
+    const copies: RecoveryCopies = { database: null, olderCopy, ...(olderCopyError && { olderCopyError }), erasedMark: isErasedMarked(storage) }
+    const db = await database()
+    if (!db) return { ...copies, databaseError: 'This browser cannot open its database here.' }
+    try {
+      // One read-only transaction: every store as it is at one moment, and nothing can be written.
+      const stored = await transact<NonNullable<RecoveryCopies['database']>>(db, [SPACES, META, QUARANTINE], 'readonly', (tx, end) => {
+        const meta = tx.objectStore(META)
+        const spaces = tx.objectStore(SPACES)
+        const quarantine = tx.objectStore(QUARANTINE)
+        when(meta.get(CURRENT), currentSpace => when(meta.get(LEGACY), legacy => when(meta.get(LAST_REVISION), lastRevision =>
+          when(spaces.getAllKeys(), spaceKeys => when(spaces.getAll(), spaceValues =>
+            when(quarantine.getAllKeys(), quarantineKeys => when(quarantine.getAll(), quarantineValues => end.done({
+              currentSpace, legacy, lastRevision,
+              spaces: spaceKeys.map((key, index) => ({ id: String(key), stored: spaceValues[index] })),
+              quarantine: quarantineKeys.map((key, index) => ({ key: String(key), stored: quarantineValues[index] })),
+            }))))))))
+      })
+      return { ...copies, database: stored }
+    } catch {
+      return { ...copies, databaseError: 'The database could not be read.' }
+    }
+  }
+
   function watch(onChange: (change: StoreChange) => void) {
     let listener: BroadcastChannel | null = null
     try {
@@ -417,5 +448,5 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     opening = null
   }
 
-  return { load, create, save, erase, useOlderCopy, watch, close }
+  return { load, create, save, erase, useOlderCopy, exportCopies, watch, close }
 }

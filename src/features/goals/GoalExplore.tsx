@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { isCalendarDate } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
 import { tryDate, tryMonthlyAmount } from '../../domain/goalExplore'
@@ -33,6 +34,8 @@ export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: P
   // The revision the date was confirmed on.
   const [base, setBase] = useState(revision)
   const [sending, setSending] = useState(false)
+  // Only a date can be saved here (Use This Date); the monthly amount is a calculation.
+  useUnsavedChanges(`Explore: ${goal.name}`, date !== '' ? { 'Date': date } : null, {})
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const from = referenceDay(today, isDemo)
   if (!progress.hasTarget || progress.remaining <= 0) return null

@@ -4,7 +4,8 @@ import { MEMBER_NAME_MAX_LENGTH, validateSetup, type SetupError } from '../../do
 import type { SpaceMode, Theme } from '../../domain/finance/types'
 import { CURRENCIES, type CurrencyCode } from '../../domain/money'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
-import { setupFromDraft, type SetupDraft } from './setupDraft'
+import { EMPTY_SETUP, setupFromDraft, type SetupDraft } from './setupDraft'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 
 const STEPS = ['Your Profile', 'Your Plan', 'Your Preferences', 'Privacy & Terms'] as const
 
@@ -34,8 +35,11 @@ type Props = {
 }
 
 /** Welcome Setup: four steps that create the user's own, empty space on this device. */
+const typedSetup = (draft: SetupDraft) => ({ 'Your name': draft.name, 'Second name': draft.partner, 'Space': draft.mode, 'Currency': draft.currency, 'Appearance': draft.theme })
+
 export function WelcomeSetup({ draft, onChange, onBack, onFinish, saving = false, outcome = null }: Props) {
   const [showErrors, setShowErrors] = useState(false)
+  useUnsavedChanges('Welcome Setup', typedSetup(draft), typedSetup(EMPTY_SETUP))
   const set = (change: Partial<SetupDraft>) => onChange({ ...draft, ...change })
   const errors = validateSetup(setupFromDraft(draft))
   const stepErrors = errors.filter(error => (draft.step === 0 ? error.startsWith('name') : draft.step === 1 && !error.startsWith('name')))

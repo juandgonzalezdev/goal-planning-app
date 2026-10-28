@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { useEditBase, useSaver } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 import { Icon } from '../../components/Icon'
@@ -60,6 +61,10 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
   const base = useEditBase()
   const saver = useSaver()
   const [sendingWith, setSendingWith] = useState<boolean | null>(null)
+  useUnsavedChanges('Emergency Fund', done ? null : {
+    ...Object.fromEntries(estimate.lines.map(line => [line.label, `${lines[line.key]?.text ?? ''}${lines[line.key]?.essential ? '' : ' (not essential)'}`])),
+    'Months': months, 'Set aside now': setAside,
+  })
   /** The fund shows as saved only once it is kept; otherwise the draft stays, with the reason. */
   const send = async (next: FinanceData, id: Id, withTarget: boolean) => {
     setSendingWith(withTarget)

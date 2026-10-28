@@ -90,6 +90,7 @@ describe('read-only', () => {
     save: vi.fn(async () => ({ status: 'failed' as const })),
     erase: vi.fn(async () => ({ status: 'failed' as const })),
     useOlderCopy: vi.fn(async () => ({ status: 'failed' as const })),
+    exportCopies: async () => ({ database: null, olderCopy: null, erasedMark: false }),
     watch: () => () => {},
   })
 
@@ -212,8 +213,10 @@ describe('saving', () => {
 })
 
 describe('another tab', () => {
-  it('stops saving after a change in another tab, keeps the screen, and opens the latest version on request', async () => {
-    await start()
+  it('stops saving after a change in another tab, keeps the screen, and opens the latest version on request, also when no notice came', async () => {
+    // The notice from the other tab is lost (as in a tab the browser paused): the revision check alone keeps the change from being written over.
+    const inner = browserSpaceStore(memoryStorage())
+    await start({ ...inner, watch: () => () => {} })
     await setUpTo()
     await fire.click(button('Create My Space'))
     const other = browserSpaceStore(memoryStorage())

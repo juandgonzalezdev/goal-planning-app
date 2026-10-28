@@ -107,6 +107,7 @@ export function heldStore(inner: SpaceStore = browserSpaceStore(memoryStorage())
     save: (data, base) => later('save', () => inner.save(data, base)),
     erase: () => later('erase', () => inner.erase()),
     useOlderCopy: () => later('useOlderCopy', () => inner.useOlderCopy()),
+    exportCopies: () => inner.exportCopies(),
     watch: onChange => inner.watch(onChange),
   }
   return {

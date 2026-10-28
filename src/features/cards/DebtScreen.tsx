@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { MonthSwitch } from '../../components/MonthSwitch'
@@ -47,7 +48,7 @@ export function DebtScreen(props: Props) {
     return (
       <div className="tab-screen">
         <button type="button" className="back-link" onClick={props.onBack}><Icon name="arrowLeft" size={18} /> Back</button>
-        <div className="empty-block"><p>This card or loan is no longer here.</p></div>
+        <div className="empty-block"><p>This card or loan is no longer here. It may have been deleted in another tab.</p></div>
       </div>
     )
   }
@@ -71,6 +72,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
   // The revision the balance form was opened on, and which change is being saved.
   const [balanceBase, setBalanceBase] = useState(revision)
   const [sending, setSending] = useState<'balance' | 'delete' | null>(null)
+  useUnsavedChanges(`Update balance: ${debt.name}`, balanceForm ? { 'Balance': balanceForm.amount, 'As of': balanceForm.asOf } : null)
   const save = async (what: NonNullable<typeof sending>, done: string, change: (data: FinanceData) => FinanceData, base?: number): Promise<SaveOutcome> => {
     setSending(what)
     const outcome = await onChange(change, base).finally(() => setSending(null))
@@ -244,6 +246,11 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
   const linked = debt ? debtPayment(data, debt, draft.paymentFrom).bill : null
   const set = (patch: Partial<DebtDraft>) => setDraft({ ...draft, ...patch })
   const cancel = () => (onDone ? onDone(null) : onBack())
+  useUnsavedChanges(isNew ? 'Add card or loan' : `Edit: ${debt?.name ?? ''}`, {
+    'Kind': draft.kind, 'Name': draft.name, 'Yearly interest (%)': draft.interest, 'Due day': draft.dueDay, 'Closing day': draft.closingDay,
+    'Minimum payment': draft.minimumPayment, 'Start month': draft.startMonth, 'Final payment month': draft.finalPaymentMonth,
+    'Monthly payment': draft.payment, 'Payment from': draft.paymentFrom,
+  })
   const base = useEditBase()
   const saver = useSaver()
 

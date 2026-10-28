@@ -13,8 +13,9 @@ type Props = {
   onLogIn: () => void
   onExplore: () => void
   /**
-   * Why the own space is not open, if something is saved: it could not be
-   * opened, this browser cannot save, or an erase left a copy behind.
+   * Why the own space is not open, if something is saved: this browser
+   * cannot save, or an erase left a copy behind. (Saved information that
+   * cannot be opened has its own screen, Recovery.)
    * Starting a new space is blocked while saved data could be lost or
    * could not be saved.
    */
@@ -23,6 +24,8 @@ type Props = {
   busy: boolean
   onErase: () => Promise<EraseOutcome>
   onRetry: () => void
+  /** The space was just erased in another tab. */
+  erasedElsewhere?: boolean
 }
 
 const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
@@ -31,7 +34,7 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
   'busy': 'Still saving. Try again in a moment.',
 }
 
-export function Welcome({ onCreateAccount, onLogIn, onExplore, problem, busy, onErase, onRetry }: Props) {
+export function Welcome({ onCreateAccount, onLogIn, onExplore, problem, busy, onErase, onRetry, erasedElsewhere = false }: Props) {
   const [eraseText, setEraseText] = useState('')
   const erase = async () => {
     setEraseText('')
@@ -55,20 +58,9 @@ export function Welcome({ onCreateAccount, onLogIn, onExplore, problem, busy, on
           </li>
         ))}
       </ul>
-      {problem?.kind === 'unreadable' && (
-        <div className="callout callout-warning" role="alert">
-          {problem.reason === 'newer-version' ? <>
-            <p>Your space was saved by a newer version of the app, so this version cannot open it. It has not been changed.</p>
-            <p>Reload the page, or open the app where you used it last.</p>
-            <button type="button" className="button-secondary" onClick={onRetry}>Try Again</button>
-          </> : <>
-            <p>Saved information on this device could not be opened. It has not been changed.</p>
-            <p>To start a new space here, erase it first.</p>
-            <div className="inline-actions">
-              <button type="button" className="button-secondary" onClick={onRetry}>Try Again</button>
-              <button type="button" className="button-secondary" aria-disabled={busy || undefined} onClick={() => void erase()}>Erase Saved Information</button>
-            </div>
-          </>}
+      {erasedElsewhere && (
+        <div className="callout" role="status">
+          <p>Your space was erased in another tab. Nothing is saved on this device now.</p>
         </div>
       )}
       {problem?.kind === 'read-only' && (problem.takenOver ? (

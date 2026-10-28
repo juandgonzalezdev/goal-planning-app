@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { amountText } from '../../ui/labels'
 import { Icon } from '../../components/Icon'
@@ -58,6 +59,8 @@ export function BillScreen(props: Props) {
   const [sending, setSending] = useState<'month' | 'usual' | 'paid' | 'delete' | null>(null)
   const [monthBase, setMonthBase] = useState(revision)
   const [usualBase, setUsualBase] = useState(revision)
+  useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText })
+  useUnsavedChanges(`New usual amount: ${bill?.name ?? ''}`, usual ? { 'Amount': usual.amount, 'From month': usual.from } : null)
   /** Saves one change and says what happened; an editor closes only when the change is kept. */
   const save = async (what: NonNullable<typeof sending>, done: string, change: (data: FinanceData) => FinanceData, base?: number): Promise<SaveOutcome> => {
     setSending(what)
@@ -70,7 +73,7 @@ export function BillScreen(props: Props) {
     return (
       <div className="tab-screen">
         <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
-        <div className="empty-block"><p>This bill is no longer here.</p></div>
+        <div className="empty-block"><p>This bill is no longer here. It may have been deleted in another tab.</p></div>
       </div>
     )
   }
