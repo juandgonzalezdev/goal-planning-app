@@ -109,6 +109,8 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   const floor = useRef(0)
   /** A newer version of the app took the database over: nothing can be read or saved here any more. */
   const takenOver = useRef(false)
+  /** The own space open when the demo was opened from Settings: on exit, Welcome says why when it is gone. */
+  const ownBeforeDemo = useRef<string | null>(null)
   /** The space is being opened (first opening, Try Again, Open Latest Version): checks for other tabs wait. */
   const openingRef = useRef(true)
   const hasUnsavedRef = useRef(hasUnsaved)
@@ -351,17 +353,31 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     return 'not-saved'
   }, [show, report, store, write])
 
-  const openDemo = useCallback(() => {
+  /**
+   * Opens the demo. Refused (`busy`) while a change is being saved or the own space is being opened:
+   * the demo never starts with an answer for the own space still to come, and that save is never cancelled.
+   */
+  const openDemo = useCallback((): 'opened' | 'busy' => {
+    if (writing.current || openingRef.current) return 'busy'
+    // The own space this demo was opened from, if any: when it is gone on exit, Welcome says why.
+    if (openRef.current?.kind === 'own') ownBeforeDemo.current = openRef.current.data.space.id
+    else if (openRef.current === null) ownBeforeDemo.current = null
     newSession()
     const fixture = createDemo()
     setDemoToday(fixture.today)
     show({ kind: 'demo', data: fixture.data })
+    return 'opened'
   }, [show, createDemo, newSession])
   /** Leaves the demo (dropping its changes) and opens whatever the device has now. */
   const closeDemo = useCallback(() => {
     if (openRef.current?.kind !== 'demo') return
+    const from = ownBeforeDemo.current
+    ownBeforeDemo.current = null
     show(null)
-    void reload()
+    void reload().then(() => {
+      // Erased in another tab while the demo was open.
+      if (from && openRef.current === null && problemRef.current === null) setNotice('erased')
+    })
   }, [show, reload])
   /** Puts the original example back. Only the demo changes: the own space is never read or touched. */
   const resetDemo = useCallback(() => { if (openRef.current?.kind === 'demo') openDemo() }, [openDemo])

@@ -25,6 +25,9 @@ export interface NewGoalState {
 
 export const EMPTY_NEW_GOAL: NewGoalState = { draft: EMPTY_GOAL_DRAFT, step: 'form' }
 
+/** The New Goal draft as the user sees it, for "Copy What I Typed". */
+export const typedGoalDraft = (draft: GoalDraft) => ({ 'Name': draft.name, 'Target': draft.target, 'Has a date': draft.dated, 'Date': draft.dated ? draft.deadline : '' })
+
 export const draftFromGoal = (goal: Goal): GoalDraft => ({
   name: goal.name,
   target: goal.target === null ? '' : (goal.target / 100).toFixed(2),

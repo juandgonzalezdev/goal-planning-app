@@ -226,62 +226,70 @@ describe('saving', () => {
 })
 
 describe('answers that come after leaving', () => {
-  it('ignores a slow create after switching to the demo, but the space is still created', async () => {
+  it('does not open the demo while a new space is being created, and the create still finishes', async () => {
     const held = heldStore()
     const { result } = await openWith(held.store)
     held.hold()
     let created: Promise<unknown> = Promise.resolve()
     act(() => { created = result.current.startOwnSpace(robin()) })
-    act(() => result.current.openDemo())
-    expect(result.current.saving).toBe(false)
-    expect(result.current.open?.kind).toBe('demo')
-    // The demo can change while the create is still on its way.
-    expect(await act(() => result.current.update(renamed('Demo Change')))).toBe('demo')
+    let answer: string = ''
+    act(() => { answer = result.current.openDemo() })
+    expect(answer).toBe('busy')
+    expect(result.current.open).toBeNull()
     await held.release()
-    // The answer is ignored: the demo stays open, unchanged by it.
-    expect(await created).toBe('stale')
-    expect(result.current.open).toMatchObject({ kind: 'demo', data: { space: { name: 'Demo Change' } } })
-    // Ignored is not cancelled: the browser did save the space.
-    expect((await storedData())?.space.name).toBe('Robin')
-    // Leaving the demo opens what the device has now.
-    act(() => result.current.closeDemo())
-    await waitFor(() => expect(result.current.opening).toBe(false))
+    expect(await created).toBe('saved')
     expect(result.current.open).toMatchObject({ kind: 'own', revision: 1, data: { space: { name: 'Robin' } } })
+    expect((await storedData())?.space.name).toBe('Robin')
   })
 
-  it('ignores a slow save after switching to the demo; leaving the demo shows it saved', async () => {
+  it('does not open the demo while a change is being saved; the save is not cancelled', async () => {
     const held = heldStore()
     await held.store.create(robin())
     const { result } = await openWith(held.store)
     held.hold()
     let saving: Promise<unknown> = Promise.resolve()
     act(() => { saving = result.current.update(renamed('Saved Late')) })
-    act(() => result.current.openDemo())
-    act(() => result.current.closeDemo())
-    // Opening waits for the write being saved, so it never shows the space without it.
-    expect(result.current.opening).toBe(true)
+    let answer: string = ''
+    act(() => { answer = result.current.openDemo() })
+    expect(answer).toBe('busy')
+    expect(result.current.open?.kind).toBe('own')
     await held.release()
-    expect(await saving).toBe('stale')
-    await waitFor(() => expect(result.current.opening).toBe(false))
+    expect(await saving).toBe('saved')
     expect(result.current.open).toMatchObject({ kind: 'own', revision: 2, data: { space: { name: 'Saved Late' } } })
+    // Once it is saved, the demo opens.
+    act(() => { answer = result.current.openDemo() })
+    expect(answer).toBe('opened')
+    expect(result.current.open?.kind).toBe('demo')
   })
 
-  it('ignores a slow erase after switching to the demo, and the space is still erased', async () => {
+  it('does not open the demo while the space is being erased, and the erase still finishes', async () => {
     const held = heldStore()
     await held.store.create(robin())
     const { result } = await openWith(held.store)
     held.hold()
     let erasing: Promise<unknown> = Promise.resolve()
     act(() => { erasing = result.current.eraseOwnSpace() })
-    act(() => result.current.openDemo())
+    let answer: string = ''
+    act(() => { answer = result.current.openDemo() })
+    expect(answer).toBe('busy')
     await held.release()
-    expect(await erasing).toBe('stale')
-    expect(result.current.open?.kind).toBe('demo')
-    expect(await storedData()).toBeNull()
-    act(() => result.current.closeDemo())
-    await waitFor(() => expect(result.current.opening).toBe(false))
+    expect(await erasing).toBe('erased')
     expect(result.current.open).toBeNull()
-    expect(result.current.problem).toBeNull()
+    expect(await storedData()).toBeNull()
+  })
+
+  it('does not open the demo while the own space is being opened again', async () => {
+    const held = heldStore()
+    await held.store.create(robin())
+    const { result } = await openWith(held.store)
+    held.hold()
+    act(() => { void result.current.reload() })
+    let answer: string = ''
+    act(() => { answer = result.current.openDemo() })
+    expect(answer).toBe('busy')
+    await held.release()
+    await waitFor(() => expect(result.current.opening).toBe(false))
+    expect(result.current.open?.kind).toBe('own')
   })
 
   it('ignores an answer that arrives after erasing, so it never brings the space back on screen', async () => {

@@ -347,7 +347,8 @@ describe('Home', () => {
     expect(within(goals).getByRole('heading', { name: 'Start with an emergency fund' })).toBeTruthy()
     await fire.click(within(goals).getByRole('button', { name: 'Maybe Later' }))
     expect(within(region('Our Goals')).queryByRole('heading', { name: 'Start with an emergency fund' })).toBeNull()
-    expect(storage.getItem('goal-planning-app.emergency-later')).toBe('yes')
+    // A demo preference: kept in memory only, never on the device.
+    expect(storage.getItem('goal-planning-app.emergency-later')).toBeNull()
   })
 
   it('starts the Year Summary closed, with the year so far', async () => {

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { EraseOutcome } from '../../app/useSpace'
-import { useWriteBlocked } from '../../app/writeStatus'
+import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { Icon } from '../../components/Icon'
 import { ResetDemoConfirm } from '../../components/ResetDemoConfirm'
 import { ownerColor } from '../../domain/finance/space'
@@ -20,6 +20,10 @@ type Props = {
   canErase?: boolean
   onExitDemo: () => void
   onResetDemo: () => void
+  /** The own space: Explore the Demo. The app asks first when something typed would be dropped. */
+  onExploreDemo?: () => void
+  /** That question (or the one before Exit Demo), shown here where it was asked. */
+  demoQuestion?: ReactNode
 }
 
 const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
@@ -28,11 +32,12 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
   'busy': 'Still saving the last change. Try again in a moment.',
 }
 
-export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true }: Props) {
+export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [eraseText, setEraseText] = useState('')
   const [themeText, setThemeText] = useState('')
   const blocked = useWriteBlocked()
+  const { saving } = useWriteStatus()
   const changeTheme = async (theme: Theme) => {
     setThemeText('')
     const outcome = await onThemeChange(theme)
@@ -85,6 +90,7 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
             <ResetDemoConfirm onReset={onResetDemo} showDone />
             <button type="button" className="button-secondary" onClick={onExitDemo}>Exit Demo</button>
           </div>
+          {demoQuestion && <div className="callout callout-warning" role="alert">{demoQuestion}</div>}
         </> : <>
           <PrivacyFacts />
           {!confirming && <button type="button" className="button-danger" disabled={!canErase} onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}
@@ -100,6 +106,17 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
           {eraseText && <p className="field-error" role="alert">{eraseText}</p>}
         </>}
       </section>
+
+      {!isDemo && onExploreDemo && (
+        <section className="block" aria-labelledby="settings-demo">
+          <h2 id="settings-demo" className="section-title">Explore the Demo</h2>
+          <p className="field-help">See the app with Alex, an invented person. Your space is not changed, and Exit Demo brings you back to it.</p>
+          <button type="button" className="button-secondary align-start" aria-disabled={saving || undefined} aria-describedby={saving ? 'settings-demo-wait' : undefined}
+            onClick={() => { if (!saving) onExploreDemo() }}>Explore the Demo</button>
+          {saving && <p id="settings-demo-wait" className="field-help">Wait until your last change is saved.</p>}
+          {demoQuestion && <div className="callout callout-warning" role="alert">{demoQuestion}</div>}
+        </section>
+      )}
     </div>
   )
 }

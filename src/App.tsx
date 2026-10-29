@@ -3,7 +3,7 @@ import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './ap
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
 import { WriteStatusContext } from './app/writeStatus'
-import { UnsavedChangesContext, useUnsavedRegistry } from './app/unsavedChanges'
+import { describeTyped, UnsavedChangesContext, useUnsavedRegistry } from './app/unsavedChanges'
 import { ConfirmDiscard, UnsavedForms } from './components/UnsavedForms'
 import { Recovery } from './features/recovery/Recovery'
 import { recoveryFile, recoveryFileName } from './data/recovery'
@@ -27,7 +27,7 @@ import { DebtScreen } from './features/cards/DebtScreen'
 import { DataScreen } from './features/data/DataScreen'
 import { INITIAL_DATA_VIEW, setBlockOpen, type DataBlock, type DataView } from './features/data/dataBlocks'
 import { GoalDetailScreen } from './features/goals/GoalDetailScreen'
-import { EMPTY_NEW_GOAL, type NewGoalState } from './features/goals/goalDraft'
+import { EMPTY_NEW_GOAL, typedGoalDraft, type NewGoalState } from './features/goals/goalDraft'
 import { GoalsScreen } from './features/goals/GoalsScreen'
 import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
@@ -52,6 +52,9 @@ import './styles/finance.css'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
 
+/** Alex's screen preferences, where every demo starts. */
+const DEMO_PREFS: { hidden: ReadonlySet<HomeBlock>; chartView: BillsChartView; emergencyLater: boolean } = { hidden: new Set(), chartView: 'donut', emergencyLater: false }
+
 type Props = {
   getToday?: () => CalendarDate
   /** Where the own space is saved. Tests pass their own; the app uses the browser's localStorage. */
@@ -75,12 +78,19 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const unsaved = useUnsavedRegistry()
   const space = useSpace(storage, getToday, createDemo, undefined, createStore, unsaved.hasUnsaved)
   // Asking before what was typed is dropped: to open the latest version (or try again), or to close a space erased in another tab.
-  const [confirming, setConfirming] = useState<'reload' | 'discard-erased' | null>(null)
+  // Also before the demo opens from Settings, and before it is left, when something typed would be dropped.
+  const [confirming, setConfirming] = useState<'reload' | 'discard-erased' | 'open-demo' | 'exit-demo' | 'exit-demo-settings' | null>(null)
+  // Where the demo was opened from: Exit Demo goes back there (the own space's Home, or Welcome).
+  const [demoFrom, setDemoFrom] = useState<'settings' | 'welcome'>('welcome')
   const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
   const [goalId, setGoalId] = useState<Id | null>(null)
   const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
+  // The New Goal draft stays while the user looks elsewhere, so it counts as unsaved even with its screen closed.
+  const newGoalText = describeTyped('New Goal', typedGoalDraft(newGoal.draft))
+  const newGoalTyped = newGoalText !== describeTyped('New Goal', typedGoalDraft(EMPTY_NEW_GOAL.draft))
+  useEffect(() => { unsaved.registry.set('app:new-goal', newGoalTyped ? { title: 'New Goal', text: newGoalText } : null) }, [unsaved.registry, newGoalTyped, newGoalText])
   // The card or loan, and the bill, shown on their own screens (null: adding a new one).
   const [debtId, setDebtId] = useState<Id | null>(null)
   const [billId, setBillId] = useState<Id | null>(null)
@@ -92,6 +102,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [hiddenBlocks, setHiddenBlocks] = useState<ReadonlySet<HomeBlock>>(
     () => new Set(readHiddenBlocks(storage).filter((block): block is HomeBlock => (HOME_BLOCKS as readonly string[]).includes(block))))
   const [emergencyLater, setEmergencyLater] = useState(() => readEmergencyLater(storage))
+  // The demo's own screen preferences: Alex's (nothing hidden, the donut, the emergency suggestion shown), in memory only.
+  // They never read or change this device's, and Reset Demo and Exit Demo put them back.
+  const [demoPrefs, setDemoPrefs] = useState(DEMO_PREFS)
   // The months follow "today", which differs between the demo and the own
   // space: the twelve months of today's year (and next January in
   // December, to plan ahead). A month chosen for another "today" is not reused.
@@ -332,9 +345,49 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       return false
     }
   }
-  const exitDemo = () => { space.closeDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false); replace('welcome') }
-  // Reset Demo puts the whole example back: the records, the Home layout, Data's closed blocks, History's first view, and everything planned or chosen on top of them.
-  const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setConfirmReset(false) }
+  /** Everything the demo shows on top of its records goes back to the start: layout, views, screen preferences, choices. */
+  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
+  // What the own space shows and is not kept per space (the Bills view and the month): set aside while the demo is open.
+  const ownReturn = useRef<{ billsView: BillsView; chosenMonth: typeof chosenMonth } | null>(null)
+  /**
+   * Opens the demo. From the own space (Settings) nothing of it goes into the demo: no choice, view or draft;
+   * the Bills view and the month are set aside, to be given back on exit. Never while a change is being saved.
+   */
+  const openDemo = (from: 'settings' | 'welcome') => {
+    const bills = billsView
+    const month = chosenMonth
+    if (space.openDemo() === 'busy') return
+    ownReturn.current = from === 'settings' ? { billsView: bills, chosenMonth: month } : null
+    setDemoFrom(from)
+    resetGoals(); setChosenMonth(null); clearDemoViews(); setConfirming(null)
+    if (from === 'settings') replace('home')
+    else go('home')
+  }
+  /** Explore the Demo in Settings: it asks first when something typed (here or kept after a problem) would be dropped. */
+  const requestDemo = () => {
+    if (space.saving || space.opening) return
+    if (unsaved.hasUnsaved()) { setConfirming('open-demo'); return }
+    openDemo('settings')
+  }
+  const openDemoDiscarding = () => { discardTyped(); openDemo('settings') }
+  /** Leaves the demo, dropping all of it. From Settings, back to the own space's Home, opened again from the store. */
+  const leaveDemo = () => {
+    space.closeDemo(); resetGoals(); clearDemoViews(); setConfirming(null)
+    const back = demoFrom === 'settings' ? ownReturn.current : null
+    setBillsView(back?.billsView ?? INITIAL_BILLS_VIEW)
+    setChosenMonth(back?.chosenMonth ?? null)
+    ownReturn.current = null
+    replace(demoFrom === 'settings' ? 'home' : 'welcome')
+  }
+  /** Exit Demo asks first when something typed in the demo would be dropped. */
+  const exitDemo = (where: 'exit-demo' | 'exit-demo-settings' = 'exit-demo') => {
+    if (unsaved.hasUnsaved()) { setConfirming(where); return }
+    leaveDemo()
+  }
+  const exitDemoDiscarding = () => { discardTyped(); leaveDemo() }
+  // Reset Demo puts the whole example back: the records, the Home layout, Data's closed blocks, History's first view,
+  // Alex's screen preferences, and everything planned or chosen on top of them.
+  const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); clearDemoViews() }
   /**
    * Erase in Settings. The space is closed when it no longer opens, also when a copy was left behind
    * (Welcome then says that the erase is not finished); an answer for a space no longer open changes nothing.
@@ -366,7 +419,13 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const selectedGoal = open?.data.goals.find(goal => goal.id === goalId && goal.status === 'active') ?? null
   // New records belong to the one person in an Individual space, and are shared in a Duo.
   const newGoalOwner = open?.data.space.mode === 'individual' ? open.data.space.members[0].id : 'shared'
-  const changeChartView = (view: BillsChartView) => { setChartView(view); writeChartView(storage, view) }
+  const inDemo = open?.kind === 'demo'
+  const shownChartView = inDemo ? demoPrefs.chartView : chartView
+  const changeChartView = (view: BillsChartView) => {
+    if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, chartView: view })); return }
+    setChartView(view)
+    writeChartView(storage, view)
+  }
   /** A purchase chosen on Home opens in History, on its month with no search or filter, ready to change. */
   const openExpense = (id: Id) => {
     const expense = open?.data.expenses.find(e => e.id === id)
@@ -382,18 +441,28 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     dataTarget.current = 'accounts'
     go('data')
   }
-  const saveHidden = (next: ReadonlySet<HomeBlock>) => { setHiddenBlocks(next); writeHiddenBlocks(storage, [...next]) }
+  const shownHidden = inDemo ? demoPrefs.hidden : hiddenBlocks
+  const saveHidden = (next: ReadonlySet<HomeBlock>) => {
+    if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, hidden: next })); return }
+    setHiddenBlocks(next)
+    writeHiddenBlocks(storage, [...next])
+  }
   const visibility = {
-    hidden: hiddenBlocks,
+    hidden: shownHidden,
     toggle: (block: HomeBlock) => {
-      const next = new Set(hiddenBlocks)
+      const next = new Set(shownHidden)
       if (next.has(block)) next.delete(block)
       else next.add(block)
       saveHidden(next)
     },
     setAll: (hide: boolean) => saveHidden(new Set(hide ? HOME_BLOCKS : [])),
   }
-  const emergencyLaterChange = (later: boolean) => { setEmergencyLater(later); writeEmergencyLater(storage, later) }
+  const shownEmergencyLater = inDemo ? demoPrefs.emergencyLater : emergencyLater
+  const emergencyLaterChange = (later: boolean) => {
+    if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, emergencyLater: later })); return }
+    setEmergencyLater(later)
+    writeEmergencyLater(storage, later)
+  }
   const selectTab = (tab: Tab) => {
     if (tab === screen) return
     if (tab === 'history') {
@@ -430,8 +499,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {!confirmReset && <span><b>Demo</b> · Alex is invented · All information is invented · Changes are not saved</span>}
           <span className="inline-actions">
             <ResetDemoConfirm onReset={resetDemo} triggerClassName="button-small" onAskingChange={setConfirmReset} />
-            {!confirmReset && <button type="button" className="button-small" onClick={exitDemo}>Exit Demo</button>}
+            {!confirmReset && <button type="button" className="button-small" onClick={() => exitDemo()}>Exit Demo</button>}
           </span>
+          {confirming === 'exit-demo' && <div className="demo-question" role="alert">
+            <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+            <ConfirmDiscard question="Leaving the demo closes what you typed in it. It cannot be brought back." confirm="Discard and Exit Demo" onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
+          </div>}
         </div>
       )}
       {open?.kind === 'own' && space.problem?.kind === 'read-only' && (space.problem.takenOver ? (
@@ -482,10 +555,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         </div>}
         {!space.opening && shows('welcome') && (space.problem?.kind === 'unreadable' ? <div className="screen" data-screen="recovery">
           <Recovery problem={space.problem} busy={space.saving} onDownload={downloadCopies} onUseOlderCopy={space.restoreOlderCopy}
-            onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} onExplore={() => { space.openDemo(); go('home') }} />
+            onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} onExplore={() => openDemo('welcome')} />
         </div> : <div className="screen" data-screen="welcome">
           <Welcome problem={space.problem} busy={space.saving} onCreateAccount={() => go('sign-up')} onLogIn={() => go('log-in')} erasedElsewhere={notice === 'erased'}
-            onExplore={() => { space.openDemo(); go('home') }} onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} />
+            onExplore={() => openDemo('welcome')} onErase={() => space.eraseOwnSpace()} onRetry={() => void space.reload()} />
         </div>)}
         {(shows('sign-up') || shows('log-in')) && <div className="screen" data-screen={screen}>
           <AuthPreview key={screen} mode={screen === 'sign-up' ? 'sign-up' : 'log-in'} onBack={back} onContinue={() => go('setup')} />
@@ -498,9 +571,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
               <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} today={space.today}
-                chartView={chartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
+                chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 onChange={space.update} onOpen={go} onOpenDataBlock={openDataBlock} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
-                onOpenExpense={openExpense} emergencyLater={emergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
+                onOpenExpense={openExpense} emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 onReviewEmergency={() => go('emergency')} />
             </AmountVisibilityProvider>
           </div>}
@@ -573,7 +646,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onAddGoal={() => go('new-goal')} onReviewEmergency={() => go('emergency')} onResetDemo={resetDemo} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
-            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={exitDemo} onResetDemo={resetDemo} onErase={erase}
+            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
+              onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
+                <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+                <ConfirmDiscard question="Opening the demo closes what you typed here. It cannot be brought back." confirm="Discard and Open Demo" onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />
+              </> : confirming === 'exit-demo-settings' ? <>
+                <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
+                <ConfirmDiscard question="Leaving the demo closes what you typed in it. It cannot be brought back." confirm="Discard and Exit Demo" onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
+              </> : null}
               onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} canErase={space.problem === null} />
           </div>}
         </Fragment>}

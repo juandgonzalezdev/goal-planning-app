@@ -164,15 +164,20 @@ describe('Alex demo: Home', () => {
     expect(stat('Planned Bills')).toContain(NOVEMBER_PLANNED)
   })
 
-  it('remembers Donut or Bars', async () => {
+  it('keeps Donut or Bars in the demo only: the device keeps its own, and every demo starts with the donut', async () => {
     const storage = memoryStorage()
+    storage.setItem('goal-planning-app.bills-chart', 'bars')
     await openAlex(storage)
+    // Alex's preference, not the device's.
+    expect(button('Donut').getAttribute('aria-pressed')).toBe('true')
     await fire.click(button('Bars'))
     expect(button('Bars').getAttribute('aria-pressed')).toBe('true')
+    await fire.click(button('Donut'))
+    expect(storage.getItem('goal-planning-app.bills-chart')).toBe('bars')
     cleanup()
     await openAlex(storage)
-    expect(button('Bars').getAttribute('aria-pressed')).toBe('true')
-    // Only the chart preference is kept: no demo data.
+    expect(button('Donut').getAttribute('aria-pressed')).toBe('true')
+    // No demo data either.
     expect(storage.getItem(STORAGE_KEY)).toBeNull()
     expect(await storedData()).toBeNull()
   })
