@@ -29,7 +29,9 @@ personal.
   los registros, así que Home, Bills, Cards, History, Data y Goals no pueden
   contradecirse.
 - Todas las pantallas cambian los datos con `space.update` (`app/useSpace.ts`).
-  El espacio propio se guarda en ese mismo paso; la demo no se guarda nunca.
+  En el espacio propio, el cambio se muestra cuando la base de datos del
+  navegador confirma que lo guardó; la demo no se guarda nunca. Detalles en
+  [STORAGE_AND_RECOVERY.md](STORAGE_AND_RECOVERY.md).
 
 ## 2. Dinero y fechas
 
@@ -261,23 +263,33 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
 
 ## 8. Demo y espacio propio
 
-- La demo (Alex) y el espacio propio nunca se mezclan: abrir, usar o reiniciar
-  la demo no lee ni escribe el espacio propio. La demo no se puede importar.
+- La demo (Alex) y el espacio propio nunca se mezclan: abrir, usar, reiniciar
+  o dejar la demo no lee ni escribe el espacio propio, y ninguna preferencia,
+  vista, selección ni borrador pasa de uno a otro. La demo no se puede
+  importar. Se abre desde la bienvenida o desde Settings; las reglas de
+  entrada y salida están en
+  [STORAGE_AND_RECOVERY.md](STORAGE_AND_RECOVERY.md#8-la-demo-y-el-espacio-propio).
 - **Reset Demo** (franja, Data o Settings) devuelve el año completo: todos los
-  registros, el mes elegido (diciembre de 2026) y el diseño inicial de Home.
+  registros, el mes elegido (diciembre de 2026), el diseño inicial de Home y
+  las preferencias de pantalla de Alex.
 - El orden y los bloques abiertos de Home son preferencias de pantalla, no
   datos. En el espacio propio se recuerdan en este dispositivo
   (`goal-planning-app.home-layout`, ligado al id del espacio); en la demo duran
   mientras está abierta y nunca se guardan.
-- **Exit Demo** descarta todos los cambios.
+- Las preferencias de pantalla de la demo (importes ocultos, Donut o Bars,
+  Maybe Later) también viven solo en memoria.
+- **Exit Demo** descarta todos los cambios. Si hay algo escrito sin guardar,
+  pregunta antes.
 
 ## 9. Guardado y mensajes
 
 - Cada cambio dice qué pasó (`ui/saveOutcome.ts`): "Saved on this device.",
-  "Demo only: not saved." o que el navegador no lo guardó.
-- Si el navegador rechaza el guardado, aparece además un aviso fijo arriba.
+  "Demo only: not saved.", que el navegador no lo guardó o por qué no se
+  guardó (otra pestaña, solo lectura, otro cambio guardándose).
+- Un cambio rechazado no cambia nada, y el formulario conserva lo escrito.
 - Si hay datos guardados que no se pueden leer, nunca se sobrescriben en
-  silencio: la bienvenida ofrece borrarlos.
+  silencio: la pantalla de recuperación ofrece Download Both Copies, Use Older
+  Copy y Erase, siempre con confirmación.
 - **Importar** comprueba el archivo (versión, migración y validación) y no
   reemplaza nada hasta que el usuario confirma.
 - **Formato guardado:** `schemaVersion` 3 (añade gastos y transferencias; la
@@ -297,7 +309,9 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
 - **Include amounts** decide si el PDF lleva importes; no depende de lo oculto
   en Home y el informe dice en su portada si los incluye.
 - **Data Backup** (Download Backup / Restore Backup) es el JSON restaurable. El
-  PDF no es una copia de seguridad.
+  PDF no es una copia de seguridad, y **Download Both Copies** tampoco: es un
+  archivo de recuperación que Restore Backup rechaza. Los dos JSON llevan los
+  datos sin cifrar.
 - **Ocultar importes** (ojo en cada bloque de Home y Hide All Amounts) solo
   cambia lo que se ve: máscara fija `••••`, también en etiquetas accesibles,
   porcentajes y gráficos. Se recuerda en este dispositivo. **No es cifrado ni

@@ -12,7 +12,8 @@ Juan ni de Kamila (una prueba lo comprueba).
   espacio propio sigue usando la fecha real del dispositivo.
 - **Editable y reproducible:** todo se puede cambiar (meses, facturas, gastos,
   transferencias, metas, saldos). La demo no se guarda nunca: **Reset Demo**
-  devuelve el año completo y **Exit Demo** descarta los cambios. Crear la demo
+  devuelve el año completo y **Exit Demo** descarta los cambios. Se abre desde
+  la bienvenida o desde Settings del espacio propio, sin tocarlo. Crear la demo
   dos veces da exactamente los mismos datos (prueba "is the same every time").
 - **Pruebas:** `src/domain/finance/alexDemo.test.ts` (cifras, conciliación,
   criterios 1–10, 13 y 14) y `src/AlexDemo.test.tsx` (lo mismo visto en

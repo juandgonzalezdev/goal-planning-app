@@ -19,21 +19,22 @@ en Safari la dirección "Network" que muestra la terminal.
 
 ## Comprobaciones
 
-Ejecuta las tres antes de entregar un cambio:
+Ejecuta las cuatro antes de entregar un cambio:
 
 | Orden | Qué comprueba | Resultado esperado |
 | --- | --- | --- |
 | `npm test` | Todas las pruebas (Vitest + Testing Library en jsdom). | Todas pasan. |
 | `npm run lint` | ESLint (incluye reglas de React Hooks). | Sin errores. |
 | `npm run build` | `tsc -b` (tipos) y compilación de Vite. | Sin errores. |
+| `npm audit` | Vulnerabilidades conocidas en las dependencias. | 0 vulnerabilidades. |
 
 `npm run test:watch` repite las pruebas al guardar. Para una sola carpeta:
 `npx vitest run src/report`.
 
 ### Avisos conocidos (no son errores)
 
-- `npm run build` avisa de que el paquete JS supera 500 kB: en octubre de 2026
-  son unos 570 kB, que el navegador descarga comprimidos como unos 156 kB. La parte
+- `npm run build` avisa de que el paquete JS supera 500 kB: en `98addbc`
+  (29-10-2026) son unos 615 kB, que el navegador descarga comprimidos como unos 169 kB. La parte
   mayor es React DOM; después, los 401 registros del año de Alex
   (`src/data/fixtures/demoAlex.ts`). No se sube el límite del aviso para
   esconderlo. Si el paquete pasa de unos 200 kB comprimidos, la demo y el
@@ -51,6 +52,11 @@ Ejecuta las tres antes de entregar un cambio:
 - Pantallas: en `src/AlexDemo.test.tsx` (demo de Alex) o `src/App.test.tsx`
   (espacio propio y hogar Duo de pruebas). Se pasa una fecha fija con
   `getToday` y un almacenamiento en memoria (`src/test/memoryStorage.ts`).
+- Guardado y otras pestañas: la base de datos es `fake-indexeddb`, nueva en
+  cada prueba (`freshDatabaseForEachTest` en `src/test/space.ts`). Otra pestaña
+  es otro almacén sobre la misma base de datos; un guardado lento se simula con
+  `heldStore`. Ejemplos: `src/OtherTabs.test.tsx` y
+  `src/DemoFromSettings.test.tsx`.
 - Un error corregido lleva una prueba que fallaba antes de la corrección.
 - Solo datos inventados. Ningún dato financiero real en el repositorio.
 
@@ -73,7 +79,8 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    Gym Membership → What If I Pause It? → 387,00. Cancel no cambia nada.
 5. **Ocultar importes.** Hide All Amounts: todos los importes son `••••`, sin
    barras ni porcentajes reveladores. El ojo de un bloque lo muestra solo a él.
-   La preferencia se recuerda en este dispositivo.
+   En la demo dura mientras está abierta; en el espacio propio se recuerda en
+   este dispositivo.
 6. **Fondo de emergencia.** My Goals → Review My Emergency Fund: esenciales
    4.415,42 al mes; 3 months → objetivo 13.246,26. Cancel no cambia nada; Save
    Review guarda el objetivo y la cobertura (~0,2 meses) aparece en Home.
@@ -114,6 +121,19 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
     una factura y vuelve: mismo mes, vista, filtro, día, posición y foco.
 15. **Safari (iPhone).** Los campos de fecha no se salen de la columna y la barra
     de pestañas no tapa el pie de página.
+16. **Demo desde Settings.** En el espacio propio, oculta los importes y pon
+    Bills en List. Settings → Explore the Demo: la demo empieza con lo de Alex.
+    Cambia cosas, Reset Demo, Exit Demo: vuelves a tu Home con tus importes
+    ocultos, tu vista de Bills y tu mes. Con un New Goal empezado, Explore the
+    Demo pregunta antes (Copy What I Typed, Keep Editing, Discard and Open
+    Demo). Exit Demo también pregunta si escribiste algo en la demo.
+17. **Dos pestañas.** Con el mismo espacio en dos pestañas, un cambio en una se
+    ve en la otra con «Updated with changes from another tab.». Con un
+    formulario escrito en una, el cambio de la otra no lo sustituye: aviso de
+    conflicto, Copy What I Typed y Open Latest Version con confirmación.
+
+El registro de qué recorridos están confirmados y en qué navegador está en
+[STATUS.md](STATUS.md).
 
 ## Ramas y entregas
 
@@ -124,6 +144,12 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
   de los cambios de lógica.
 - Si la entrega llega como paquete `.mbox`, se aplica con `git am` (ver la
   entrega correspondiente).
+- Si llega como parche `.patch` (con finales de línea CRLF, como los archivos de
+  Windows), se aplica en una rama nueva desde `main` con
+  `git apply --check` y después `git apply`. El aviso de «trailing whitespace»
+  se debe a los finales CRLF y no es un error. Si `--check` falla, no se usa
+  `--ignore-whitespace` ni se sobrescriben archivos: primero se busca la
+  diferencia con la base.
 
 ## Archivos auxiliares
 
