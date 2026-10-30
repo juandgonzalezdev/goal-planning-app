@@ -41,6 +41,7 @@ npm audit        # dependencias con vulnerabilidades conocidas
 
 | Documento | Para qué sirve |
 | --- | --- |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Manual de uso en inglés sencillo: cómo usar la app tal como funciona hoy, con ejemplos inventados y sus límites actuales. |
 | [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) | Dónde vive cada cosa y qué archivos revisar para cambiar X. |
 | [docs/FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md) | Las reglas financieras, cómo se relacionan las cifras y ejemplos. |
 | [docs/STORAGE_AND_RECOVERY.md](docs/STORAGE_AND_RECOVERY.md) | Guardado en IndexedDB, migración, otras pestañas, formularios sin guardar, recuperación, copias y aislamiento de la demo. |
