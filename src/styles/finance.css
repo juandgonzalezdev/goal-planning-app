@@ -7,7 +7,7 @@
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); cursor: pointer;
 }
 .icon-button:hover { background: var(--color-surface-hover); }
-:is(.icon-button, .bottom-nav button, .month-switch button, .stat, .day-head, .paid-toggle, .text-button, .button-small, .button-danger, .tiles button, .annual-owners button, .monthly-row, .goal-row):focus-visible {
+:is(.icon-button, .eye-toggle, .bottom-nav button, .month-switch button, .stat, .day-head, .paid-toggle, .text-button, .button-small, .button-danger, .tiles button, .annual-owners button, .monthly-row, .goal-row):focus-visible {
   outline: 2px solid var(--color-focus); outline-offset: 2px;
 }
 
@@ -334,7 +334,13 @@ button.monthly-row:hover { background: var(--color-surface-hover); }
 }
 .month-picker .icon-button:disabled { opacity: .4; cursor: not-allowed; }
 .month-picker select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.eye-toggle { width: 40px; height: 40px; flex-shrink: 0; color: var(--color-text-muted); }
+/* A block's own eye: light while amounts show, marked while they are hidden. */
+.eye-toggle {
+  display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; padding: 0; cursor: pointer;
+  border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-text-muted);
+}
+.eye-toggle:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.eye-toggle.is-hidden { background: var(--color-accent-soft); color: var(--color-accent); }
 .section-head { flex-wrap: wrap; }
 .section-head .section-title { flex: 1 0 auto; white-space: nowrap; }
 .section-head > .inline-actions { margin-left: auto; }
@@ -420,12 +426,62 @@ html { scroll-padding-top: calc(var(--sticky-top, 64px) + var(--sticky-bar, 0px)
   margin: -6px calc(-1 * var(--space-gutter)) 0; padding: 6px var(--space-gutter);
   background: var(--color-bg); border-bottom: 1px solid transparent;
 }
-.home-month-bar .month-picker { max-width: var(--column-wide); margin: 0 auto; }
 .home-month-bar .month-picker select { min-height: 44px; }
-.home-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.home-tools .inline-actions { gap: 6px; }
-.home-tools.is-customizing { padding: 10px 12px; border-radius: var(--radius-card); background: var(--color-accent-soft); }
-.home-tools.is-customizing .muted-note { flex: 1 1 16rem; color: var(--color-text); }
+/*
+ * The month, then the Home eye and Home options on the same row. The month
+ * keeps the room its longest name needs: on a very narrow screen the two
+ * buttons move to a second row instead of squeezing it.
+ */
+.home-bar-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; max-width: var(--column-wide); margin: 0 auto; }
+.home-bar-row .month-picker { flex: 1 1 15.25rem; min-width: 15.25rem; gap: 6px; }
+.home-bar-row .month-picker select { padding-left: 6px; padding-right: 6px; }
+.home-tools { display: flex; align-items: center; gap: 4px; flex: none; }
+.home-customize { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: var(--radius-card); background: var(--color-accent-soft); }
+.home-customize .muted-note { flex: 1 1 16rem; margin: 0; color: var(--color-text); }
+.home-customize:focus { outline: none; }
+.home-customize:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Icon buttons of Home and the demo: the eye that hides every amount, and the three-dots menus. */
+.tool-button { position: relative; flex-shrink: 0; color: var(--color-text-muted); }
+.tool-button:hover { color: var(--color-text); }
+.tool-button[aria-expanded="true"] { background: var(--color-surface-hover); color: var(--color-text); }
+.tool-button.is-hidden { background: var(--color-accent-soft); border-color: transparent; color: var(--color-accent); }
+
+/* The name of an icon button, on hover (mouse) and keyboard focus. */
+.has-tip { position: relative; }
+.icon-tip, .amounts-notice {
+  position: absolute; top: calc(100% + 6px); z-index: 30; padding: 4px 8px; border-radius: 6px;
+  font-size: 12px; font-weight: 600; line-height: 1.4; white-space: nowrap; pointer-events: none;
+  background: var(--color-text-strong); color: var(--color-bg);
+  opacity: 0; visibility: hidden; transition: opacity var(--motion-quick) var(--motion-ease), visibility 0s var(--motion-quick);
+}
+.icon-tip-end, .amounts-notice { right: 0; }
+.icon-tip-start { left: 0; }
+.has-tip:focus-visible .icon-tip { opacity: 1; visibility: visible; transition-delay: 0s; }
+@media (hover: hover) { .has-tip:hover .icon-tip { opacity: 1; visibility: visible; transition-delay: 0s; } }
+
+/* "Amounts hidden" / "Amounts visible" for a moment after the Home eye, over the page: nothing moves. */
+.amounts-eye { position: relative; display: inline-flex; }
+.amounts-notice:empty { padding: 0; }
+.amounts-notice.is-shown { opacity: 1; visibility: visible; transition-delay: 0s; }
+
+/* A panel that opens from a three-dots button. */
+.menu-root { position: relative; display: inline-flex; }
+.popover {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  min-width: 12rem; max-width: min(20rem, calc(100vw - 2 * var(--space-gutter)));
+  padding: 6px; margin: 0; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control);
+  background: var(--color-surface); color: var(--color-text); box-shadow: 0 10px 28px rgba(20, 16, 40, .16);
+}
+.menu-list { list-style: none; display: grid; gap: 2px; }
+.menu-item {
+  display: block; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: var(--radius-small);
+  background: transparent; color: var(--color-text); font-size: 15px; font-weight: 600; text-align: left; cursor: pointer;
+}
+.menu-item:hover, .menu-item:focus { background: var(--color-surface-hover); }
+.menu-item:focus { outline: none; }
+.menu-item:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .icon-tip, .amounts-notice { transition: none; } }
 .home-blocks { display: grid; gap: 14px; }
 
 /* A block that opens and closes from its heading (Home and Data, like a day in Bills). */
@@ -513,6 +569,17 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .reset-confirm p { margin: 0; font-size: 14px; line-height: 1.5; }
 .demo-banner .reset-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .demo-banner.is-asking > .inline-actions { flex: 1; }
+/* The demo strip: one short row (Demo · Invented data, Exit Demo, Demo options). */
+.demo-banner { padding-top: 4px; padding-bottom: 4px; }
+.demo-label { white-space: nowrap; }
+.demo-actions { flex-wrap: nowrap; align-items: center; gap: 6px; margin-left: auto; }
+.demo-banner.is-asking > .demo-actions { flex-wrap: wrap; }
+.demo-banner .button-small { min-height: 40px; }
+.banner-tool { width: 40px; height: 40px; background: transparent; border-color: transparent; color: var(--color-text); }
+.banner-tool:hover { background: var(--color-surface); }
+.demo-popover { display: grid; gap: 8px; padding: 12px; min-width: 15rem; font-size: 14px; line-height: 1.5; }
+.demo-popover p { margin: 0; }
+.demo-popover .button-small { justify-self: start; }
 
 /*
  * Printing (Home and Data): what is on screen, without the tab row. A

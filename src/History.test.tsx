@@ -6,6 +6,7 @@ import { createAlexDemo } from './data/fixtures/demoAlex'
 import { activityLog, filterActivity, NO_FILTER } from './domain/finance/history'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabase, settle, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
@@ -125,21 +126,25 @@ describe('History search and filters', () => {
 
   it('counts the filters in More Filters, shows them as chips to remove one by one, and keeps them while the panel is closed', async () => {
     await openHistory()
-    await fire.click(button(/^More Filters/))
-    expect(button(/^More Filters/).getAttribute('aria-expanded')).toBe('true')
-    await fire.change(field('Type'), { target: { value: 'spending' } })
-    await fire.change(field('Account'), { target: { value: 'everyday' } })
-    expect(text(button(/^More Filters/))).toContain('2 on')
-    await fire.click(button(/^More Filters/))
+    // Every query looks only inside Period and search: searching the whole screen goes through the year's records each time.
+    const tools = within(screen.getByRole('region', { name: 'Period and search' }))
+    const moreFilters = () => tools.getByRole('button', { name: /^More Filters/ })
+    const toolField = (label: string) => tools.getByLabelText(label) as HTMLSelectElement
+    await fire.click(moreFilters())
+    expect(moreFilters().getAttribute('aria-expanded')).toBe('true')
+    await fire.change(toolField('Type'), { target: { value: 'spending' } })
+    await fire.change(toolField('Account'), { target: { value: 'everyday' } })
+    expect(text(moreFilters())).toContain('2 on')
+    await fire.click(moreFilters())
     expect(document.getElementById('history-more-filters')!.hidden).toBe(true)
-    const chips = screen.getByRole('list', { name: 'Filters on' })
+    const chips = tools.getByRole('list', { name: 'Filters on' })
     expect([...chips.querySelectorAll('button')].map(text)).toEqual(['Type: Spending×', 'Account: Everyday Account×'])
     const expected = filterActivity(alex(), { ...NO_FILTER, period: { kind: 'year', year: 2026 }, type: 'spending', accountId: 'everyday' }).length
     expect(count()).toContain(`${expected} records match in 2026`)
-    await fire.click(button('Remove filter Type: Spending'))
-    expect(field('Type').value).toBe('all')
-    expect(field('Account').value).toBe('everyday')
-    expect(text(button(/^More Filters/))).toContain('1 on')
+    await fire.click(within(chips).getByRole('button', { name: 'Remove filter Type: Spending' }))
+    expect(toolField('Type').value).toBe('all')
+    expect(toolField('Account').value).toBe('everyday')
+    expect(text(moreFilters())).toContain('1 on')
   })
 
   it('clears the search and the filters with Clear Filters, keeping the period, and never changes a record', async () => {
@@ -405,11 +410,11 @@ describe('History in the demo and the own space', () => {
     await fire.click(overviewToggle())
     await fire.click(button('Expand All'))
     const banner = screen.getByRole('note')
-    await fire.click(within(banner).getByRole('button', { name: 'Reset Demo' }))
+    await startDemoReset()
     await fire.click(within(banner).getByRole('button', { name: 'Cancel' }))
     expect(field('Search by name or note').value).toBe('rent')
     expect(openMonthNames().length).toBeGreaterThan(1)
-    await fire.click(within(banner).getByRole('button', { name: 'Reset Demo' }))
+    await startDemoReset()
     await confirmReset()
     expect(field('Search by name or note').value).toBe('')
     expect(field('Period').value).toBe('year:2026')

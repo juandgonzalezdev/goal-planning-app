@@ -6,6 +6,7 @@ import { STORAGE_KEY } from './data/localStore'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, refuseWrites, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { chooseHomeOption } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
@@ -53,11 +54,11 @@ async function createIndividualSpace(storage: Storage = memoryStorage(), name = 
 async function openDemo({ expanded = true } = {}) {
   const result = await start()
   await fire.click(button('Explore the App'))
-  if (expanded) await fire.click(button('Expand All'))
+  if (expanded) await chooseHomeOption('Expand All')
   return result
 }
 
-const expandAll = async () => await fire.click(button('Expand All'))
+const expandAll = async () => await chooseHomeOption('Expand All')
 /** Bills opens on Calendar; its List keeps the Paid / Pending and Change Amount buttons of each bill. */
 const showBillsList = async () => await fire.click(within(screen.getByRole('group', { name: 'View' })).getByRole('button', { name: 'List' }))
 
@@ -224,8 +225,10 @@ describe('Returning to the app', () => {
 describe('Demo', () => {
   it('opens with invented data, clearly marked', async () => {
     await openDemo()
-    expect(screen.getByRole('note').textContent).toContain('All information is invented')
-    expect(screen.getByText('Demo · Invented data')).toBeTruthy()
+    expect(screen.getByRole('note').textContent).toContain('Demo · Invented data')
+    await fire.click(button('Demo options'))
+    expect(screen.getByRole('group', { name: 'About the demo' }).textContent).toContain('all the information in this demo are invented')
+    expect(screen.getAllByText('Demo · Invented data').length).toBeGreaterThan(0)
     expect(stat('Income')).toContain('11 700,35 zł')
     expect(stat('Planned Bills')).toContain('5571,43 zł')
     expect(text(screen.getByRole('region', { name: 'Left to Pay' }))).toContain('0,00 zł')
@@ -1012,7 +1015,7 @@ describe('Logo (Go to Home)', () => {
     expect(window.history.length).toBe(steps + 1)
     expect(monthSelect().value).toBe('2026-09')
     expect(button('Show amounts in Total Debt')).toBeTruthy()
-    expect(button('Reset Demo')).toBeTruthy()
+    expect(button('Demo options')).toBeTruthy()
   })
 
   it('adds no history step when Home is already open', async () => {

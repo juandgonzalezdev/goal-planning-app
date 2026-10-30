@@ -8,6 +8,7 @@ import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabaseForEachTest, heldStore, settle, storedSpace } from './test/space'
+import { startDemoReset } from './test/homeControls'
 
 /*
  * Explore the Demo from Settings (patch 05b). The own space stays exactly
@@ -88,8 +89,8 @@ describe('Explore the Demo from Settings', () => {
     await fire.click(button('Hide All Amounts'))
     await fire.click(button('Settings'))
     await fire.change(field('Appearance'), { target: { value: 'dark' } })
-    await fire.click(within(screen.getByRole('note')).getByRole('button', { name: 'Reset Demo' }))
-    await fire.click(within(screen.getByRole('note')).getByRole('button', { name: /Reset/ }))
+    await startDemoReset()
+    await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     expect(screen.getByText(DEMO)).toBeTruthy()
     // Reset Demo also puts Alex's screen preferences back.
     await fire.click(button('Go to Home'))

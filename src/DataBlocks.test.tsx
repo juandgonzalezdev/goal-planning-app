@@ -5,6 +5,7 @@ import App from './App'
 import { STORAGE_KEY } from './data/localStore'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
@@ -315,7 +316,7 @@ describe('Data: Bills, Cards & Loans, Accounts, Goals', () => {
 describe('Links into Data', () => {
   it('Edit Balances opens Data on Accounts & Balances, with the focus on its heading', async () => {
     await openAlex()
-    await fire.click(button('Expand All'))
+    await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
     expect(screen.getByRole('heading', { name: 'Manage Your Data' })).toBeTruthy()
     expect(isOpen('Accounts & Balances')).toBe(true)
@@ -325,7 +326,7 @@ describe('Links into Data', () => {
 
   it('Income on This Month opens the Income block', async () => {
     await openAlex()
-    await fire.click(button('Expand All'))
+    await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('This Month')).getByText('Income').closest('button')!)
     expect(isOpen('Income')).toBe(true)
     expect(document.activeElement).toBe(toggleOf('Income'))
@@ -333,7 +334,7 @@ describe('Links into Data', () => {
 
   it('the Data tab keeps the blocks as they were, with the focus on the title', async () => {
     await openAlex()
-    await fire.click(button('Expand All'))
+    await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
     await fire.click(tab('Home'))
     await fire.click(tab('Data'))
@@ -382,10 +383,13 @@ describe('Reset Demo', () => {
     await fire.click(tab('Data'))
     await editSalary()
     const banner = screen.getByRole('note')
-    await fire.click(within(banner).getByRole('button', { name: 'Reset Demo' }))
+    await startDemoReset()
     expect(within(banner).queryByRole('button', { name: 'Exit Demo' })).toBeNull()
     await fire.click(within(banner).getByRole('button', { name: 'Cancel' }))
     expect(within(banner).getByRole('button', { name: 'Exit Demo' })).toBeTruthy()
+    // The keyboard is back on the demo menu, which is closed again.
+    expect(document.activeElement).toBe(within(banner).getByRole('button', { name: 'Demo options' }))
+    expect(within(banner).getByRole('button', { name: 'Demo options' }).getAttribute('aria-expanded')).toBe('false')
     expect(decemberSalary()).toContain('Received: not recorded yet')
 
     await fire.click(button('Settings'))

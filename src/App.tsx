@@ -10,7 +10,7 @@ import { recoveryFile, recoveryFileName } from './data/recovery'
 import { downloadFile } from './ui/download'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
-import { ResetDemoConfirm } from './components/ResetDemoConfirm'
+import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
@@ -495,17 +495,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         )}
       </header>
       {open?.kind === 'demo' && (
-        <div className={`demo-banner${confirmReset ? ' is-asking' : ''}`} role="note">
-          {!confirmReset && <span><b>Demo</b> · Alex is invented · All information is invented · Changes are not saved</span>}
-          <span className="inline-actions">
-            <ResetDemoConfirm onReset={resetDemo} triggerClassName="button-small" onAskingChange={setConfirmReset} />
-            {!confirmReset && <button type="button" className="button-small" onClick={() => exitDemo()}>Exit Demo</button>}
-          </span>
-          {confirming === 'exit-demo' && <div className="demo-question" role="alert">
+        <DemoBanner asking={confirmReset} onAskingChange={setConfirmReset} onReset={resetDemo} onExit={() => exitDemo()}
+          exitQuestion={confirming === 'exit-demo' && <>
             <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
             <ConfirmDiscard question="Leaving the demo closes what you typed in it. It cannot be brought back." confirm="Discard and Exit Demo" onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
-          </div>}
-        </div>
+          </>} />
       )}
       {open?.kind === 'own' && space.problem?.kind === 'read-only' && (space.problem.takenOver ? (
         <div className="save-warning" role="alert">

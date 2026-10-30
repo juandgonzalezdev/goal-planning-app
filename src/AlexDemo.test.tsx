@@ -7,6 +7,7 @@ import { createSpaceData } from './domain/finance/space'
 import { STORAGE_KEY } from './data/localStore'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
@@ -46,16 +47,18 @@ async function openAlex(storage: Storage = memoryStorage(), { expanded = true } 
   const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
   await settle()
   await fire.click(button('Explore the App'))
-  if (expanded) await fire.click(button('Expand All'))
+  if (expanded) await chooseHomeOption('Expand All')
   return { storage, ...result }
 }
 
 describe('Alex demo: Home', () => {
   it('is clearly an invented demo that is not saved, with Reset Demo', async () => {
     const { storage } = await openAlex()
-    const banner = text(screen.getByRole('note'))
-    expect(banner).toContain('Alex is invented')
-    expect(banner).toContain('Changes are not saved')
+    expect(text(screen.getByRole('note'))).toContain('Demo · Invented data')
+    await fire.click(button('Demo options'))
+    const about = text(screen.getByRole('group', { name: 'About the demo' }))
+    expect(about).toContain('Alex and all the information in this demo are invented')
+    expect(about).toContain('Changes are not saved')
     expect(button('Reset Demo')).toBeTruthy()
     expect(storage.length).toBe(0)
   })
@@ -409,7 +412,7 @@ describe('Alex demo: keeping and resetting (15)', () => {
     expect(region('Total Debt')).toContain('12 122,63 zł')
     await pickMonth('2026-03')
 
-    await fire.click(button('Reset Demo'))
+    await startDemoReset()
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     expect(monthSelect().value).toBe('2026-12')
     expect(region('Total Debt')).toContain('12 266,98 zł')
@@ -423,7 +426,7 @@ describe('Alex demo: keeping and resetting (15)', () => {
     await fire.click(tab('Bills'))
     await showBillsList()
     await fire.click(button('Phone & Internet paid in December 2026'))
-    await fire.click(button('Reset Demo'))
+    await startDemoReset()
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     await fire.click(button('Exit Demo'))
     expect(storage.getItem(STORAGE_KEY)).toBe('{ saved, but unreadable')

@@ -21,13 +21,10 @@ export function ResetDemoConfirm({ onReset, triggerClassName = 'button-secondary
   const [asking, setAsking] = useState(false)
   const [done, setDone] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
-  const cancel = useRef<HTMLButtonElement>(null)
   const returnFocus = useRef(false)
-  const id = useId()
 
   useEffect(() => {
-    if (asking) cancel.current?.focus()
-    else if (returnFocus.current) { returnFocus.current = false; trigger.current?.focus() }
+    if (!asking && returnFocus.current) { returnFocus.current = false; trigger.current?.focus() }
   }, [asking])
 
   const ask = (next: boolean) => {
@@ -40,12 +37,24 @@ export function ResetDemoConfirm({ onReset, triggerClassName = 'button-secondary
     <button ref={trigger} type="button" className={triggerClassName} onClick={() => { setDone(false); ask(true) }}>Reset Demo</button>
     {showDone && done && <p className="muted-note" role="status">The demo is back to Alex’s original example.</p>}
   </>
+  return <ResetDemoQuestion onCancel={() => ask(false)} onReset={() => { onReset(); setDone(true); ask(false) }} />
+}
+
+/**
+ * The second step of Reset Demo: "Reset demo?" with Cancel and Reset Demo.
+ * The keyboard starts on Cancel. Where it goes when the question closes is
+ * up to the place that asked (its first button, or the demo menu).
+ */
+export function ResetDemoQuestion({ onCancel, onReset }: { onCancel: () => void; onReset: () => void }) {
+  const cancel = useRef<HTMLButtonElement>(null)
+  const id = useId()
+  useEffect(() => { cancel.current?.focus() }, [])
   return (
     <div className="reset-confirm" role="group" aria-labelledby={`${id}-question`} aria-describedby={`${id}-text`}>
       <p><b id={`${id}-question`}>Reset demo?</b> <span id={`${id}-text`}>This will remove your changes and restore Alex’s original example.</span></p>
       <span className="inline-actions">
-        <button ref={cancel} type="button" className="button-small" onClick={() => ask(false)}>Cancel</button>
-        <button type="button" className="button-small button-small-primary" onClick={() => { onReset(); setDone(true); ask(false) }}>Reset Demo</button>
+        <button ref={cancel} type="button" className="button-small" onClick={onCancel}>Cancel</button>
+        <button type="button" className="button-small button-small-primary" onClick={onReset}>Reset Demo</button>
       </span>
     </div>
   )

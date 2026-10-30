@@ -6,7 +6,7 @@ import type { FinanceData, Id } from '../../domain/finance/types'
 import type { BillsChartView } from '../../data/uiPrefs'
 import type { DataBlock } from '../data/dataBlocks'
 import { BLOCK_NAMES, type HomeBlock } from '../../ui/amountVisibility'
-import { AllAmountsToggle } from '../../ui/privacy'
+import { HomeAmountsEye } from '../../ui/privacy'
 import type { ChangeSpace } from '../../ui/saveOutcome'
 import { LeftToPay } from './LeftToPay'
 import { MonthSummary } from './MonthSummary'
@@ -16,6 +16,7 @@ import { HomeMoney } from './HomeMoney'
 import { TotalDebt } from './TotalDebt'
 import { YearSummary } from './YearSummary'
 import { MonthSwitch } from '../../components/MonthSwitch'
+import { MenuButton } from '../../components/MenuButton'
 import { HomeBlocksContext, type HomeBlocksControl } from './homeBlocksContext'
 import { DEFAULT_LAYOUT, isOpen, moveBlock, setAllOpen, setOpen, type HomeLayout } from './homeLayout'
 
@@ -70,6 +71,10 @@ export function HomeScreen(props: Props) {
   const dragRef = useRef<Drag | null>(null)
   const blocksRef = useRef<HTMLDivElement>(null)
   const focusAfterMove = useRef<{ block: HomeBlock; direction: 'up' | 'down' } | null>(null)
+  const customizeRef = useRef<HTMLDivElement>(null)
+  const optionsRef = useRef<HTMLDivElement>(null)
+  // Customize Home puts the keyboard on its instructions; Done puts it back on Home options.
+  const focusAfterCustomize = useRef<'panel' | 'options' | null>(null)
   const name = (block: HomeBlock) => (block === 'money' && !individual ? 'Our Money' : block === 'goals' && !individual ? 'Our Goals' : BLOCK_NAMES[block])
 
   const move = (block: HomeBlock, to: number, direction?: 'up' | 'down') => {
@@ -91,6 +96,19 @@ export function HomeScreen(props: Props) {
       if (button) { button.focus(); break }
     }
   }, [layout])
+
+  useEffect(() => {
+    const wanted = focusAfterCustomize.current
+    focusAfterCustomize.current = null
+    if (wanted === 'panel') customizeRef.current?.focus()
+    else if (wanted === 'options') optionsRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus()
+  }, [customizing])
+
+  const customize = (on: boolean) => {
+    focusAfterCustomize.current = on ? 'panel' : 'options'
+    setCustomizing(on)
+    setAnnouncement('')
+  }
 
   const startDrag = (block: HomeBlock, event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return
@@ -167,24 +185,25 @@ export function HomeScreen(props: Props) {
     <div className="tab-screen">
       <h1 className="visually-hidden">Home</h1>
       <div className="home-month-bar" data-sticky-bar>
-        <MonthSwitch months={months} value={month} onChange={onMonthChange} />
-      </div>
-      {customizing
-        ? <div className="home-tools is-customizing" role="group" aria-label="Customize Home">
-          <p className="muted-note">Drag a block by its handle, or use Move up and Move down. Nothing else changes.</p>
-          <span className="inline-actions">
-            <button type="button" className="button-small" onClick={() => { onLayoutChange({ order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement('Home layout reset: the first order, with This Month and Left to Pay open.') }}>Reset Layout</button>
-            <button type="button" className="button-small button-small-primary" onClick={() => { setCustomizing(false); setAnnouncement('') }}>Done</button>
-          </span>
+        <div className="home-bar-row">
+          <MonthSwitch months={months} value={month} onChange={onMonthChange} />
+          {!customizing && <div className="home-tools" ref={optionsRef}>
+            <HomeAmountsEye />
+            <MenuButton label="Home options" options={[
+              { label: 'Expand All', onSelect: () => { onLayoutChange(setAllOpen(layout, true)); setAnnouncement('All blocks open.') } },
+              { label: 'Collapse All', onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All blocks closed.') } },
+              { label: 'Customize Home', onSelect: () => customize(true) },
+            ]} />
+          </div>}
         </div>
-        : <div className="home-tools">
-          <AllAmountsToggle />
-          <span className="inline-actions">
-            <button type="button" className="button-small" onClick={() => onLayoutChange(setAllOpen(layout, true))}>Expand All</button>
-            <button type="button" className="button-small" onClick={() => onLayoutChange(setAllOpen(layout, false))}>Collapse All</button>
-            <button type="button" className="button-small" onClick={() => setCustomizing(true)}>Customize Home</button>
-          </span>
-        </div>}
+      </div>
+      {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
+        <p className="muted-note" id="customize-home-help">Drag a block by its handle, or use Move up and Move down. Nothing else changes.</p>
+        <span className="inline-actions">
+          <button type="button" className="button-small" onClick={() => { onLayoutChange({ order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement('Home layout reset: the first order, with This Month and Left to Pay open.') }}>Reset Layout</button>
+          <button type="button" className="button-small button-small-primary" onClick={() => customize(false)}>Done</button>
+        </span>
+      </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
       <HomeBlocksContext.Provider value={control}>
         <div className={`home-blocks${customizing ? ' is-customizing' : ''}${drag?.started ? ' is-dragging' : ''}`} ref={blocksRef}>

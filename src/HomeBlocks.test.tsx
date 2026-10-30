@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
@@ -196,9 +197,9 @@ describe('Home blocks open and close', () => {
 
   it('opens and closes all blocks at once', async () => {
     await openAlex()
-    await fire.click(button('Expand All'))
+    await chooseHomeOption('Expand All')
     expect(BLOCKS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'true')).toBe(true)
-    await fire.click(button('Collapse All'))
+    await chooseHomeOption('Collapse All')
     expect(BLOCKS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'false')).toBe(true)
   })
 
@@ -215,7 +216,7 @@ describe('Customize Home', () => {
   it('moves blocks only in Customize Home, with Move up and Move down, and Done ends it', async () => {
     await openAlex()
     expect(screen.queryByRole('button', { name: /^Move (up|down)/ })).toBeNull()
-    await fire.click(button('Customize Home'))
+    await chooseHomeOption('Customize Home')
     expect((button('Move up: This Month') as HTMLButtonElement).disabled).toBe(true)
     await fire.click(button('Move up: Year Summary'))
     expect(order()).toEqual(['month', 'left-to-pay', 'categories', 'debt', 'money', 'year', 'goals'])
@@ -230,8 +231,8 @@ describe('Customize Home', () => {
 
   it('Reset Layout brings back the first order and open blocks', async () => {
     await openAlex()
-    await fire.click(button('Expand All'))
-    await fire.click(button('Customize Home'))
+    await chooseHomeOption('Expand All')
+    await chooseHomeOption('Customize Home')
     await fire.click(button('Move up: My Money'))
     await fire.click(button('Reset Layout'))
     await fire.click(button('Done'))
@@ -241,7 +242,7 @@ describe('Customize Home', () => {
 
   it('drags a block by its handle', async () => {
     await openAlex()
-    await fire.click(button('Customize Home'))
+    await chooseHomeOption('Customize Home')
     const blocks = [...document.querySelectorAll<HTMLElement>('[data-home-block]')]
     blocks.forEach((element, index) => { element.getBoundingClientRect = () => ({ top: index * 100, height: 90, bottom: index * 100 + 90 } as DOMRect) })
     const handle = document.querySelector('[data-home-block="year"] .drag-handle')!
@@ -254,7 +255,7 @@ describe('Customize Home', () => {
 
   it('keeps the demo layout only while the demo is open, and Reset Demo restores it', async () => {
     const { storage } = await openAlex()
-    await fire.click(button('Customize Home'))
+    await chooseHomeOption('Customize Home')
     await fire.click(button('Move up: Year Summary'))
     await fire.click(button('Done'))
     await fire.click(toggleOf('My Money'))
@@ -266,7 +267,7 @@ describe('Customize Home', () => {
     expect(storage.getItem('goal-planning-app.home-layout')).toBeNull()
     expect(storage.getItem('goal-planning-app.my-space')).toBeNull()
     expect(await storedData()).toBeNull()
-    await fire.click(button('Reset Demo'))
+    await startDemoReset()
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     expect(order()).toEqual(['month', 'left-to-pay', 'categories', 'debt', 'money', 'goals', 'year'])
     expect(toggleOf('My Money').getAttribute('aria-expanded')).toBe('false')
@@ -274,7 +275,7 @@ describe('Customize Home', () => {
 
   it('remembers the own space’s layout after reopening the app, apart from the demo', async () => {
     const { storage } = await createOwnSpace()
-    await fire.click(button('Customize Home'))
+    await chooseHomeOption('Customize Home')
     await fire.click(button('Move down: This Month'))
     await fire.click(button('Done'))
     await fire.click(toggleOf('Year Summary'))
