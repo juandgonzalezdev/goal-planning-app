@@ -14,6 +14,7 @@ import { isKept, type ChangeSpace } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { LeftToPayMessage } from '../home/LeftToPay'
 import { MonthSwitch } from '../../components/MonthSwitch'
+import { AllBills } from './AllBills'
 import { BillsCalendar } from './BillsCalendar'
 import { FILTER_NAMES, filterBills, selectedDay, shortDay, type BillsFilter, type BillsMode, type BillsView } from './billsView'
 
@@ -171,6 +172,9 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
           ))}
         </div>
       )}
+
+      <AllBills data={data} today={today} isDemo={isDemo} money={amounts.money} open={view.allOpen} onToggle={() => onViewChange({ ...view, allOpen: !view.allOpen })}
+        filter={view.allFilter} onFilterChange={allFilter => onViewChange({ ...view, allFilter })} onOpenBill={id => onOpenBill(id, `all-${id}`)} onAddBill={onAddBill} />
 
       <PrintList bills={all} monthLabel={monthLabel} amounts={amounts} data={data} />
     </div>

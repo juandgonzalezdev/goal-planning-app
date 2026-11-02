@@ -29,7 +29,7 @@ export interface DebtPayment {
 
 /**
  * A debt's monthly payment. A linked bill is the one place that holds it,
- * so the payment shown in Cards and the bill in Monthly Bills are always
+ * so the payment shown in Cards & Loans and the bill in Monthly Bills are always
  * the same amount, counted once.
  */
 export function debtPayment(data: Pick<FinanceData, 'bills'>, debt: DebtAccount, month: YearMonth): DebtPayment {

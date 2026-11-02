@@ -6,6 +6,7 @@ import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import type { BillMonth, FinanceData, RecurringBill } from './domain/finance/types'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { openCardsAndLoans } from './test/money'
 
 freshDatabaseForEachTest()
 
@@ -262,11 +263,11 @@ describe('Bills calendar', () => {
 describe('Bills links', () => {
   const household = () => ({ data: createDemoHousehold(), today: DEMO_TODAY })
 
-  it('opens a loan’s bill from Cards in the same month, and Bills follows the month', async () => {
+  it('opens a loan’s bill from Cards & Loans in the same month, and Bills follows the month', async () => {
     render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} createDemo={household} />)
     await settle()
     await fire.click(button('Explore the App'))
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await pickMonth('2026-12')
     await fire.click(button(/^Furniture Loan/))
     await fire.click(within(document.querySelector('[data-screen="debt"]') as HTMLElement).getByRole('button', { name: 'Furniture Loan, December 2026' }))

@@ -26,7 +26,7 @@ personal.
   `domain/finance/types.ts`): ingresos, facturas, meses de factura, deudas,
   cuentas, saldos, metas y movimientos.
 - **Los totales no se guardan nunca.** Se calculan en cada pantalla a partir de
-  los registros, así que Home, Bills, Cards, History, Data y Goals no pueden
+  los registros, así que Home, Bills, Goals, Money y History no pueden
   contradecirse.
 - Todas las pantallas cambian los datos con `space.update` (`app/useSpace.ts`).
   En el espacio propio, el cambio se muestra cuando la base de datos del
@@ -126,14 +126,14 @@ cuenta diaria + 377,29 de deuda nueva.
   (`summarizeDebts`). Las cuotas mensuales no se suman: pagan la deuda, no son
   más deuda.
 - **Una cuota vinculada se cuenta una vez.** Si una factura paga una deuda, la
-  cuota vive solo en esa factura: Cards la muestra, Monthly Bills la cuenta, y
+  cuota vive solo en esa factura: Money › Cards & Loans la muestra, Monthly Bills la cuenta, y
   la deuda no guarda una cuota propia (`debtPayment`; la importación rechaza un
   archivo con las dos).
 - **Marcar una cuota como pagada no reduce el principal por sí solo.** Si la
   cuota guarda su interés, el principal es cuota − interés; si no, la app no
   lo supone. El saldo registrado sigue siendo la referencia; el anterior queda
   en el historial.
-- **La cuota de un mes** que muestran Cards y el detalle de una tarjeta o
+- **La cuota de un mes** que muestran Cards & Loans y el detalle de una tarjeta o
   préstamo es la misma que Monthly Bills para ese mes: el importe propio del
   mes si la factura lo tiene (p. ej. la tarjeta pagada entera en diciembre,
   2.489,27) o, si no, el habitual (`debtMonthPayment`). El enlace a la factura
@@ -269,7 +269,7 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
   importar. Se abre desde la bienvenida o desde Settings; las reglas de
   entrada y salida están en
   [STORAGE_AND_RECOVERY.md](STORAGE_AND_RECOVERY.md#8-la-demo-y-el-espacio-propio).
-- **Reset Demo** (franja, Data o Settings) devuelve el año completo: todos los
+- **Reset Demo** (franja o Settings) devuelve el año completo: todos los
   registros, el mes elegido (diciembre de 2026), el diseño inicial de Home y
   las preferencias de pantalla de Alex.
 - El orden y los bloques abiertos de Home son preferencias de pantalla, no
@@ -299,7 +299,7 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
 
 ## 10. Informe PDF, copia de seguridad y ocultar importes
 
-- **Export Report** (Data) descarga un PDF de un mes o un año: periodo, moneda,
+- **Export Report** (Settings › Reports & Backup) descarga un PDF de un mes o un año: periodo, moneda,
   fecha de generación, aviso de datos inventados en la demo, resumen, mes a mes
   (año), categorías con gráfico, pagos pendientes, deudas con la fecha de su
   saldo, cuentas, Savings y metas, datos que faltan y supuestos. Dice siempre

@@ -40,7 +40,7 @@ type Props = {
   /** Opens a bill on the month of the payment chosen. */
   onOpenBill: (id: Id, month: YearMonth) => void
   onOpenGoal: (id: Id) => void
-  /** Opens Accounts & Balances in Data, on this account. */
+  /** Opens Accounts & Savings in Money, on this account. */
   onOpenAccount: (id: Id) => void
 }
 
@@ -301,7 +301,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
             ))}
           </div>
         )}
-        <p className="field-help no-print">Bill payments open their bill, savings movements their goal, and balances Accounts &amp; Balances in Data. Spending, transfers and income open here to change.</p>
+        <p className="field-help no-print">Bill payments open their bill, savings movements their goal, and balances open Accounts &amp; Savings in Money. Spending, transfers and income open here to change.</p>
       </section>
 
       <PrintList groups={groups} amounts={amounts} />
@@ -434,7 +434,7 @@ function EntryRow({ entry, amounts, editing, onOpen }: { entry: ActivityEntry; a
   const amount = amountOf(entry, amounts)
   const extras = extrasOf(entry, amounts)
   const action = entry.ref.kind === 'bill' ? 'Open bill' : entry.ref.kind === 'movement' || entry.ref.kind === 'opening' ? 'Open goal'
-    : entry.ref.kind === 'balance' ? 'Open in Data' : editing ? 'Close' : 'Change'
+    : entry.ref.kind === 'balance' ? 'Open in Money' : editing ? 'Close' : 'Change'
   return (
     <>
       <div className="history-row">

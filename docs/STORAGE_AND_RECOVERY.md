@@ -184,7 +184,7 @@ después quita la copia antigua.
 
 | | Download Backup | Download Both Copies |
 | --- | --- | --- |
-| Dónde | Data → Data Backup, siempre (también en la demo) | Pantalla de recuperación, y en Data cuando el espacio es de solo lectura |
+| Dónde | Settings → Reports & Backup → Data Backup, siempre (también en la demo) | Pantalla de recuperación, y en Settings → Reports & Backup cuando el espacio es de solo lectura |
 | Qué contiene | El espacio abierto, validado, en el formato de intercambio | Todas las copias del dispositivo **tal como están guardadas**: el espacio actual (aunque esté dañado), todos los espacios, la cuarentena, las marcas y la copia antigua como texto |
 | Para qué | Guardar y restaurar con **Restore Backup** | Rescatar información antes de Use Older Copy o Erase |
 | Restore Backup | Lo lee, lo comprueba y pide confirmación antes de reemplazar | Lo rechaza: «This is a recovery file, not a backup…» |
@@ -217,8 +217,8 @@ con la demo abierta).
   - Las preferencias de pantalla de la demo (importes ocultos, Donut o Bars,
     Maybe Later del fondo de emergencia) viven solo en memoria. Toda demo
     empieza con las de Alex, y Reset Demo las restablece.
-  - El diseño de Home y las vistas de Data y History de la demo también son
-    solo suyos.
+  - El diseño de Home, las vistas de Money y History y el filtro de Goals de
+    la demo también son solo suyos.
   - La vista de Bills y el mes del espacio propio se apartan al entrar y se
     devuelven al salir.
   - La demo usa el tema de Alex. Al salir vuelve el del espacio propio.

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './app/navigation'
+import { isSpaceScreen, isTab, shownScreen, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
 import { WriteStatusContext } from './app/writeStatus'
@@ -22,10 +22,10 @@ import type { CalendarDate } from './domain/goalTime'
 import { BillScreen } from './features/bills/BillScreen'
 import { BillsScreen } from './features/bills/BillsScreen'
 import { INITIAL_BILLS_VIEW, type BillsView } from './features/bills/billsView'
-import { CardsScreen } from './features/cards/CardsScreen'
 import { DebtScreen } from './features/cards/DebtScreen'
-import { DataScreen } from './features/data/DataScreen'
-import { INITIAL_DATA_VIEW, setBlockOpen, type DataBlock, type DataView } from './features/data/dataBlocks'
+import { MoneyScreen } from './features/money/MoneyScreen'
+import { INITIAL_MONEY_VIEW, setBlockOpen, type MoneyBlock, type MoneyView } from './features/money/moneyBlocks'
+import type { GoalFilter } from './domain/finance/goals'
 import { GoalDetailScreen } from './features/goals/GoalDetailScreen'
 import { EMPTY_NEW_GOAL, typedGoalDraft, type NewGoalState } from './features/goals/goalDraft'
 import { GoalsScreen } from './features/goals/GoalsScreen'
@@ -80,8 +80,8 @@ type Props = {
  * between screens.
  *
  * Every screen reads the same records (the open space's data) and changes
- * them through `space.update`, so Home, Bills, Cards, Data, History and
- * the goals always agree.
+ * them through `space.update`, so Home, Bills, Goals, Money and History
+ * always agree.
  */
 function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo, createStore = browserSpaceStore }: Props) {
   // Forms with changes that are not saved: another tab's changes never replace them, and they are never dropped without asking.
@@ -163,9 +163,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
   const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
   const [ownLayout, setOwnLayout] = useState<{ spaceId: string; layout: HomeLayout } | null>(null)
-  // How Data looks (open blocks, filters): for this session only, separately for the demo and the own space.
-  const [demoDataView, setDemoDataView] = useState<DataView>(INITIAL_DATA_VIEW)
-  const [ownDataView, setOwnDataView] = useState<{ spaceId: string; view: DataView } | null>(null)
+  // How Money looks (open blocks, filters, the source or account shown) and the Goals filter:
+  // for this session only, separately for the demo and the own space.
+  const [demoMoneyView, setDemoMoneyView] = useState<MoneyView>(INITIAL_MONEY_VIEW)
+  const [ownMoneyView, setOwnMoneyView] = useState<{ spaceId: string; view: MoneyView } | null>(null)
+  const [demoGoalsFilter, setDemoGoalsFilter] = useState<GoalFilter>('all')
+  const [ownGoalsFilter, setOwnGoalsFilter] = useState<{ spaceId: string; filter: GoalFilter } | null>(null)
   // How Bills looks (Calendar or List, filter, chosen day): for this session only, so Back from a bill finds it as it was.
   const [billsView, setBillsView] = useState<BillsView>(INITIAL_BILLS_VIEW)
   // How History looks (its own period, search, filters, open months, records shown): for this session only,
@@ -179,15 +182,21 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const billsReturn = useRef<{ y: number; key: string } | null>(null)
   // + Add Bill in the day panel: the day the new bill starts on (null: the top Add Bill, an empty form).
   const [billDay, setBillDay] = useState<CalendarDate | null>(null)
-  // The Data block a link asked for (Edit Balances): it gets the focus instead of the screen title.
-  const dataTarget = useRef<DataBlock | null>(null)
+  // The Money block a link asked for (Edit Balances, Open Cards & Loans): it gets the focus instead of the screen title.
+  const moneyTarget = useRef<MoneyBlock | null>(null)
+  // Where Money was scrolled when a card, a loan or a goal was opened from it, the block, and which
+  // button (its data-return-key) gets the focus back: Back returns there.
+  const moneyReturn = useRef<{ y: number; block: MoneyBlock; key: string } | null>(null)
+  // Reports & Backup asked for from Money: Settings opens with the focus on that section.
+  const settingsTarget = useRef(false)
   const mainRef = useRef<HTMLElement>(null)
   const firstScreen = useRef(true)
 
   // Space screens need an open space, and an open space never shows the
   // screens before it (Back after setup must not create a second space).
+  // A step saved by an earlier version may name an old tab (Cards, Data): Money shows it.
   const screen: Screen = space.open
-    ? (isSpaceScreen(requested) ? requested : 'home')
+    ? (isSpaceScreen(requested) ? shownScreen(requested) : 'home')
     : (isSpaceScreen(requested) ? 'welcome' : requested)
   const shows = (name: Screen) => screen === name
   // The "Bill added" notice belongs to this visit to Bills: any other screen (apart from a bill opened there) ends it.
@@ -259,7 +268,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
 
   // After each move, focus goes to the new screen's title so keyboard and
   // screen reader users know where they are.
-  // A link to one Data block (Edit Balances) moves the view and the focus to that block's heading instead.
+  // A link to one Money block (Edit Balances, Open Cards & Loans) moves the view and the focus to that block's heading instead.
   useEffect(() => {
     // The first screen (and the one shown when the space has opened) is not a move: the focus stays where the browser put it.
     if (firstScreen.current) { if (!space.opening) firstScreen.current = false; return }
@@ -287,9 +296,32 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       window.scrollTo?.(0, returnTo)
       return
     }
-    const target = screen === 'data' ? dataTarget.current : null
-    dataTarget.current = null
-    const toggle = target ? mainRef.current?.querySelector<HTMLElement>(`[data-data-block="${target}"] .block-toggle`) : null
+    // Back to Money from a card, a loan or a goal opened there: the same place, with the focus on the button that
+    // opened it, else on its block's heading (after Delete, the button is gone).
+    const moneyBack = screen === 'money' ? moneyReturn.current : null
+    if (screen !== 'debt' && screen !== 'bill' && screen !== 'goal') moneyReturn.current = null
+    if (moneyBack) {
+      const money = mainRef.current?.querySelector<HTMLElement>('[data-screen="money"]')
+      const target = money?.querySelector<HTMLElement>(`[data-return-key="${moneyBack.key}"]`)
+        ?? money?.querySelector<HTMLElement>(`[data-money-block="${moneyBack.block}"] .block-toggle`)
+      target?.focus({ preventScroll: true })
+      window.scrollTo?.(0, moneyBack.y)
+      target?.scrollIntoView?.({ block: 'nearest' })
+      return
+    }
+    // Reports & Backup from Money: Settings with the focus on that section.
+    const reports = screen === 'settings' && settingsTarget.current
+    settingsTarget.current = false
+    if (reports) {
+      const section = mainRef.current?.querySelector<HTMLElement>('#settings-reports')
+      section?.focus({ preventScroll: true })
+      section?.scrollIntoView?.({ block: 'start' })
+      return
+    }
+    // A step of an earlier version's Cards tab shows Money on Cards & Loans.
+    const target = screen === 'money' ? moneyTarget.current ?? (requested === 'cards' ? 'debts' : null) : null
+    moneyTarget.current = null
+    const toggle = target ? mainRef.current?.querySelector<HTMLElement>(`[data-money-block="${target}"] .block-toggle`) : null
     if (toggle) {
       toggle.focus({ preventScroll: true })
       // Scrolls under the header (and the tab row on wide screens): html's scroll-padding-top leaves their height free.
@@ -300,7 +332,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading) return
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
-  }, [screen, space.opening])
+  }, [screen, requested, space.opening])
 
   // After the space is read again (changes from another tab), the screens start again from the new records.
   // The screen, the month and the views stay; the focus and the scroll position are put back where they were, when that place is still there.
@@ -348,13 +380,27 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     writeHomeLayout(storage, open.data.space.id, layout)
   }
 
-  const dataView = !open ? INITIAL_DATA_VIEW
-    : open.kind === 'demo' ? demoDataView
-      : ownDataView?.spaceId === open.data.space.id ? ownDataView.view : INITIAL_DATA_VIEW
-  const changeDataView = (view: DataView) => {
+  const moneyView = !open ? INITIAL_MONEY_VIEW
+    : open.kind === 'demo' ? demoMoneyView
+      : ownMoneyView?.spaceId === open.data.space.id ? ownMoneyView.view : INITIAL_MONEY_VIEW
+  const changeMoneyView = (view: MoneyView) => {
     if (!open) return
-    if (open.kind === 'demo') setDemoDataView(view)
-    else setOwnDataView({ spaceId: open.data.space.id, view })
+    if (open.kind === 'demo') setDemoMoneyView(view)
+    else setOwnMoneyView({ spaceId: open.data.space.id, view })
+  }
+  const goalsFilter = !open ? 'all'
+    : open.kind === 'demo' ? demoGoalsFilter
+      : ownGoalsFilter?.spaceId === open.data.space.id ? ownGoalsFilter.filter : 'all'
+  const changeGoalsFilter = (filter: GoalFilter) => {
+    if (!open) return
+    if (open.kind === 'demo') setDemoGoalsFilter(filter)
+    else setOwnGoalsFilter({ spaceId: open.data.space.id, filter })
+  }
+  // A step of an earlier version's Cards tab (Back or Forward to it) opens Cards & Loans in Money.
+  const [seenRequested, setSeenRequested] = useState(requested)
+  if (seenRequested !== requested) {
+    setSeenRequested(requested)
+    if (requested === 'cards' && open) changeMoneyView(setBlockOpen(moneyView, 'debts', true))
   }
   const historyView = !open ? INITIAL_HISTORY_VIEW
     : open.kind === 'demo' ? demoHistoryView
@@ -364,12 +410,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (open.kind === 'demo') setDemoHistoryView(view)
     else setOwnHistoryView({ spaceId: open.data.space.id, view })
   }
-  /** Opens Data on one block: the block opens, and the view and the focus go to its heading. */
-  const openDataBlock = (block: DataBlock) => confirmLeave(ANY_FORM, () => {
-    changeDataView(setBlockOpen(dataView, block, true))
-    dataTarget.current = block
-    navigation.go('data')
+  /** Opens Money on one block: the block opens, and the view and the focus go to its heading. */
+  const openMoneyBlock = (block: MoneyBlock) => confirmLeave(ANY_FORM, () => {
+    changeMoneyView(setBlockOpen(moneyView, block, true))
+    moneyTarget.current = block
+    navigation.go('money')
   })
+  /** Money's link to Reports & Backup: Settings, on that section. */
+  const openReports = () => confirmLeave(ANY_FORM, () => { settingsTarget.current = true; navigation.go('settings') })
 
   // Home's month bar sticks under the header (and the tab row on wide screens). Their real
   // height changes with the iPhone notch and the font size, so it is measured, not guessed.
@@ -418,7 +466,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   /** After another tab erased the space: the user discarded what was typed here, and the space closes. */
   const closeErased = () => {
     discardTyped()
-    resetGoals(); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null)
+    resetGoals(); setOwnLayout(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null)
     space.discardErased()
     replace('welcome')
   }
@@ -432,7 +480,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     }
   }
   /** Everything the demo shows on top of its records goes back to the start: layout, views, screen preferences, choices. */
-  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoDataView(INITIAL_DATA_VIEW); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
+  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoMoneyView(INITIAL_MONEY_VIEW); setDemoGoalsFilter('all'); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
   // What the own space shows and is not kept per space (the Bills view and the month): set aside while the demo is open.
   const ownReturn = useRef<{ billsView: BillsView; chosenMonth: typeof chosenMonth } | null>(null)
   /**
@@ -471,7 +519,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     leaveDemo()
   }
   const exitDemoDiscarding = () => { discardTyped(); leaveDemo() }
-  // Reset Demo puts the whole example back: the records, the Home layout, Data's closed blocks, History's first view,
+  // Reset Demo puts the whole example back: the records, the Home layout, Money's closed blocks, the Goals filter, History's first view,
   // Alex's screen preferences, and everything planned or chosen on top of them.
   const resetDemo = () => { space.resetDemo(); resetGoals(); setChosenMonth(null); clearDemoViews() }
   /**
@@ -480,14 +528,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    */
   const erase = async (): Promise<EraseOutcome> => {
     const outcome = await space.eraseOwnSpace()
-    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
+    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
     return outcome
   }
   // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
   const showGoal = (id: Id) => { setGoalId(id); navigation.go('goal') }
   const openGoal = (id: Id) => confirmLeave(ANY_FORM, () => showGoal(id))
   const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => { setDebtId(id); navigation.go('debt') })
-  /** Opens a bill; with `forMonth` (a payment chosen in Cards or History), on that month, which becomes the shared month. */
+  /** Opens a bill; with `forMonth` (a payment chosen in a card or loan, or in History), on that month, which becomes the shared month. */
   const showBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillDay(null); if (forMonth) setMonth(forMonth); navigation.go('bill') }
   const openBill = (id: Id | null, forMonth?: YearMonth) => confirmLeave(ANY_FORM, () => showBill(id, forMonth))
   /** Bills opens a bill, or Add Bill on a day: Back finds Bills where it was, with the focus on the button used. */
@@ -525,12 +573,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   })
   /** History opens a bill or a goal: Back finds History scrolled where it was. */
   const fromHistory = (show: () => void) => confirmLeave(ANY_FORM, () => { historyScroll.current = window.scrollY; show() })
-  /** A balance in History opens Accounts & Balances in Data, on its account. */
+  /** A balance in History opens Accounts & Savings in Money, on its account. */
   const openAccount = (id: Id) => confirmLeave(ANY_FORM, () => {
-    changeDataView({ ...setBlockOpen(dataView, 'accounts', true), account: open?.data.moneyAccounts.some(a => a.id === id) ? id : null })
-    dataTarget.current = 'accounts'
-    navigation.go('data')
+    changeMoneyView({ ...setBlockOpen(moneyView, 'accounts', true), account: open?.data.moneyAccounts.some(a => a.id === id) ? id : null })
+    moneyTarget.current = 'accounts'
+    navigation.go('money')
   })
+  /** Money opens a card, a loan or a goal: Back finds Money where it was, with the focus on the button used. */
+  const fromMoney = (block: MoneyBlock, key: string, show: () => void) => confirmLeave(ANY_FORM, () => { moneyReturn.current = { y: window.scrollY, block, key }; show() })
   const shownHidden = inDemo ? demoPrefs.hidden : hiddenBlocks
   const saveHidden = (next: ReadonlySet<HomeBlock>) => {
     if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, hidden: next })); return }
@@ -620,11 +670,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       )}
       {open?.kind === 'own' && space.problem?.kind === 'read-only' && (space.problem.takenOver ? (
         <div className="save-warning" role="alert">
-          <p><b>Read-only.</b> A newer version of the app was opened in another tab, so nothing more is saved here. Anything you typed stays on screen: copy what you need, then reload this page. You can still use Download Backup in Data.</p>
+          <p><b>Read-only.</b> A newer version of the app was opened in another tab, so nothing more is saved here. Anything you typed stays on screen: copy what you need, then reload this page. You can still use Download Backup in Settings, under Reports &amp; Backup.</p>
         </div>
       ) : (
         <div className="save-warning" role="alert">
-          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup or Download Both Copies in Data.</p>
+          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup or Download Both Copies in Settings, under Reports &amp; Backup.</p>
           <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
           {confirming === 'reload'
             ? <ConfirmDiscard question="Trying again closes the forms you changed here. What you typed cannot be brought back." confirm="Discard and Try Again" onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
@@ -685,7 +735,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <HomeScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
-                onChange={space.update} onOpen={go} onOpenDataBlock={openDataBlock} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
+                onChange={space.update} onOpen={go} onOpenMoneyBlock={openMoneyBlock} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
                 onOpenExpense={openExpense} emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 onReviewEmergency={() => go('emergency')} />
             </AmountVisibilityProvider>
@@ -696,9 +746,6 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onMonthChange={next => confirmLeave(form => form.month !== undefined && form.month !== next, () => { setBillsView(view => ({ ...view, added: null, selected: null })); setMonth(next) })}
                 onChange={space.update} onOpenBill={(id, key) => fromBills(key, () => showBill(id))} onAddBill={() => openBill(null)} onAddBillOn={addBillOn} />
             </AmountVisibilityProvider>
-          </div>}
-          {shows('cards') && <div className="screen" data-screen="cards">
-            <CardsScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
           </div>}
           {shows('debt') && <div className="screen" data-screen="debt">
             <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} months={months} month={month} onMonthChange={changeMonth}
@@ -712,7 +759,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
             {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
-            <GoalsScreen data={open.data} today={space.today} onBack={back} onNew={() => go('new-goal')} onOpenGoal={openGoal} />
+            <GoalsScreen data={open.data} today={space.today} filter={goalsFilter} onFilterChange={changeGoalsFilter} onNew={() => go('new-goal')} onOpenGoal={openGoal}
+              onStartEmergency={() => go('emergency')} />
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
             <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} isDemo={open.kind === 'demo'} newId={newId} onBack={back}
@@ -753,14 +801,16 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenAccount={openAccount} />
             </AmountVisibilityProvider>
           </div>}
-          {shows('data') && <div className="screen" data-screen="data">
-            <DataScreen key={open.kind} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today} owner={newGoalOwner} newId={newId}
-              view={dataView} onViewChange={changeDataView}
-              onChange={space.update} onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onOpenBill={openBill} onOpenDebt={openDebt} onOpenGoal={openGoal}
-              onAddGoal={() => go('new-goal')} onReviewEmergency={() => go('emergency')} onResetDemo={resetDemo} />
+          {/* A step of an earlier version (cards, data) also shows Money: moving to or from it starts Money again, so its forms close as on any other move. */}
+          {shows('money') && <div className="screen" data-screen="money">
+            <MoneyScreen key={`${open.kind}:${requested}`} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} onMonthChange={changeMonth} today={space.today} owner={newGoalOwner} newId={newId}
+              view={moneyView} onViewChange={changeMoneyView} onChange={space.update}
+              onOpenDebt={id => fromMoney('debts', id ? `debt-${id}` : 'add-debt', () => { setDebtId(id); navigation.go('debt') })}
+              onOpenGoal={id => fromMoney('accounts', `goal-${id}`, () => showGoal(id))} onOpenReports={openReports} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
-            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} onBack={back} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
+            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}
+              onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
               onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
                 <ConfirmDiscard question="Opening the demo closes what you typed here. It cannot be brought back." confirm="Discard and Open Demo" onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />

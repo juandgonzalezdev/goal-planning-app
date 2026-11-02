@@ -6,6 +6,7 @@ import { createAlexDemo } from './data/fixtures/demoAlex'
 import { activityLog, filterActivity, NO_FILTER } from './domain/finance/history'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabase, settle, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { openCardsAndLoans } from './test/money'
 import { startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
@@ -97,7 +98,7 @@ describe('History layout', () => {
 })
 
 describe('History period', () => {
-  it('keeps its own period, apart from the month shared by Home, Bills and Cards', async () => {
+  it('keeps its own period, apart from the month shared by Home, Bills and Cards & Loans', async () => {
     await openHistory()
     await fire.change(field('Period'), { target: { value: 'month:2026-03' } })
     await fire.click(tab('Home'))
@@ -106,7 +107,7 @@ describe('History period', () => {
     await fire.click(tab('Bills'))
     await fire.click(tab('History'))
     expect(field('Period').value).toBe('month:2026-03')
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     expect(monthSelect().value).toBe('2026-06')
   })
 })
@@ -296,11 +297,11 @@ describe('History navigation', () => {
     expect(field('Search by name or note').value).toBe('japan')
   })
 
-  it('opens a balance in Accounts & Balances in Data, on its account', async () => {
+  it('opens a balance in Accounts & Savings in Money, on its account', async () => {
     await openHistory()
     await fire.click(screen.getAllByRole('button', { name: /^Balance updateSavings Account/ })[0])
-    const block = screen.getByRole('region', { name: 'Accounts & Balances' })
-    expect(within(block).getByRole('button', { name: /^Accounts & Balances/ }).getAttribute('aria-expanded')).toBe('true')
+    const block = screen.getByRole('region', { name: 'Accounts & Savings' })
+    expect(within(block).getByRole('button', { name: /^Accounts & Savings/ }).getAttribute('aria-expanded')).toBe('true')
     expect(within(block).getByRole('button', { name: /^Savings Account/ }).getAttribute('aria-expanded')).toBe('true')
   })
 
@@ -348,8 +349,8 @@ describe('History empty states', () => {
     render(<App getToday={() => '2027-02-10'} storage={memoryStorage()} />)
     await settle()
     await createOwnSpace()
-    await fire.click(tab('Data'))
-    await fire.click(within(screen.getByRole('region', { name: 'Accounts & Balances' })).getByRole('button', { name: /Add Account/ }))
+    await fire.click(tab('Money'))
+    await fire.click(within(screen.getByRole('region', { name: 'Accounts & Savings' })).getByRole('button', { name: /Add Account/ }))
     await fire.change(field('Account Name'), { target: { value: 'Main' } })
     await fire.click(button('Save Account'))
     await fire.click(tab('History'))

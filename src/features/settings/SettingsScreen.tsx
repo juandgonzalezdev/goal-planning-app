@@ -7,12 +7,24 @@ import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Theme } from '../../domain/finance/types'
 import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSetup'
+import type { YearMonth } from '../../domain/calendar'
+import type { CalendarDate } from '../../domain/goalTime'
+import { ExchangeSection } from './ExchangeSection'
+import { ReportSection } from './ReportSection'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
 
 type Props = {
   data: FinanceData
   isDemo: boolean
+  /** For Reports & Backup: the months the report can cover, the month chosen, and today. */
+  months: YearMonth[]
+  month: YearMonth
+  today: CalendarDate
+  /** Restore Backup: replaces the whole space (asks first). */
+  onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome>
+  /** While the space can only be shown: "Download Both Copies". */
+  onDownloadCopies?: () => Promise<boolean>
   onBack: () => void
   onThemeChange: (theme: Theme) => Promise<SaveOutcome>
   onErase: () => Promise<EraseOutcome>
@@ -32,7 +44,7 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
   'busy': 'Still saving the last change. Try again in a moment.',
 }
 
-export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
+export function SettingsScreen({ data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [eraseText, setEraseText] = useState('')
   const [themeText, setThemeText] = useState('')
@@ -96,7 +108,7 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
           {!confirming && <button type="button" className="button-danger" disabled={!canErase} onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}
           {confirming && (
             <div className="callout callout-warning" role="alert">
-              <p>Erase your whole space from this device? This cannot be undone. Export it first in Data if you want a copy.</p>
+              <p>Erase your whole space from this device? This cannot be undone. Use Download Backup in Reports &amp; Backup first if you want a copy.</p>
               <div className="inline-actions">
                 <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined} onClick={() => void erase()}>Erase Everything</button>
                 <button type="button" className="button-small" onClick={() => setConfirming(false)}>Cancel</button>
@@ -105,6 +117,12 @@ export function SettingsScreen({ data, isDemo, onBack, onThemeChange, onErase, o
           )}
           {eraseText && <p className="field-error" role="alert">{eraseText}</p>}
         </>}
+      </section>
+
+      <section className="block" id="settings-reports" aria-labelledby="settings-reports-title" tabIndex={-1}>
+        <h2 id="settings-reports-title" className="section-title">Reports &amp; Backup</h2>
+        <ReportSection data={data} isDemo={isDemo} months={months} month={month} today={today} />
+        <ExchangeSection data={data} isDemo={isDemo} onReplace={onReplace} onDownloadCopies={onDownloadCopies} />
       </section>
 
       {!isDemo && onExploreDemo && (

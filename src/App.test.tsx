@@ -6,6 +6,7 @@ import { STORAGE_KEY } from './data/localStore'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, refuseWrites, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption } from './test/homeControls'
 
 freshDatabaseForEachTest()
@@ -21,7 +22,7 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const heading = (name: string | RegExp) => screen.getByRole('heading', { name })
 const field = (label: string | RegExp) => screen.getByLabelText(label) as HTMLInputElement
 const type = async (label: string | RegExp, value: string) => await fire.change(field(label), { target: { value } })
-const section = (name: 'emergency' | 'cards') => document.querySelector<HTMLElement>(`[data-screen="${name}"]`)
+const section = (name: 'emergency' | 'money') => document.querySelector<HTMLElement>(`[data-screen="${name}"]`)
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 // Intl writes amounts with no-break spaces; compare them as plain spaces.
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
@@ -87,7 +88,7 @@ describe('Welcome', () => {
     await start()
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
     expect(section('emergency')).toBeNull()
-    expect(section('cards')).toBeNull()
+    expect(section('money')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull()
   })
 })
@@ -255,7 +256,8 @@ describe('Demo', () => {
 
   it('does not allow importing into the demo', async () => {
     await openDemo()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     expect(screen.getByText(/Exit the demo to import your own data/)).toBeTruthy()
     expect(screen.queryByLabelText('Choose a JSON file')).toBeNull()
   })
@@ -420,11 +422,12 @@ describe('Goals & Savings Pots', () => {
     await fire.click(button(kind === 'Add' ? 'Save Contribution' : 'Save Withdrawal'))
   }
 
-  it('opens from View All on Home, without a sixth tab', async () => {
+  it('opens from View All on Home as the Goals tab (no sixth tab)', async () => {
     await openDemo()
     await openGoals()
     expect(heading('Our Goals')).toBeTruthy()
-    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    expect(within(screen.getByRole('navigation', { name: 'Main navigation' })).getAllByRole('button')).toHaveLength(5)
+    expect(tab('Goals').getAttribute('aria-current')).toBe('page')
     expect(stat('Saved in Goals')).toContain('0,00 zł')
     expect(stat('Total Targets')).toContain('20 500,00 zł')
     expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift'])
@@ -525,7 +528,7 @@ describe('Goals & Savings Pots', () => {
     expect(text(pace)).toContain('250,00 zł per month for 2 months')
     expect(text(pace)).toContain('Suggestions, not payments')
 
-    await fire.click(button(/All Goals/))
+    await fire.click(button('Back'))
     await waitFor(() => expect(heading('Our Goals')).toBeTruthy())
     await fire.click(button(/^Trip to Japan/))
     expect(screen.getByText('No deadline · Flexible')).toBeTruthy()
@@ -543,7 +546,7 @@ describe('Goals & Savings Pots', () => {
     expect(text(region('Progress'))).toContain('19 900,00 zł still needed')
     expect(text(region('Savings Activity'))).toBe('Savings Activity23 Oct 2026 · First savingsFrom unassigned savings+100,00 zł')
 
-    await fire.click(button(/All Goals/))
+    await fire.click(button('Back'))
     await waitFor(() => expect(stat('Saved in Goals')).toContain('100,00 zł'))
     await fire.click(button(/^(?!Go to)\s*Home/))
     await waitFor(() => expect(text(region('Our Money').querySelector('.tiles'))).toBe(moneyBefore))
@@ -661,7 +664,7 @@ describe('Goals & Savings Pots', () => {
       expect(text(region('Progress'))).toContain('60,00 zł')
       expect(region('Savings Activity').querySelectorAll('li')).toHaveLength(2)
 
-      await fire.click(button(/All Goals/))
+      await fire.click(button('Back'))
       await waitFor(() => expect(stat('Saved in Goals')).toContain('60,00 zł'))
       await fire.click(button(/^(?!Go to)\s*Home/))
       await waitFor(() => expect(text(region('Our Goals'))).toContain('60,00 zł'))
@@ -696,7 +699,7 @@ describe('Tab bar', () => {
   it('has the five approved tabs in order, and marks the current one', async () => {
     await openDemo()
     const nav = screen.getByRole('navigation', { name: 'Main navigation' })
-    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Home', 'Bills', 'Cards', 'History', 'Data'])
+    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['Home', 'Bills', 'Goals', 'Money', 'History'])
     expect(tab('Home').getAttribute('aria-current')).toBe('page')
     await fire.click(tab('History'))
     expect(heading('History')).toBeTruthy()
@@ -816,10 +819,10 @@ describe('Bills', () => {
 })
 
 describe('Keeping information between screens', () => {
-  it('keeps a loan added in Cards, with its calculator, after visiting other tabs', async () => {
+  it('keeps a loan added in Cards & Loans, with its calculator, after visiting other tabs', async () => {
     await createIndividualSpace()
-    await fire.click(tab('Cards'))
-    expect(heading('My Loans & Cards')).toBeTruthy()
+    await openCardsAndLoans()
+    expect(heading('Money')).toBeTruthy()
     expect(screen.queryByLabelText(/Monthly Income/)).toBeNull()
     await fire.click(button(/Add Card or Loan/))
     await type('Name', 'Test loan')
@@ -832,7 +835,7 @@ describe('Keeping information between screens', () => {
     expect(screen.getByText('Months Saved').nextElementSibling!.textContent).toBe('2')
 
     await fire.click(button(/Back/))
-    await waitFor(() => expect(heading('My Loans & Cards')).toBeTruthy())
+    await waitFor(() => expect(heading('Money')).toBeTruthy())
     await fire.click(tab('Bills'))
     expect(text(within(screen.getByRole('region', { name: 'Whole month' })).getByText('Planned').parentElement)).toContain('1000,00 zł')
     await fire.click(tab('Home'))
@@ -885,7 +888,7 @@ describe('Card or loan estimate', () => {
   // These cases were covered by the old My Money screen's tests; the estimate now lives on each card or loan.
   async function addLoan(payment: string) {
     await createIndividualSpace()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(button(/Add Card or Loan/))
     await type('Name', 'Test loan')
     await type('Remaining Balance (PLN)', '12000')
@@ -955,7 +958,7 @@ describe('Hiding amounts on Home', () => {
     expect(home()).toMatch(amount)
 
     async function openAccountsWithBalance() {
-      await fire.click(tab('Data'))
+      await fire.click(tab('Money'))
       await fire.click(button(/Add Account/))
       await type('Account Name', 'Wallet')
       await type(/^Balance \(/, '120')
@@ -977,7 +980,7 @@ describe('Back navigation', () => {
   it('goes back one screen at a time with the browser back button', async () => {
     await openDemo()
     await fire.click(tab('Bills'))
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await browserBack()
     expect(heading('Bills')).toBeTruthy()
     await browserBack()
@@ -1006,8 +1009,8 @@ describe('Logo (Go to Home)', () => {
     await openDemo()
     await pickMonth('2026-09')
     await fire.click(button('Hide amounts in Total Debt'))
-    await fire.click(tab('Cards'))
-    await fire.click(document.querySelector<HTMLButtonElement>('[data-screen="cards"] .goal-card')!)
+    await openCardsAndLoans()
+    await fire.click(document.querySelector<HTMLButtonElement>('[data-screen="money"] .goal-card')!)
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
     const steps = window.history.length
     await fire.click(button('Go to Home'))
@@ -1067,8 +1070,10 @@ describe('Focus', () => {
     await openDemo()
     await fire.click(tab('Bills'))
     expect(document.activeElement).toBe(heading('Bills'))
-    await fire.click(tab('Data'))
-    expect(document.activeElement).toBe(heading('Manage Your Data'))
+    await fire.click(tab('Goals'))
+    expect(document.activeElement).toBe(heading('Our Goals'))
+    await fire.click(tab('Money'))
+    expect(document.activeElement).toBe(heading('Money'))
   })
 })
 
@@ -1103,7 +1108,7 @@ describe('Settings', () => {
   })
 })
 
-describe('Data', () => {
+describe('Reports & Backup (Settings)', () => {
   const upload = async (content: string) => {
     const input = field('Choose a backup file (JSON)')
     await act(async () => {
@@ -1116,8 +1121,8 @@ describe('Data', () => {
     await createIndividualSpace()
     const current = (await saved())!
     const other = { ...current, space: { ...current.space, name: 'Imported', members: [{ id: 'member-1', name: 'Imported', color: '#3B82F6' }] } }
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Reports & Backup/))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     await upload(JSON.stringify(other))
     expect(screen.getByRole('alert').textContent).toContain('Replace everything in this space with “Imported”')
     expect((await saved()).space.name).toBe('Robin')
@@ -1130,8 +1135,8 @@ describe('Data', () => {
     await createIndividualSpace()
     const current = (await saved())!
     const other = { ...current, space: { ...current.space, name: 'Imported' } }
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Reports & Backup/))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     await upload(JSON.stringify(other))
     // The browser's database refuses the write.
     refuseWrites()
@@ -1148,8 +1153,8 @@ describe('Data', () => {
 
   it('refuses a broken file and changes nothing', async () => {
     await createIndividualSpace()
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Reports & Backup/))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     await upload('{ "schemaVersion": 1 }')
     expect(screen.getByRole('alert').textContent).toContain('This file cannot be used. Nothing was changed.')
     expect((await saved()).space.name).toBe('Robin')

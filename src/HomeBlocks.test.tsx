@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
@@ -46,7 +47,7 @@ async function createOwnSpace(storage: Storage = memoryStorage()) {
   return { storage, ...result }
 }
 
-describe('One month for Home, Bills, Cards and their details', () => {
+describe('One month for Home, Bills, Cards & Loans and their details', () => {
   it('changes the month in Bills and Home shows it, and the other way round', async () => {
     await openAlex()
     await fire.click(tab('Bills'))
@@ -55,14 +56,14 @@ describe('One month for Home, Bills, Cards and their details', () => {
     expect(monthSelect().value).toBe('2026-01')
     expect(text(toggleOf('This Month'))).toContain('January 2026')
     await fire.click(button('Next month'))
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     expect(monthSelect().value).toBe('2026-02')
-    expect(screenText('cards')).toContain('Monthly Payments · February 2026')
+    expect(screenText('money')).toContain('Monthly Payments · February 2026')
   })
 
   it('changes the month inside a bill and inside a card, and Home follows', async () => {
     await openAlex()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(screen.getAllByRole('button', { name: /^Student Loan/ })[0])
     await fire.click(button('Previous month'))
     expect(screenText('debt')).toContain('Monthly Payment · November 2026')
@@ -105,8 +106,8 @@ describe('One month for Home, Bills, Cards and their details', () => {
 describe('A card payment opens the same bill and month', () => {
   it('shows December’s real card payment and opens December’s bill', async () => {
     await openAlex()
-    await fire.click(tab('Cards'))
-    expect(screenText('cards')).toContain('December 2026 payment 2489,27 zł (this month only)')
+    await openCardsAndLoans()
+    expect(screenText('money')).toContain('December 2026 payment 2489,27 zł (this month only)')
     await fire.click(screen.getAllByRole('button', { name: /^Credit Card/ })[0])
     expect(screenText('debt')).toContain('Monthly Payment · December 20262489,27 zł')
     expect(screenText('debt')).toContain('Usual Payment300,00 zł')
@@ -119,7 +120,7 @@ describe('A card payment opens the same bill and month', () => {
     await openAlex()
     await fire.click(tab('Bills'))
     await pickMonth('2027-01')
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(screen.getAllByRole('button', { name: /^Credit Card/ })[0])
     expect(screenText('debt')).toContain('Monthly Payment · January 2027300,00 zł')
     await fire.click(button('Credit Card Payment, January 2027'))
@@ -305,7 +306,7 @@ describe('Customize Home', () => {
 describe('Fixes from the manual review', () => {
   it('says “Nothing left to pay” for a card with no balance, with no estimate or savings', async () => {
     await openAlex()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(screen.getAllByRole('button', { name: /^Credit Card/ })[0])
     const debt = screenText('debt')
     expect(debt).toContain('Nothing left to pay on the balance of 31 Dec 2026.')
@@ -315,7 +316,7 @@ describe('Fixes from the manual review', () => {
 
   it('names the demo’s date in estimates instead of “today”', async () => {
     await openAlex()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(screen.getAllByRole('button', { name: /^Student Loan/ })[0])
     expect(screenText('debt')).toContain('Calculated on 31 Dec 2026 (the demo’s date)')
     expect(screenText('debt')).not.toMatch(/Calculated today/)
@@ -330,7 +331,7 @@ describe('Fixes from the manual review', () => {
 
   it('says “today” in the own space, where it is really today', async () => {
     await createOwnSpace()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(button(/Add Card or Loan/))
     await fire.change(screen.getByLabelText('Name'), { target: { value: 'Bank Loan' } })
     await fire.change(screen.getByLabelText(/^Remaining Balance/), { target: { value: '1000' } })

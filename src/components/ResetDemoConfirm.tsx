@@ -6,7 +6,7 @@ type Props = {
   triggerClassName?: string
   /** Tells the place around it (the demo banner) when the question is showing. */
   onAskingChange?: (asking: boolean) => void
-  /** Shows "The demo is back…" after a reset (Data and Settings). */
+  /** Shows "The demo is back…" after a reset (Settings). */
   showDone?: boolean
 }
 

@@ -2,6 +2,7 @@ import { isYearMonth, yearMonthOf, type YearMonth } from '../../domain/calendar'
 import type { BillOccurrence } from '../../domain/finance/bills'
 import type { Id } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
+import type { ValidityFilter } from '../../domain/finance/validity'
 import { formatDate, formatYearMonth, monthName, weekdayOf } from '../../ui/format'
 
 export type BillsMode = 'calendar' | 'list'
@@ -23,9 +24,12 @@ export interface BillsView {
    * day, the month, the view or the filter changes.
    */
   added: { id: Id; message: string } | null
+  /** All Bills, at the end of Bills: open or closed, and which bills it lists (Active, Upcoming, Ended or All). */
+  allOpen: boolean
+  allFilter: ValidityFilter
 }
 
-export const INITIAL_BILLS_VIEW: BillsView = { mode: 'calendar', filter: 'all', selected: null, added: null }
+export const INITIAL_BILLS_VIEW: BillsView = { mode: 'calendar', filter: 'all', selected: null, added: null, allOpen: false, allFilter: 'active' }
 
 export const FILTER_NAMES: Record<BillsFilter, string> = { all: 'All', pending: 'Pending', paid: 'Paid' }
 

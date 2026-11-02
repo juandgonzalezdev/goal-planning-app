@@ -93,7 +93,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
       case 'more-than-unassigned': return (savings.unassigned ?? 0) <= 0
         ? 'All your savings already have a purpose. Reduce another allocation first, or choose New savings if you’re adding new money.'
         : `Only ${money(savings.unassigned ?? 0)} of your savings has no purpose yet. Move that much or less, or choose New savings if you’re adding new money.`
-      case 'account-balance-unknown': return `Enter the balance of ${account?.name ?? 'the savings account'} in Data first.`
+      case 'account-balance-unknown': return `Enter the balance of ${account?.name ?? 'the savings account'} in Money first.`
       case 'before-balance-date': return `${account?.name ?? 'The account'} has a balance from a later date. Use that date or a later one.`
       case 'more-than-account': return `${account?.name ?? 'The account'} does not hold that much.`
       default: return 'This could not be saved. Check the amount and date.'
@@ -151,7 +151,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
 
   return (
     <div className="tab-screen">
-      <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> {isEmergency ? 'Back' : 'All Goals'}</button>
+      <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
       <div>
         <h1 className="tab-title">{goal.name}</h1>
         <p className="muted-note">
@@ -193,7 +193,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
             {effectOption('taken-out', 'Out of my savings', 'You spent it or moved it out of Savings. Savings go down.', !hasAccounts)}
           </>}
         </fieldset>
-        {!hasAccounts && <p className="field-help">No savings account is entered, so only the goal is recorded. Add your savings account in Data to see your savings divided by purpose.</p>}
+        {!hasAccounts && <p className="field-help">No savings account is entered, so only the goal is recorded. Add your savings account in Money to see your savings divided by purpose.</p>}
         <div className="form-stack">
           {needsAccount && savingsAccounts.length > 1 && (
             <div className="form-field">

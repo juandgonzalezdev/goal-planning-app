@@ -1,6 +1,6 @@
-import type { CalendarDate } from '../../domain/goalTime'
-import { VALIDITY_NAMES, type Validity, type ValidityFilter } from '../../domain/finance/validity'
-import { referenceDay } from '../../ui/format'
+import type { CalendarDate } from '../domain/goalTime'
+import { VALIDITY_NAMES, type Validity, type ValidityFilter } from '../domain/finance/validity'
+import { referenceDay } from '../ui/format'
 
 type Props = {
   /** What is filtered, for screen readers: "Income sources" or "Bills". */

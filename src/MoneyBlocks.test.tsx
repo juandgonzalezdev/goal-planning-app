@@ -9,15 +9,16 @@ import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
-// Data in six blocks that open and close, its compact lists and filters, the
-// links into one block, and Reset Demo in two steps. Alex's demo is shown on
+// Money in three blocks that open and close (once six blocks of Data), its
+// compact lists and filters, the links into one block, All Bills in Bills,
+// the goals in Goals, and Reset Demo in two steps. Alex's demo is shown on
 // its own date, 31 Dec 2026; the device date is in October.
 afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme') })
 
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
-const BLOCKS = ['Income', 'Bills', 'Cards & Loans', 'Accounts & Balances', 'Goals & Emergency Fund', 'Reports & Backup']
+const BLOCKS = ['Income', 'Accounts & Savings', 'Cards & Loans']
 const escape = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const toggleOf = (name: string) => within(regionOf(name)).getByRole('button', { name: new RegExp(`^${escape(name)}`) })
@@ -38,9 +39,9 @@ async function openAlex(storage: Storage = memoryStorage()) {
   return { storage, ...result }
 }
 
-async function openData() {
+async function openMoney() {
   await openAlex()
-  await fire.click(tab('Data'))
+  await fire.click(tab('Money'))
 }
 
 /** Welcome → Create Account → Welcome Setup → Home, as one person. */
@@ -54,10 +55,10 @@ async function createOwnSpace() {
   await fire.click(button('Create My Space'))
 }
 
-describe('Data blocks', () => {
-  it('shows six closed blocks in a fixed order, each with a short summary', async () => {
-    await openData()
-    const names = [...document.querySelectorAll('[data-screen="data"] [data-data-block] .block-name')].map(element => element.textContent)
+describe('Money blocks', () => {
+  it('shows three closed blocks in a fixed order, each with a short summary', async () => {
+    await openMoney()
+    const names = [...document.querySelectorAll('[data-screen="money"] [data-money-block] .block-name')].map(element => element.textContent)
     expect(names).toEqual(BLOCKS)
     for (const name of BLOCKS) {
       expect(isOpen(name)).toBe(false)
@@ -67,17 +68,17 @@ describe('Data blocks', () => {
     }
     expect(summaryOf('Income')).toBe('3 sources · 1 active')
     expect(summaryOf('Cards & Loans')).toBe('1 card · 2 loans')
-    expect(summaryOf('Goals & Emergency Fund')).toBe('2 goals · Emergency Fund')
+    expect(summaryOf('Accounts & Savings')).not.toMatch(/\d,\d\d/)
     // Closed content is not reachable: the Record Received buttons are not in the accessibility tree.
     expect(screen.queryByRole('button', { name: /^Record Received/ })).toBeNull()
   })
 
   it('opens several blocks at once from their headings; Add buttons sit beside the heading', async () => {
-    await openData()
+    await openMoney()
     await fire.click(toggleOf('Income'))
-    await fire.click(toggleOf('Accounts & Balances'))
+    await fire.click(toggleOf('Accounts & Savings'))
     expect(isOpen('Income')).toBe(true)
-    expect(isOpen('Accounts & Balances')).toBe(true)
+    expect(isOpen('Accounts & Savings')).toBe(true)
     expect(bodyOf('Income').hasAttribute('inert')).toBe(false)
     // The action is a separate button, not inside the heading button, and does not close the block.
     const add = within(regionOf('Income')).getByRole('button', { name: /Add Income/ })
@@ -87,8 +88,8 @@ describe('Data blocks', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Name'))
   })
 
-  it('opens the six blocks with Expand All, but not the payments of every income source', async () => {
-    await openData()
+  it('opens the three blocks with Expand All, but not the payments of every income source', async () => {
+    await openMoney()
     await fire.click(button('Expand All'))
     for (const name of BLOCKS) expect(isOpen(name)).toBe(true)
     expect(screen.queryByRole('combobox', { name: /^Payments of/ })).toBeNull()
@@ -96,9 +97,9 @@ describe('Data blocks', () => {
   })
 
   it('closes everything with Collapse All, keeping the focus out of hidden content and what was typed', async () => {
-    await openData()
+    await openMoney()
     await fire.click(button('Expand All'))
-    await fire.click(within(regionOf('Accounts & Balances')).getByRole('button', { name: /Add Account/ }))
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Add Account/ }))
     await fire.change(screen.getByLabelText('Account Name'), { target: { value: 'Piggy Bank' } })
     const collapse = button('Collapse All')
     collapse.focus()
@@ -106,12 +107,12 @@ describe('Data blocks', () => {
     for (const name of BLOCKS) expect(isOpen(name)).toBe(false)
     expect(document.activeElement).toBe(collapse)
     expect(document.activeElement?.closest('[inert]')).toBeNull()
-    await fire.click(toggleOf('Accounts & Balances'))
+    await fire.click(toggleOf('Accounts & Savings'))
     expect((screen.getByLabelText('Account Name') as HTMLInputElement).value).toBe('Piggy Bank')
   })
 
   it('keeps a form being typed when its block is closed from the heading', async () => {
-    await openData()
+    await openMoney()
     await fire.click(within(regionOf('Income')).getByRole('button', { name: /Add Income/ }))
     await fire.change(screen.getByLabelText('Name'), { target: { value: 'Bonus' } })
     await fire.click(toggleOf('Income'))
@@ -125,36 +126,36 @@ describe('Data blocks', () => {
     const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
     await settle()
     await fire.click(button('Explore the App'))
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await openBlock('Income')
-    await openBlock('Bills')
+    await openBlock('Cards & Loans')
     await fire.click(tab('Home'))
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     expect(isOpen('Income')).toBe(true)
-    expect(isOpen('Bills')).toBe(true)
+    expect(isOpen('Cards & Loans')).toBe(true)
 
     await fire.click(button('Exit Demo'))
     await createOwnSpace()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     for (const name of BLOCKS) expect(isOpen(name)).toBe(false)
-    await openBlock('Accounts & Balances')
+    await openBlock('Accounts & Savings')
     await fire.click(tab('Bills'))
-    await fire.click(tab('Data'))
-    expect(isOpen('Accounts & Balances')).toBe(true)
+    await fire.click(tab('Money'))
+    expect(isOpen('Accounts & Savings')).toBe(true)
     expect(isOpen('Income')).toBe(false)
 
     // A new session starts with every block closed (nothing is kept between sessions).
     result.unmount()
     render(<App getToday={() => '2026-10-25'} storage={storage} />)
     await settle()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     for (const name of BLOCKS) expect(isOpen(name)).toBe(false)
   })
 })
 
-describe('Data: Income', () => {
+describe('Money: Income', () => {
   it('lists the sources compactly and filters them by status on the demo’s date', async () => {
-    await openData()
+    await openMoney()
     await openBlock('Income')
     expect(text(regionOf('Income'))).toContain('worked out for 31 Dec 2026 (the demo’s date)')
     expect(lineNames('Income')).toEqual(['Salary Active'])
@@ -171,7 +172,7 @@ describe('Data: Income', () => {
   })
 
   it('opens one source with its months, expected and received apart, and its actions', async () => {
-    await openData()
+    await openMoney()
     await openBlock('Income')
     await fire.click(within(regionOf('Income')).getByRole('button', { name: /^Salary/ }))
     const period = screen.getByRole('combobox', { name: 'Payments of Salary' }) as HTMLSelectElement
@@ -201,7 +202,7 @@ describe('Data: Income', () => {
   it('shows a source that starts later as Upcoming, never as Ended, whatever month is chosen elsewhere', async () => {
     await openAlex()
     await pickMonth('2026-03')
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await openBlock('Income')
     await fire.click(within(regionOf('Income')).getByRole('button', { name: /Add Income/ }))
     await fire.change(screen.getByLabelText('Name'), { target: { value: 'New Job' } })
@@ -227,7 +228,7 @@ describe('Data: Income', () => {
 
   it('never changes a record by filtering', async () => {
     const { storage } = await openAlex()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await openBlock('Income')
     await filter('Income', /^Ended/)
     await filter('Income', /^All/)
@@ -239,15 +240,17 @@ describe('Data: Income', () => {
   })
 })
 
-describe('Data: Bills, Cards & Loans, Accounts, Goals', () => {
+describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
   it('lists bills compactly with their usual amount, filtered by status', async () => {
-    await openData()
-    await openBlock('Bills')
-    expect(text(regionOf('Bills'))).toContain('The amount is the bill’s usual amount.')
-    await filter('Bills', /^Ended/)
-    expect(lineNames('Bills')).toEqual(['Rent (shared flat) Ended', 'Video Streaming Ended', 'Design Software Ended'])
-    await filter('Bills', /^Active/)
-    const utilities = text(within(regionOf('Bills')).getByRole('button', { name: /^Utilities/ }))
+    await openAlex()
+    await fire.click(tab('Bills'))
+    expect(isOpen('All Bills')).toBe(false)
+    await openBlock('All Bills')
+    expect(text(regionOf('All Bills'))).toContain('The amount is the bill’s usual amount.')
+    await filter('All Bills', /^Ended/)
+    expect(lineNames('All Bills')).toEqual(['Rent (shared flat) Ended', 'Video Streaming Ended', 'Design Software Ended'])
+    await filter('All Bills', /^Active/)
+    const utilities = text(within(regionOf('All Bills')).getByRole('button', { name: /^Utilities/ }))
     expect(utilities).toContain('Utilities · Due day 12')
     expect(utilities).toContain('330,00 zł')
     expect(utilities).toContain('usual')
@@ -257,29 +260,34 @@ describe('Data: Bills, Cards & Loans, Accounts, Goals', () => {
     await openAlex()
     await fire.click(tab('Bills'))
     await pickMonth('2026-08')
-    await fire.click(tab('Data'))
-    await openBlock('Bills')
-    await fire.click(within(regionOf('Bills')).getByRole('button', { name: /^Utilities/ }))
+    await openBlock('All Bills')
+    await fire.click(within(regionOf('All Bills')).getByRole('button', { name: /^Utilities/ }))
     expect(screen.getByRole('heading', { name: 'Utilities' })).toBeTruthy()
     expect(monthSelect().value).toBe('2026-08')
+    // Back: Bills as it was, with the focus on the bill that was opened.
+    await fire.click(button(/Back/))
+    expect(isOpen('All Bills')).toBe(true)
+    expect(document.activeElement).toBe(within(regionOf('All Bills')).getByRole('button', { name: /^Utilities/ }))
   })
 
-  it('shows each card and loan with its kind and dated Remaining Balance', async () => {
-    await openData()
+  it('shows each card and loan with its kind, dated Remaining Balance and the payment of the shared month', async () => {
+    await openMoney()
     await openBlock('Cards & Loans')
-    const lines = text(regionOf('Cards & Loans').querySelector('.compact-list'))
-    expect(lines).toContain('Credit Card · Remaining Balance as of')
-    expect(lines).toContain('Loan · Remaining Balance as of')
-    expect(within(regionOf('Cards & Loans')).getByRole('button', { name: /^Add$/ })).toBeTruthy()
+    const lines = text(regionOf('Cards & Loans').querySelector('.goal-cards'))
+    expect(lines).toContain('Credit Card')
+    expect(lines).toContain('Balance as of')
+    expect(lines).toContain('December 2026 payment')
+    expect(within(regionOf('Cards & Loans')).getByRole('button', { name: /Add Card or Loan/ })).toBeTruthy()
+    expect(text(regionOf('Cards & Loans'))).toContain('Monthly Payments · December 2026')
   })
 
   it('opens an account to update its balance, edit or delete it, and keeps an unknown balance unknown', async () => {
-    await openData()
-    await openBlock('Accounts & Balances')
-    await fire.click(within(regionOf('Accounts & Balances')).getByRole('button', { name: /Add Account/ }))
+    await openMoney()
+    await openBlock('Accounts & Savings')
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Add Account/ }))
     await fire.change(screen.getByLabelText('Account Name'), { target: { value: 'Shoebox' } })
     await fire.click(button('Save Account'))
-    const piggy = within(regionOf('Accounts & Balances')).getByRole('button', { name: /^Shoebox/ })
+    const piggy = within(regionOf('Accounts & Savings')).getByRole('button', { name: /^Shoebox/ })
     expect(text(piggy)).toContain('Not entered')
     expect(text(piggy)).not.toContain('0,00')
     await fire.click(piggy)
@@ -291,37 +299,44 @@ describe('Data: Bills, Cards & Loans, Accounts, Goals', () => {
     expect(text(piggy)).toContain('45,00 zł')
     expect(button('Edit: Shoebox')).toBeTruthy()
     await fire.click(button('Delete: Shoebox'))
-    expect(within(regionOf('Accounts & Balances')).queryByRole('button', { name: /^Shoebox/ })).toBeNull()
+    expect(within(regionOf('Accounts & Savings')).queryByRole('button', { name: /^Shoebox/ })).toBeNull()
   })
 
-  it('keeps goals compact and says they are part of Savings', async () => {
-    await openData()
-    await openBlock('Goals & Emergency Fund')
-    expect(text(regionOf('Goals & Emergency Fund'))).toContain('They are part of Savings, not extra money.')
-    expect(lineNames('Goals & Emergency Fund')).toHaveLength(3)
+  it('shows the goals and the Emergency Fund in Goals, saying they are part of Savings', async () => {
+    await openAlex()
+    await fire.click(tab('Goals'))
+    expect(text(screen.getByRole('main'))).toContain('part of your Savings, not extra money')
+    expect(screen.getAllByRole('listitem').length).toBeGreaterThanOrEqual(2)
+    expect(text(regionOf('Emergency Fund'))).toContain('is not added to Saved in Goals')
   })
 
   it('shows an empty state with a first action in a new space', async () => {
     render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} />)
     await settle()
     await createOwnSpace()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await fire.click(button('Expand All'))
     expect(button(/Add Your First Income/)).toBeTruthy()
-    expect(button(/Add Your First Bill/)).toBeTruthy()
+    expect(button(/Add Your First Account/)).toBeTruthy()
+    expect(button(/Add Your First Card or Loan/)).toBeTruthy()
     expect(text(regionOf('Income'))).toContain('No income entered yet.')
+    await fire.click(tab('Bills'))
+    await openBlock('All Bills')
+    expect(button(/Add Your First Bill/)).toBeTruthy()
+    await fire.click(tab('Goals'))
+    expect(button('Start an Emergency Fund')).toBeTruthy()
   })
 })
 
-describe('Links into Data', () => {
-  it('Edit Balances opens Data on Accounts & Balances, with the focus on its heading', async () => {
+describe('Links into Money', () => {
+  it('Edit Balances opens Money on Accounts & Savings, with the focus on its heading', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
-    expect(screen.getByRole('heading', { name: 'Manage Your Data' })).toBeTruthy()
-    expect(isOpen('Accounts & Balances')).toBe(true)
+    expect(screen.getByRole('heading', { name: 'Money' })).toBeTruthy()
+    expect(isOpen('Accounts & Savings')).toBe(true)
     expect(isOpen('Income')).toBe(false)
-    expect(document.activeElement).toBe(toggleOf('Accounts & Balances'))
+    expect(document.activeElement).toBe(toggleOf('Accounts & Savings'))
   })
 
   it('Income on This Month opens the Income block', async () => {
@@ -332,14 +347,14 @@ describe('Links into Data', () => {
     expect(document.activeElement).toBe(toggleOf('Income'))
   })
 
-  it('the Data tab keeps the blocks as they were, with the focus on the title', async () => {
+  it('the Money tab keeps the blocks as they were, with the focus on the title', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
     await fire.click(tab('Home'))
-    await fire.click(tab('Data'))
-    expect(isOpen('Accounts & Balances')).toBe(true)
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Manage Your Data' }))
+    await fire.click(tab('Money'))
+    expect(isOpen('Accounts & Savings')).toBe(true)
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Money' }))
   })
 })
 
@@ -351,10 +366,11 @@ describe('Reset Demo', () => {
   }
   const decemberSalary = () => text([...regionOf('Income').querySelectorAll('.payment-list > li')].at(-1)!)
 
-  it('asks first in Data; Cancel changes nothing', async () => {
-    await openData()
+  it('asks first in Settings; Cancel changes nothing', async () => {
+    await openMoney()
     await editSalary()
-    const zone = regionOf('Demo')
+    await fire.click(button('Settings'))
+    const zone = screen.getByRole('main')
     await fire.click(within(zone).getByRole('button', { name: 'Reset Demo' }))
     const question = screen.getByRole('group', { name: 'Reset demo?' })
     expect(text(question)).toContain('This will remove your changes and restore Alex’s original example.')
@@ -362,17 +378,17 @@ describe('Reset Demo', () => {
     await fire.click(within(question).getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('group', { name: 'Reset demo?' })).toBeNull()
     expect(document.activeElement).toBe(within(zone).getByRole('button', { name: 'Reset Demo' }))
+    await fire.click(button('Back'))
     expect(decemberSalary()).toContain('Received: not recorded yet')
   })
 
-  it('restores the example and closes the Data blocks after confirming', async () => {
-    await openData()
+  it('restores the example and closes the Money blocks after confirming', async () => {
+    await openMoney()
     await editSalary()
-    await openBlock('Bills')
-    await fire.click(within(regionOf('Demo')).getByRole('button', { name: 'Reset Demo' }))
+    await openBlock('Cards & Loans')
+    await startDemoReset()
     await confirmReset()
     for (const name of BLOCKS) expect(isOpen(name)).toBe(false)
-    expect(text(regionOf('Demo'))).toContain('The demo is back to Alex’s original example.')
     await openBlock('Income')
     await fire.click(within(regionOf('Income')).getByRole('button', { name: /^Salary/ }))
     expect(decemberSalary()).toMatch(/Received: 6500,00 zł/)
@@ -380,7 +396,7 @@ describe('Reset Demo', () => {
 
   it('never resets on the first tap of the banner or Settings', async () => {
     await openAlex()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await editSalary()
     const banner = screen.getByRole('note')
     await startDemoReset()
@@ -404,8 +420,8 @@ describe('Reset Demo', () => {
     const storage = memoryStorage()
     storage.setItem(STORAGE_KEY, '{ saved, but unreadable')
     await openAlex(storage)
-    await fire.click(tab('Data'))
-    await fire.click(within(regionOf('Demo')).getByRole('button', { name: 'Reset Demo' }))
+    await fire.click(button('Settings'))
+    await fire.click(within(screen.getByRole('main')).getByRole('button', { name: 'Reset Demo' }))
     await confirmReset()
     expect(storage.getItem(STORAGE_KEY)).toBe('{ saved, but unreadable')
     expect(await storedData()).toBeNull()

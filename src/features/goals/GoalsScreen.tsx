@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
-import { filterGoals, goalProgress, summarizeGoals, type GoalFilter } from '../../domain/finance/goals'
+import { emergencyFund, filterGoals, goalProgress, goalSaved, summarizeGoals, type GoalFilter } from '../../domain/finance/goals'
 import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import { formatAmount, formatDate } from '../../ui/format'
@@ -15,14 +14,22 @@ const FILTERS: { id: GoalFilter; label: string }[] = [
 type Props = {
   data: FinanceData
   today: CalendarDate
-  onBack: () => void
+  /** All, Flexible or With Date: kept while moving around the app (for this session). */
+  filter: GoalFilter
+  onFilterChange: (filter: GoalFilter) => void
   onNew: () => void
   onOpenGoal: (id: Id) => void
+  /** No Emergency Fund yet: Start an Emergency Fund opens its draft. */
+  onStartEmergency: () => void
 }
 
-/** Goals & Savings Pots: every active goal, its progress and what is still to go. */
-export function GoalsScreen({ data, today, onBack, onNew, onOpenGoal }: Props) {
-  const [filter, setFilter] = useState<GoalFilter>('all')
+/**
+ * The Goals tab: the Emergency Fund on its own card, then every active
+ * goal, its progress and what is still to go. The Emergency Fund is not
+ * added to Saved in Goals, and both are part of Savings, not extra money.
+ */
+export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, onNew, onOpenGoal, onStartEmergency }: Props) {
+  const fund = emergencyFund(data.goals)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const summary = summarizeGoals(data)
   const goals = filterGoals(data.goals, filter)
@@ -31,10 +38,22 @@ export function GoalsScreen({ data, today, onBack, onNew, onOpenGoal }: Props) {
   return (
     <div className="tab-screen">
       <div className="screen-top">
-        <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Home</button>
+        <h1 className="tab-title">{title}</h1>
         <button type="button" className="button-small button-small-primary" onClick={onNew}><Icon name="plus" size={16} /> Add Goal</button>
       </div>
-      <h1 className="tab-title">{title}</h1>
+      <section className="block" aria-labelledby="goals-emergency">
+        <h2 id="goals-emergency" className="section-title">Emergency Fund</h2>
+        {fund
+          ? <button type="button" className="goal-card" onClick={() => onOpenGoal(fund.id)}>
+            <span className="line"><b>{fund.name}</b><small>For unexpected costs</small></span>
+            <span className="goal-card-amount">{money(goalSaved(fund, data.goalMovements))} <small>{fund.target !== null && fund.target !== undefined ? `of ${money(fund.target)}` : 'saved'}</small></span>
+          </button>
+          : <>
+            <p className="muted-note">No Emergency Fund yet. It keeps part of your savings for unexpected costs.</p>
+            <button type="button" className="button-small align-start" onClick={onStartEmergency}>Start an Emergency Fund</button>
+          </>}
+        <p className="field-help">The Emergency Fund is not added to Saved in Goals.</p>
+      </section>
       <div className="stat-grid">
         <div className="stat"><small>Saved in Goals</small><b>{money(summary.saved)}</b></div>
         <div className="stat"><small>Total Targets</small><b>{money(summary.target)}</b>

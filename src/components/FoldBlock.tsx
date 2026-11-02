@@ -22,7 +22,7 @@ type Props = {
 }
 
 /**
- * A block that opens and closes from its heading (Home and Data). Closed,
+ * A block that opens and closes from its heading (Home, Money and Bills). Closed,
  * it keeps its period and a short summary; its content stays in the page,
  * with anything typed in a form, but takes no room, cannot be reached by
  * keyboard (inert) and is not read by a screen reader until it opens again.

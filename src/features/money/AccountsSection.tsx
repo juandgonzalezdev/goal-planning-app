@@ -9,9 +9,10 @@ import { MONEY_KINDS } from '../../ui/chartColors'
 import { formatAmount, formatDate } from '../../ui/format'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { DataBlockFrame } from './DataBlockFrame'
-import { DataBlocksContext, setBlockOpen } from './dataBlocks'
-import type { SectionProps } from './DataScreen'
+import { MoneyBlockFrame } from './MoneyBlockFrame'
+import { MoneyBlocksContext, setBlockOpen } from './moneyBlocks'
+import type { SectionProps } from './MoneyScreen'
+import { SavingsByPurpose } from './SavingsByPurpose'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
@@ -20,14 +21,15 @@ type AccountForm = { id: Id | null; name: string; kind: MoneyAccountKind; balanc
 /**
  * Accounts and their dated balances in a compact list (name, kind, latest
  * balance and its date). Opening an account shows Update Balance, Edit and
- * Delete. A balance never entered stays "Not entered", never 0.
+ * Delete. A balance never entered stays "Not entered", never 0. Below,
+ * Savings divided by purpose, as on Home (the goals are part of Savings).
  */
-export function AccountsSection({ data, today, owner, newId, onChange, say, tell }: SectionProps) {
+export function AccountsSection({ data, today, owner, newId, onChange, say, tell, onOpenGoal }: SectionProps) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const { items } = summarizeMoney(data)
   const [form, setForm] = useState<AccountForm | null>(null)
   const [balanceFor, setBalanceFor] = useState<{ id: Id; amount: string; asOf: string; error?: string } | null>(null)
-  const { view, onViewChange } = useContext(DataBlocksContext)
+  const { view, onViewChange } = useContext(MoneyBlocksContext)
   const focusField = useRef<string | null>(null)
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
@@ -120,7 +122,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
     : [`${items.length} ${items.length === 1 ? 'account' : 'accounts'}`, ...(missing > 0 ? [`${missing} without a balance`] : [])].join(' · ')
 
   return (
-    <DataBlockFrame block="accounts" summary={summary}
+    <MoneyBlockFrame block="accounts" summary={summary}
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
       <p className="field-help">Balances you read in your bank or count yourself, with their date. A new balance keeps the old one in History.</p>
       {form?.id === null && formBox}
@@ -176,6 +178,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
           )
         })}
       </ul>
-    </DataBlockFrame>
+      <SavingsByPurpose data={data} asOf={today} money={money} hidden={false} onOpenGoal={onOpenGoal} />
+    </MoneyBlockFrame>
   )
 }

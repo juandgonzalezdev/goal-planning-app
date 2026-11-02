@@ -105,11 +105,10 @@ describe('read-only', () => {
     expect(button('Erase All Data on This Device').hasAttribute('disabled') || button('Erase All Data on This Device').getAttribute('aria-disabled') === 'true').toBe(true)
     await fire.change(field('Appearance'), { target: { value: 'dark' } })
     expect(alerts()).toContain('Not saved: this browser can only show your space right now.')
-    await fire.click(button('Back'))
-    // Data: Download Backup is still there and usable.
-    await fire.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Data' }))
-    await fire.click(button(/^Reports & Backup/))
+    // Settings › Reports & Backup: Download Backup is still there and usable.
+    expect(screen.getByRole('heading', { name: 'Reports & Backup' })).toBeTruthy()
     expect(button('Download Backup').getAttribute('aria-disabled')).toBeNull()
+    await fire.click(button('Back'))
     expect(store.save).not.toHaveBeenCalled()
     expect(store.erase).not.toHaveBeenCalled()
   })

@@ -65,8 +65,8 @@ Ejecuta las cuatro antes de entregar un cambio:
 Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
 
 1. **Bienvenida → Explore the App.** Aparece la franja "Demo · Alex is
-   invented…" con Reset Demo y Exit Demo. Menú: Home, Bills, Cards, History,
-   Data.
+   invented…" con Reset Demo y Exit Demo. Menú: Home, Bills, Goals, Money,
+   History.
 2. **Home (December 2026).** Income 7.200, Planned Bills 6.401,84, Spent
    5.097,35, Result 2.102,65. Left to Pay 69,99 (Phone & Internet). Total Debt
    12.266,98. Savings 2.900 = Japón 1.800 + New Bike 200 + Emergency Fund 900.
@@ -93,9 +93,10 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    «Type: Spending ×»; Clear Filters conserva el periodo. Year Overview → July
    muestra sus categorías. Abre un pago de Credit Card Payment y vuelve: mismo
    periodo, búsqueda, meses y posición. Añade un gasto y una transferencia.
-9. **Data.** Export Report → One Month / Whole Year → Download PDF, con y sin
-   importes. Data Backup → Download Backup.
-10. **Reset Demo** desde la franja, Data o Settings: vuelve todo el año y
+9. **Settings › Reports & Backup** (también Money → Open Reports & Backup).
+   Export Report → One Month / Whole Year → Download PDF, con y sin importes.
+   Data Backup → Download Backup.
+10. **Reset Demo** desde la franja o Settings: vuelve todo el año y
     December 2026.
 11. **Exit Demo → Create Account → Continue Without an Account.** Crea un
     espacio propio, añade una factura y recarga la página: sigue ahí. Restore
@@ -104,12 +105,13 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
     los demás muestran periodo y resumen. Customize Home → Move up / Move down
     o arrastrar por el asa → Done. Reset Layout vuelve al inicio. El mes se
     queda arriba al desplazarse. Bills → January 2027 → Home muestra enero.
-13. **Data plegable.** Al entrar los seis bloques están cerrados con un
-    resumen. Income → Salary muestra sus cobros de 2026 (esperado y recibido
+13. **Money plegable.** Al entrar los tres bloques (Income, Accounts &
+    Savings, Cards & Loans) están cerrados con un resumen. Income → Salary muestra sus cobros de 2026 (esperado y recibido
     por separado); Ended muestra Part-time Job y Scholarship. Home → My Money →
-    Edit Balances abre Accounts & Balances con el foco en su encabezado. Reset
-    Demo (franja, Data o Settings) pregunta «Reset demo?»; Cancel no cambia
-    nada. Imprimir Home o Data con Collapse All cabe en una página.
+    Edit Balances abre Accounts & Savings con el foco en su encabezado. Bills
+    → All Bills lista todas las facturas. Goals muestra el Emergency Fund
+    aparte. Reset Demo (franja o Settings) pregunta «Reset demo?»; Cancel no
+    cambia nada. Imprimir Home con Collapse All cabe en una página.
 14. **Bills → Calendar.** Toca el 30 de December (última fila): la página no
     se mueve y la barra de arriba dice «Wed 30 Dec · No bills». Al bajar, esa
     barra se queda bajo la cabecera mientras se ve el calendario y nunca tapa

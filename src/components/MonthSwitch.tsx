@@ -3,7 +3,7 @@ import { formatYearMonth } from '../ui/format'
 import { Icon } from './Icon'
 
 /**
- * The month above Home, Bills, Cards and their detail screens: previous
+ * The month above Home, Bills, Money’s Cards & Loans and the bill and debt screens: previous
  * and next buttons and a list of the months that can be shown. Changing
  * the month never changes any record. A month opened from a link outside
  * the list (an older bill payment in History) is shown as it is, and the

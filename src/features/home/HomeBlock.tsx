@@ -20,7 +20,7 @@ type Props = {
 
 /**
  * One Home block that opens and closes from its heading, like a day in
- * Bills (the shared FoldBlock, also used by Data). A closed block keeps its
+ * Bills (the shared FoldBlock, also used by Money and Bills). A closed block keeps its
  * period and a short summary; its content stays in place (with any form
  * being typed), but it cannot be reached by keyboard or read by a screen
  * reader until the block opens again.

@@ -57,8 +57,8 @@ async function demo() {
 }
 
 async function typeNewAccount(name: string) {
-  await fire.click(tab('Data'))
-  await fire.click(button(/^Accounts & Balances/))
+  await fire.click(tab('Money'))
+  await fire.click(button(/^Accounts & Savings/))
   await fire.click(button('Add Account'))
   field('Account Name').focus()
   await fire.change(field('Account Name'), { target: { value: name } })
@@ -75,7 +75,7 @@ describe('Leave without saving?', () => {
     expect(document.activeElement).toBe(inQuestion('Keep Editing'))
     await fire.click(inQuestion('Keep Editing'))
     expect(question()).toBeNull()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(field('Account Name').value).toBe('Holiday pot')
     expect(document.activeElement).toBe(field('Account Name'))
   })
@@ -99,7 +99,7 @@ describe('Leave without saving?', () => {
     expect(copied).toEqual(['Add account\nName: Holiday pot\nKind: savings\nAs of: 2026-10-21'])
     expect(question()).toBeTruthy()
     expect(question()!.textContent).toContain('Copied. Nothing was closed.')
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
   })
 
   it('shows the text to select when the browser does not allow copying', async () => {
@@ -122,7 +122,7 @@ describe('Leave without saving?', () => {
     expect(window.history.length).toBe(length + 1)
     expect((await storedData())!.moneyAccounts).toEqual([])
     // Back on Data, the form is closed.
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     expect(screen.queryByLabelText('Account Name')).toBeNull()
   })
 
@@ -135,13 +135,13 @@ describe('Leave without saving?', () => {
     await fire.click(button('Settings'))
     expect(question()).toBeTruthy()
     await fire.click(inQuestion('Keep Editing'))
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
   })
 
   it('never asks when nothing was typed, or when a form was only opened', async () => {
     await ownSpace()
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Accounts & Balances/))
+    await fire.click(tab('Money'))
+    await fire.click(button(/^Accounts & Savings/))
     await fire.click(button('Add Account'))
     await fire.click(tab('Bills'))
     expect(question()).toBeNull()
@@ -164,8 +164,8 @@ describe('Leave without saving?', () => {
   it('works the same in the demo, and nothing is written anywhere', async () => {
     const local = vi.spyOn(Storage.prototype, 'setItem')
     await demo()
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Accounts & Balances/))
+    await fire.click(tab('Money'))
+    await fire.click(button(/^Accounts & Savings/))
     await fire.click(button('Add Account'))
     await fire.change(field('Account Name'), { target: { value: 'Invented pot' } })
     await fire.click(tab('Home'))
@@ -194,7 +194,7 @@ describe('kept drafts', () => {
 
   it('New Goal keeps what was typed while the user looks elsewhere: no question; Back to it shows it', async () => {
     await ownSpace()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await fire.click(button(/^Goals/))
     await fire.click(screen.getAllByRole('button', { name: /Add Goal/ })[0])
     await fire.change(field('What are you saving for?'), { target: { value: 'Trip' } })
@@ -208,7 +208,7 @@ describe('kept drafts', () => {
 
   it('a kept draft still counts when the demo would close it', async () => {
     await ownSpace()
-    await fire.click(tab('Data'))
+    await fire.click(tab('Money'))
     await fire.click(button(/^Goals/))
     await fire.click(screen.getAllByRole('button', { name: /Add Goal/ })[0])
     await fire.change(field('What are you saving for?'), { target: { value: 'Trip' } })
@@ -224,7 +224,7 @@ describe('the browser\'s Back and Forward', () => {
     await typeNewAccount('Holiday pot')
     const length = window.history.length
     await browserBack()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(field('Account Name').value).toBe('Holiday pot')
     expect(question()).toBeTruthy()
     expect(window.history.length).toBe(length)
@@ -240,7 +240,7 @@ describe('the browser\'s Back and Forward', () => {
     await typeNewAccount('Holiday pot')
     await browserBack()
     await fire.click(inQuestion('Keep Editing'))
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     await browserBack()
     expect(question()).toBeTruthy()
     await fire.click(inQuestion('Discard and Leave'))
@@ -248,7 +248,7 @@ describe('the browser\'s Back and Forward', () => {
     expect(shownScreen()).toBe('home')
     act(() => window.history.forward())
     await moves()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(question()).toBeNull()
   })
 
@@ -258,7 +258,7 @@ describe('the browser\'s Back and Forward', () => {
     await typeNewAccount('Holiday pot')
     await browserBack()
     await browserBack()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(screen.getAllByRole('alertdialog')).toHaveLength(1)
     await fire.click(inQuestion('Discard and Leave'))
     await moves()
@@ -278,19 +278,19 @@ describe('the browser\'s Back and Forward', () => {
     act(() => window.history.back())
     await moves()
     await moves()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(field('Account Name').value).toBe('Holiday pot')
     expect(inQuestion('Discard and Leave').getAttribute('aria-disabled')).toBe('true')
     await fire.click(inQuestion('Discard and Leave'))
     await moves()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     expect(window.history.length).toBe(length)
     expect(question()!.textContent).toContain('One moment…')
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 2100)) })
     expect(question()!.textContent).toContain('Navigation is taking longer than expected.')
     // Keep Editing; once the form is cancelled, Back works as usual again.
     await fire.click(inQuestion('Keep Editing'))
-    await fire.click(within(document.querySelector('[data-data-block="accounts"]') as HTMLElement).getByRole('button', { name: 'Cancel' }))
+    await fire.click(within(document.querySelector('[data-money-block="accounts"]') as HTMLElement).getByRole('button', { name: 'Cancel' }))
     await browserBack()
     expect(question()).toBeNull()
   })
@@ -388,7 +388,7 @@ describe('while a change is being saved', () => {
     await act(async () => { button('Save Account').click() })
     await act(async () => { tab('Home').click() })
     expect(question()).toBeNull()
-    expect(shownScreen()).toBe('data')
+    expect(shownScreen()).toBe('money')
     await held.release()
     await settle()
     await moves()

@@ -18,7 +18,7 @@ type Props = {
  * The strip shown while the demo is open: "Demo · Invented data", Exit
  * Demo, and a menu of its own (separate from Home options) that explains
  * the demo and holds Reset Demo. Reset Demo still asks first, here and in
- * Data and Settings; Exit Demo still asks when something typed would be
+ * Settings; Exit Demo still asks when something typed would be
  * dropped. When the question closes, the keyboard goes back to the menu button.
  */
 export function DemoBanner({ asking, onAskingChange, onReset, onExit, exitQuestion }: Props) {

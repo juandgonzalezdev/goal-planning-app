@@ -2,19 +2,28 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 
 /**
  * Every screen the app can show. The first four come before a space is
- * open; the five tabs, the goal screens, the emergency fund draft, one card or
- * loan, one bill and Settings belong to an open space. Goals open from
- * Home: they are not a tab.
+ * open; the five tabs, a goal, the New Goal and emergency fund drafts, one
+ * card or loan, one bill and Settings belong to an open space. `cards` and
+ * `data` are the tabs of earlier versions: a step of the browser history
+ * saved before the update may still name them, so they are read (as Money)
+ * but never created again.
  */
-export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'cards', 'history', 'data', 'goals', 'goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings'] as const
+export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'goals', 'money', 'history', 'goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'cards', 'data'] as const
 export type Screen = (typeof SCREENS)[number]
 
 /** The five main tabs, in the approved order. */
-export const TABS = ['home', 'bills', 'cards', 'history', 'data'] as const satisfies readonly Screen[]
+export const TABS = ['home', 'bills', 'goals', 'money', 'history'] as const satisfies readonly Screen[]
 export type Tab = (typeof TABS)[number]
 
+/** Screens of earlier versions, and the screen that shows them now. */
+export const OLD_SCREENS = { cards: 'money', data: 'money' } as const satisfies Partial<Record<Screen, Screen>>
+type OldScreen = keyof typeof OLD_SCREENS
+export const isOldScreen = (screen: Screen): screen is OldScreen => screen in OLD_SCREENS
+/** The screen to show for a screen name: an old tab shows the screen that took its place. */
+export const shownScreen = (screen: Screen): Exclude<Screen, OldScreen> => (isOldScreen(screen) ? OLD_SCREENS[screen] : screen)
+
 /** Screens that only make sense inside an open space (own or demo). */
-const SPACE_ONLY: readonly Screen[] = ['goals', 'goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings']
+const SPACE_ONLY: readonly Screen[] = ['goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'cards', 'data']
 export const isSpaceScreen = (screen: Screen) => (TABS as readonly Screen[]).includes(screen) || SPACE_ONLY.includes(screen)
 export const isTab = (screen: Screen): screen is Tab => (TABS as readonly Screen[]).includes(screen)
 

@@ -9,10 +9,10 @@ import { countByValidity, matchesValidity, usableFilter, validityOn } from '../.
 import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { DataBlockFrame } from './DataBlockFrame'
-import { DataBlocksContext, setBlockOpen } from './dataBlocks'
-import type { SectionProps } from './DataScreen'
-import { ValidityFilterBar, ValidityTag } from './ValidityFilterBar'
+import { MoneyBlockFrame } from './MoneyBlockFrame'
+import { MoneyBlocksContext, setBlockOpen } from './moneyBlocks'
+import type { SectionProps } from './MoneyScreen'
+import { ValidityFilterBar, ValidityTag } from '../../components/ValidityFilterBar'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
@@ -25,7 +25,7 @@ type ReceivedForm = { sourceId: Id; month: YearMonth; amount: string; date: stri
  * was expected and what really arrived, and its actions.
  */
 export function IncomeSection({ data, months, today, isDemo, owner, newId, onChange, say }: SectionProps) {
-  const { view, onViewChange } = useContext(DataBlocksContext)
+  const { view, onViewChange } = useContext(MoneyBlocksContext)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const [editing, setEditing] = useState<SourceForm | null>(null)
   const [receiving, setReceiving] = useState<ReceivedForm | null>(null)
@@ -130,9 +130,10 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
     : [`${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`, `${counts.active} active`, ...(counts.upcoming > 0 ? [`${counts.upcoming} upcoming`] : [])].join(' · ')
 
   return (
-    <DataBlockFrame block="income" summary={summary}
+    <MoneyBlockFrame block="income" summary={summary}
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Income</button>}>
       <p className="field-help">Expected income is a plan. Home shows it as expected until you record what arrived.</p>
+      <p className="field-help">Income does not use the month chosen in Cards &amp; Loans. Open a source to choose the year of its payments.</p>
       {editing?.id === null && form}
       {sourceCount === 0 && !editing && (
         <div className="empty-state">
@@ -179,7 +180,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
           })}
         </ul>
       </>}
-    </DataBlockFrame>
+    </MoneyBlockFrame>
   )
 }
 

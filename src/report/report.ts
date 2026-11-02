@@ -16,7 +16,7 @@ import { PAGE_HEIGHT, PAGE_WIDTH, PdfDocument, textWidth, wrapText, type Rgb } f
 /**
  * The PDF report of a month or a year: a printable summary of what was
  * recorded, worked out with the same functions as the screens. It is a
- * report, not a backup (the JSON backup in Data is the copy that can be
+ * report, not a backup (the JSON backup in Settings is the copy that can be
  * restored), and never a bank statement.
  */
 

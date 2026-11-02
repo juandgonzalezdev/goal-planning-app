@@ -17,8 +17,9 @@ explicables y conectadas entre sí.
   aquí no se pierde sin preguntar. Ver
   [docs/STORAGE_AND_RECOVERY.md](docs/STORAGE_AND_RECOVERY.md).
 - **Interfaz en inglés sencillo**; documentación en español.
-- **Menú:** Home, Bills, Cards, History y Data. My Goals, el fondo de
-  emergencia y Settings se abren desde Home o la cabecera. La demo se abre
+- **Menú:** Home, Bills, Goals, Money y History. Money reúne Income,
+  Accounts & Savings y Cards & Loans; Settings (engranaje de la cabecera)
+  incluye Reports & Backup. La demo se abre
   desde la bienvenida (Explore the App) o desde Settings (Explore the Demo).
 
 ## Empezar

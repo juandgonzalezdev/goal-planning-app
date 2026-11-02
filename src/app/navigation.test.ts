@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Navigation, readStep, type HistoryPort, type HistoryStep } from './navigation'
+import { Navigation, readStep, shownScreen, TABS, type HistoryPort, type HistoryStep } from './navigation'
 
 /**
  * A browser history the test drives by hand. A move the app asks for
@@ -388,5 +388,49 @@ describe('never a loop', () => {
     expect(history.calls.push).toBe(3)
     expect(history.entries).toHaveLength(4)
     expect(history.calls.go).toBeLessThanOrEqual(presses.length)
+  })
+})
+
+describe('steps of earlier versions (Cards and Data tabs)', () => {
+  it('reads cards and data as screens, shown as Money, and never offers them as tabs', () => {
+    expect(readStep({ screen: 'cards', chain: 'old', idx: 3 })).toEqual({ screen: 'cards', chain: 'old', idx: 3 })
+    expect(readStep({ screen: 'data', chain: 'old', idx: 1 })).toEqual({ screen: 'data', chain: 'old', idx: 1 })
+    expect(shownScreen('cards')).toBe('money')
+    expect(shownScreen('data')).toBe('money')
+    expect(shownScreen('goals')).toBe('goals')
+    expect([...TABS]).toEqual(['home', 'bills', 'goals', 'money', 'history'])
+  })
+
+  it('compares an old step by its chain and place only: Back to it is exact, and nothing is created or rewritten', () => {
+    const { history, navigation, screen } = setUp()
+    navigation.go('money')
+    // The step before is one an earlier version saved as Cards.
+    history.entries[0] = { screen: 'cards', chain: 'chain-1', idx: 0 }
+    const length = history.entries.length
+    const replaced = history.calls.replace
+    navigation.back()
+    history.deliverAll()
+    expect(screen()).toBe('cards')
+    expect(history.entries).toHaveLength(length)
+    expect(history.calls.replace).toBe(replaced)
+    expect(history.calls.push).toBe(1)
+  })
+
+  it('with something typed: Back to an old step is undone, asks, and Discard and Leave reaches it once', () => {
+    const { history, navigation, screen, type } = setUp()
+    navigation.go('money')
+    history.entries[0] = { screen: 'data', chain: 'chain-1', idx: 0 }
+    type()
+    history.user(-1)
+    expect(screen()).toBe('money')
+    expect(navigation.snapshot().request).not.toBeNull()
+    history.deliverAll()
+    expect(screen()).toBe('money')
+    expect(navigation.snapshot().ready).toBe(true)
+    navigation.leave()
+    history.deliverAll()
+    expect(screen()).toBe('data')
+    expect(readStep(history.state()).idx).toBe(0)
+    expect(history.entries).toHaveLength(2)
   })
 })

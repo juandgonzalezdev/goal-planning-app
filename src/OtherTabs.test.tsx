@@ -81,8 +81,8 @@ function clipboard(writeText: (text: string) => Promise<void>) {
 
 /** The own space opened in the Data screen, with the Accounts block open and Add Account typed in. */
 async function typeNewAccount(name: string) {
-  await fire.click(tab('Data'))
-  await fire.click(button(/^Accounts & Balances/))
+  await fire.click(tab('Money'))
+  await fire.click(button(/^Accounts & Savings/))
   await fire.click(button('Add Account'))
   await fire.change(field('Account Name'), { target: { value: name } })
 }
@@ -91,17 +91,17 @@ describe('a change saved in another tab', () => {
   it('shows by itself when nothing typed here is waiting, on the same screen, with a short notice', async () => {
     await savedSpace()
     const { tell } = await openTab()
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Accounts & Balances/))
-    const toggle = button(/^Accounts & Balances/)
+    await fire.click(tab('Money'))
+    await fire.click(button(/^Accounts & Savings/))
+    const toggle = button(/^Accounts & Savings/)
     toggle.focus()
     await tell(await otherTabSaves(renamed('Robin (other tab)')))
     expect(screen.getByText('Robin (other tab) · Individual')).toBeTruthy()
     expect(statuses()).toContain('Updated with changes from another tab.')
     // Same screen, same open block, and the focus back on the same button.
-    expect(screen.getByRole('heading', { name: 'Manage Your Data' })).toBeTruthy()
-    expect(button(/^Accounts & Balances/).getAttribute('aria-expanded')).toBe('true')
-    expect(document.activeElement).toBe(button(/^Accounts & Balances/))
+    expect(screen.getByRole('heading', { name: 'Money' })).toBeTruthy()
+    expect(button(/^Accounts & Savings/).getAttribute('aria-expanded')).toBe('true')
+    expect(document.activeElement).toBe(button(/^Accounts & Savings/))
     // It can be changed again straight away, on the new revision.
     await fire.click(button('Settings'))
     await fire.change(field('Appearance'), { target: { value: 'dark' } })
@@ -341,8 +341,8 @@ describe('Download Both Copies', () => {
     const inner = browserSpaceStore(memoryStorage())
     const store: SpaceStore = { ...inner, load: async () => ({ status: 'read-only', space: { data: robin(), revision: 0 }, mayBeOutdated: true }) }
     await openTab(store)
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Reports & Backup/))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     expect(button('Download Backup')).toBeTruthy()
     expect(button('Download Both Copies')).toBeTruthy()
     expect(screen.getByText(/It is a recovery file with your information not encrypted, not a backup/)).toBeTruthy()
@@ -365,8 +365,8 @@ describe('read-only', () => {
     await openTab(store)
     const screens: Array<{ name: string; open: () => Promise<void> }> = [
       { name: 'home', open: () => fire.click(tab('Home')) }, { name: 'bills', open: () => fire.click(tab('Bills')) },
-      { name: 'cards', open: () => fire.click(tab('Cards')) }, { name: 'history', open: () => fire.click(tab('History')) },
-      { name: 'data', open: async () => { await fire.click(tab('Data')); await fire.click(button('Expand All')) } },
+      { name: 'goals', open: () => fire.click(tab('Goals')) }, { name: 'history', open: () => fire.click(tab('History')) },
+      { name: 'money', open: async () => { await fire.click(tab('Money')); await fire.click(button('Expand All')) } },
       { name: 'settings', open: () => fire.click(button('Settings')) },
     ]
     const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')

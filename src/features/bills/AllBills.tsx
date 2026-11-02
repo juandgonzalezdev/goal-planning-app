@@ -1,40 +1,51 @@
-import { useContext } from 'react'
 import { Icon } from '../../components/Icon'
+import { FoldBlock } from '../../components/FoldBlock'
+import { ValidityFilterBar, ValidityTag } from '../../components/ValidityFilterBar'
 import { yearMonthOf } from '../../domain/calendar'
 import { usualAmountFor } from '../../domain/finance/bills'
-import { countByValidity, matchesValidity, usableFilter, validityOn } from '../../domain/finance/validity'
-import { formatAmount, formatYearMonth } from '../../ui/format'
-import { DataBlockFrame } from './DataBlockFrame'
-import { DataBlocksContext } from './dataBlocks'
-import type { DataScreenProps } from './DataScreen'
-import { ValidityFilterBar, ValidityTag } from './ValidityFilterBar'
+import type { FinanceData, Id } from '../../domain/finance/types'
+import type { CalendarDate } from '../../domain/goalTime'
+import { countByValidity, matchesValidity, usableFilter, validityOn, type ValidityFilter } from '../../domain/finance/validity'
+import { formatYearMonth } from '../../ui/format'
+
+type Props = {
+  data: FinanceData
+  today: CalendarDate
+  isDemo: boolean
+  open: boolean
+  onToggle: () => void
+  filter: ValidityFilter
+  onFilterChange: (filter: ValidityFilter) => void
+  onOpenBill: (id: Id) => void
+  onAddBill: () => void
+  /** How an amount is written: Bills' own, so hiding all amounts hides these too. */
+  money: (minor: number) => string
+}
 
 /**
- * Every bill in a compact list: name, category, due day, months and
- * status, with its usual amount (never one month's own amount). Each
- * opens the bill's own screen, on the month shared by Home, Bills and Cards.
+ * All Bills, at the end of Bills: every bill in a compact list (name,
+ * category, due day, months and status), with its usual amount (never one
+ * month's own amount), whatever the month shown above. Each opens the
+ * bill's own screen, on the shared month. Closing it drops nothing.
  */
-export function BillsSection({ data, today, isDemo, onOpenBill }: DataScreenProps) {
-  const { view, onViewChange } = useContext(DataBlocksContext)
-  const money = (minor: number) => formatAmount(minor, data.space.currency)
+export function AllBills({ data, today, isDemo, open, onToggle, filter: chosen, onFilterChange, onOpenBill, onAddBill, money }: Props) {
   const reference = yearMonthOf(today)
   const counts = countByValidity(data.bills, reference)
-  const filter = usableFilter(view.billFilter, counts)
+  const filter = usableFilter(chosen, counts)
   const shown = data.bills.filter(bill => matchesValidity(bill, reference, filter))
   const summary = data.bills.length === 0 ? 'No bills yet'
     : [`${data.bills.length} ${data.bills.length === 1 ? 'bill' : 'bills'}`, `${counts.active} active`, ...(counts.upcoming > 0 ? [`${counts.upcoming} upcoming`] : [])].join(' · ')
 
   return (
-    <DataBlockFrame block="bills" summary={summary}
-      actions={<button type="button" className="button-small" onClick={() => onOpenBill(null)}><Icon name="plus" size={16} /> Add Bill</button>}>
+    <FoldBlock title="All Bills" summary={summary} expanded={open} onToggle={onToggle} className="data-block no-print" dataset={{ 'data-bills-block': 'all' }}>
       {data.bills.length === 0 ? (
         <div className="empty-state">
           <p className="muted-note">No bills yet. Add rent, phone or any other payment that comes back regularly.</p>
-          <button type="button" className="button-small align-start" onClick={() => onOpenBill(null)}><Icon name="plus" size={16} /> Add Your First Bill</button>
+          <button type="button" className="button-small align-start" onClick={onAddBill}><Icon name="plus" size={16} /> Add Your First Bill</button>
         </div>
       ) : <>
-        <ValidityFilterBar label="Bills" value={filter} counts={counts} today={today} isDemo={isDemo} onChange={billFilter => onViewChange({ ...view, billFilter })} />
-        <p className="field-help">The amount is the bill’s usual amount. Open a bill to see or change the amount of one month.</p>
+        <ValidityFilterBar label="Bills" value={filter} counts={counts} today={today} isDemo={isDemo} onChange={onFilterChange} />
+        <p className="field-help">Every bill, whatever the month above. The amount is the bill’s usual amount. Open a bill to see or change the amount of one month.</p>
         {shown.length === 0 && <p className="muted-note">No {filter} bills. Choose All to see every bill.</p>}
         <ul className="line-list compact-list">
           {shown.map(bill => {
@@ -44,7 +55,7 @@ export function BillsSection({ data, today, isDemo, onOpenBill }: DataScreenProp
             const usual = usualAmountFor(bill, at)
             return (
               <li key={bill.id}>
-                <button type="button" className="line line-button" onClick={() => onOpenBill(bill.id)}>
+                <button type="button" className="line line-button" data-return-key={`all-${bill.id}`} onClick={() => onOpenBill(bill.id)}>
                   <span>
                     <span className="item-name">{bill.name} <ValidityTag validity={validity} /></span>
                     <small>{bill.category} · Due day {bill.dueDay}{bill.frequency === 'yearly' ? ' · Once a year' : ''}</small>
@@ -58,6 +69,6 @@ export function BillsSection({ data, today, isDemo, onOpenBill }: DataScreenProp
           })}
         </ul>
       </>}
-    </DataBlockFrame>
+    </FoldBlock>
   )
 }

@@ -7,6 +7,7 @@ import { createSpaceData } from './domain/finance/space'
 import { STORAGE_KEY } from './data/localStore'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
 freshDatabaseForEachTest()
@@ -375,8 +376,8 @@ describe('Alex demo: report and backup (12, 13)', () => {
     vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: (blob: Blob) => { blobs.push(blob); return 'blob:report' }, revokeObjectURL: () => {} }))
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download) })
     await openAlex()
-    await fire.click(tab('Data'))
-    await fire.click(button(/^Reports & Backup/))
+    await fire.click(tab('Money'))
+    await fire.click(button('Open Reports & Backup'))
     expect(heading('Export Report')).toBeTruthy()
     expect(heading('Data Backup')).toBeTruthy()
     await fire.click(button('Download PDF'))
@@ -400,7 +401,7 @@ describe('Alex demo: report and backup (12, 13)', () => {
 describe('Alex demo: keeping and resetting (15)', () => {
   it('keeps edits while switching tabs, and Reset Demo restores the whole year', async () => {
     await openAlex()
-    await fire.click(tab('Cards'))
+    await openCardsAndLoans()
     await fire.click(button(/Small Loan/))
     await waitFor(() => expect(heading('Small Loan')).toBeTruthy())
     await fire.click(button('Update Balance'))
@@ -408,7 +409,7 @@ describe('Alex demo: keeping and resetting (15)', () => {
     await fire.click(button('Save Balance'))
     expect(text(screen.getAllByRole('status').find(s => s.textContent)!)).toContain('Demo only: not saved.')
     await backHome()
-    for (const name of ['History', 'Data', 'Bills', 'Home']) await fire.click(tab(name))
+    for (const name of ['History', 'Money', 'Goals', 'Bills', 'Home']) await fire.click(tab(name))
     expect(region('Total Debt')).toContain('12 122,63 zł')
     await pickMonth('2026-03')
 
@@ -467,8 +468,9 @@ describe('Alex demo: keeping and resetting (15)', () => {
 describe('Alex demo: keyboard and labels', () => {
   it('names every button and field on every tab', async () => {
     await openAlex()
-    for (const name of ['Home', 'Bills', 'Cards', 'History', 'Data']) {
+    for (const name of ['Home', 'Bills', 'Goals', 'Money', 'History']) {
       await fire.click(tab(name))
+      if (name === 'Money') await fire.click(button('Expand All'))
       for (const element of screen.getAllByRole('button')) expect(element.textContent?.trim() || element.getAttribute('aria-label')).toBeTruthy()
       for (const element of document.querySelectorAll('input, select, textarea')) {
         expect(screen.getByLabelText((_, node) => node === element)).toBeTruthy()

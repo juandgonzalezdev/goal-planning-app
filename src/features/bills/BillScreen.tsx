@@ -202,7 +202,7 @@ export function BillScreen(props: Props) {
         </div>
         {confirmDelete && (
           <div className="callout callout-warning" role="alert">
-            <p>Delete “{bill.name}” and what was recorded for it each month? This cannot be undone.{debt ? ` “${debt.name}” stays in Cards, without a monthly payment.` : ''}</p>
+            <p>Delete “{bill.name}” and what was recorded for it each month? This cannot be undone.{debt ? ` “${debt.name}” stays in Money, under Cards & Loans, without a monthly payment.` : ''}</p>
             <div className="inline-actions">
               <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined}
                 onClick={async () => { if (isKept(await save('delete', '', current => deleteBill(current, bill.id)))) props.onDeleted() }}>{sending === 'delete' ? 'Saving…' : 'Delete Bill'}</button>

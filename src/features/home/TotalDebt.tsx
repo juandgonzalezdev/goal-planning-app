@@ -11,7 +11,7 @@ import { HomeBlockFrame } from './HomeBlock'
 /**
  * How much do I owe? The total of the Remaining Balances (never the
  * monthly payments), and each card and loan with the date of its balance;
- * each row opens that card or loan in Cards, where it can be edited. For
+ * each row opens that card or loan, where it can be edited. For
  * a past month it uses the balances entered by the end of that month.
  */
 export function TotalDebt({ data, asOf, onOpenDebt, onOpenCards }: { data: FinanceData; asOf: CalendarDate; onOpenDebt: (id: Id) => void; onOpenCards: () => void }) {
@@ -43,7 +43,7 @@ export function TotalDebt({ data, asOf, onOpenDebt, onOpenCards }: { data: Finan
         </ul>
       )}
       <p className="field-help">What you still owe, not your monthly payments. Paying a bill does not lower a balance by itself: update it in the card or loan.</p>
-      <button type="button" className="button-small align-start" onClick={onOpenCards}>Open Cards <Icon name="arrowRight" size={16} /></button>
+      <button type="button" className="button-small align-start" onClick={onOpenCards}>Open Cards &amp; Loans <Icon name="arrowRight" size={16} /></button>
     </HomeBlockFrame>
   )
 }

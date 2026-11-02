@@ -1,8 +1,8 @@
 import type { Tab } from '../app/navigation'
 
-const LABELS: Record<Tab, string> = { home: 'Home', bills: 'Bills', cards: 'Cards', history: 'History', data: 'Data' }
+const LABELS: Record<Tab, string> = { home: 'Home', bills: 'Bills', goals: 'Goals', money: 'Money', history: 'History' }
 
-/** The five main tabs, fixed at the bottom on phones (approved order). */
+/** The five main tabs, with their names always shown: fixed at the bottom on phones, a row under the header on wide screens (approved order). */
 export function BottomNav({ current, onSelect }: { current: Tab | null; onSelect: (tab: Tab) => void }) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
