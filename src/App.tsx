@@ -3,8 +3,8 @@ import { isSpaceScreen, isTab, useNavigation, type Screen, type Tab } from './ap
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
 import { WriteStatusContext } from './app/writeStatus'
-import { describeTyped, UnsavedChangesContext, useUnsavedRegistry } from './app/unsavedChanges'
-import { ConfirmDiscard, UnsavedForms } from './components/UnsavedForms'
+import { describeTyped, LeaveGuardContext, UnsavedChangesContext, useUnsavedRegistry, type LeaveGuard, type UnsavedForm } from './app/unsavedChanges'
+import { ConfirmDiscard, LeaveDialog, UnsavedForms } from './components/UnsavedForms'
 import { Recovery } from './features/recovery/Recovery'
 import { recoveryFile, recoveryFileName } from './data/recovery'
 import { downloadFile } from './ui/download'
@@ -41,7 +41,7 @@ import { AmountVisibilityProvider } from './ui/privacy'
 import { HOME_BLOCKS, type HomeBlock } from './ui/amountVisibility'
 import { AuthPreview } from './features/welcome/AuthPreview'
 import { Welcome } from './features/welcome/Welcome'
-import { EMPTY_SETUP, setupFromDraft, type SetupDraft } from './features/welcome/setupDraft'
+import { EMPTY_SETUP, setupFromDraft, typedSetup, type SetupDraft } from './features/welcome/setupDraft'
 import { WelcomeSetup } from './features/welcome/WelcomeSetup'
 import { Opening } from './features/welcome/Opening'
 import { isKept, type SaveOutcome } from './ui/saveOutcome'
@@ -51,6 +51,16 @@ import './styles/app.css'
 import './styles/finance.css'
 
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
+
+/** Moving to another screen closes every form on screen (a kept draft and a form kept after a problem stay). */
+const ANY_FORM = () => true
+
+/**
+ * A change inside the app that would close forms with changes, waiting for an answer to "Leave without saving?"
+ * (or, `waiting`, for the last change to be saved first). `run(discarded)` makes the change; `history`: it moves
+ * the browser history (the app's Back buttons), so it waits like Back and Forward do.
+ */
+type AppLeave = { lost: (form: UnsavedForm) => boolean; run: (discarded: boolean) => void; history: boolean; waiting: boolean }
 
 /** Alex's screen preferences, where every demo starts. */
 const DEMO_PREFS: { hidden: ReadonlySet<HomeBlock>; chartView: BillsChartView; emergencyLater: boolean } = { hidden: new Set(), chartView: 'donut', emergencyLater: false }
@@ -82,15 +92,49 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [confirming, setConfirming] = useState<'reload' | 'discard-erased' | 'open-demo' | 'exit-demo' | 'exit-demo-settings' | null>(null)
   // Where the demo was opened from: Exit Demo goes back there (the own space's Home, or Welcome).
   const [demoFrom, setDemoFrom] = useState<'settings' | 'welcome'>('welcome')
-  const { screen: requested, direction, go, replace, back } = useNavigation(space.open ? 'home' : 'welcome')
+  // The field the user was in when a question about leaving started: Keep Editing puts the focus back there.
+  const lastField = useRef<HTMLElement | null>(null)
+  const questionField = useRef<HTMLElement | null>(null)
+  // Where the page was when Back or Forward was undone: it stays there.
+  const guardScroll = useRef(0)
+  const nav = useNavigation(space.open ? 'home' : 'welcome', () => unsaved.losing(ANY_FORM).length > 0, {
+    onGuard: () => { guardScroll.current = window.scrollY; questionField.current = lastField.current },
+    onRestored: () => { const y = guardScroll.current; requestAnimationFrame(() => { if (window.scrollY !== y) window.scrollTo?.(0, y) }) },
+  })
+  const { screen: requested, direction, navigation } = nav
+  // Leave without saving?: asked before a change inside the app (a tab, a link, Back, another month) closes forms with changes.
+  const [appLeave, setAppLeave] = useState<AppLeave | null>(null)
+  /**
+   * Makes a change that would close the forms `lost` says: at once when none has changes; otherwise after the last
+   * change is saved when one is being saved, and only after Discard and Leave when forms would still close. While a
+   * question is open, no other move that would close forms starts: the first destination stays.
+   */
+  const confirmLeave = (lost: (form: UnsavedForm) => boolean, run: (discarded: boolean) => void, history = false) => {
+    if (unsaved.losing(lost).length === 0) { run(false); return }
+    if (appLeave || nav.request) return
+    if (space.saving) { setAppLeave({ lost, run, history, waiting: true }); return }
+    questionField.current = lastField.current
+    setAppLeave({ lost, run, history, waiting: false })
+  }
+  const leaveGuard: LeaveGuard = (lost, run) => confirmLeave(lost, () => run())
+  /** A new screen, from a tab, a link or a button: asks first when forms would close. */
+  const go = (next: Screen) => confirmLeave(ANY_FORM, () => navigation.go(next))
+  /** The app's Back buttons: the same as the browser's, asking first when forms would close. */
+  const back = () => confirmLeave(ANY_FORM, discarded => (discarded ? navigation.backAllowed() : navigation.back()), true)
+  /** Moves after a save or a step the user already confirmed: nothing more to ask. */
+  const replace = (next: Screen) => navigation.replace(next)
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
+  // The Welcome Setup draft stays while the user looks elsewhere (until the space is created), so moving around never drops it.
+  const setupText = describeTyped('Welcome Setup', typedSetup(setupDraft))
+  const setupTyped = setupText !== describeTyped('Welcome Setup', typedSetup(EMPTY_SETUP))
+  useEffect(() => { unsaved.registry.set('app:welcome-setup', setupTyped ? { title: 'Welcome Setup', text: setupText, kept: true } : null) }, [unsaved.registry, setupTyped, setupText])
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
   const [goalId, setGoalId] = useState<Id | null>(null)
   const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
   // The New Goal draft stays while the user looks elsewhere, so it counts as unsaved even with its screen closed.
   const newGoalText = describeTyped('New Goal', typedGoalDraft(newGoal.draft))
   const newGoalTyped = newGoalText !== describeTyped('New Goal', typedGoalDraft(EMPTY_NEW_GOAL.draft))
-  useEffect(() => { unsaved.registry.set('app:new-goal', newGoalTyped ? { title: 'New Goal', text: newGoalText } : null) }, [unsaved.registry, newGoalTyped, newGoalText])
+  useEffect(() => { unsaved.registry.set('app:new-goal', newGoalTyped ? { title: 'New Goal', text: newGoalText, kept: true } : null) }, [unsaved.registry, newGoalTyped, newGoalText])
   // The card or loan, and the bill, shown on their own screens (null: adding a new one).
   const [debtId, setDebtId] = useState<Id | null>(null)
   const [billId, setBillId] = useState<Id | null>(null)
@@ -113,6 +157,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [chosenMonth, setChosenMonth] = useState<{ from: YearMonth; month: YearMonth } | null>(null)
   const month = chosenMonth?.from === thisMonth ? chosenMonth.month : thisMonth
   const setMonth = (next: YearMonth) => setChosenMonth({ from: thisMonth, month: next })
+  /** The month bar: an amount typed for one month is never carried to another; it asks first. */
+  const changeMonth = (next: YearMonth) => confirmLeave(form => form.month !== undefined && form.month !== next, () => setMonth(next))
   // How Home is arranged. The own space's layout is remembered on this device for that space;
   // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
   const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
@@ -160,6 +206,45 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // While nothing can be saved, a form closed with changes keeps them in the list, to copy before discarding.
   const savingBlocked = open?.kind === 'own' && space.problem !== null
   useEffect(() => { unsaved.setKeepClosed(savingBlocked) }, [unsaved, savingBlocked])
+
+  // A question asked while a change was being saved: once the answer is in (and the form has closed, if it was kept),
+  // the move happens without asking when nothing would close any more; otherwise the question shows.
+  useEffect(() => {
+    if (!appLeave?.waiting || space.saving) return
+    const timer = setTimeout(() => setAppLeave(current => current && { ...current, waiting: false }), 0)
+    return () => clearTimeout(timer)
+  }, [appLeave, space.saving])
+  useEffect(() => {
+    if (!appLeave || appLeave.waiting || unsaved.losing(appLeave.lost).length > 0) return
+    if (appLeave.history && !nav.ready) return
+    const timer = setTimeout(() => {
+      setAppLeave(null)
+      appLeave.run(false)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [appLeave, unsaved, unsaved.forms, nav.ready])
+  // The same for Back and Forward: with nothing left to close, the first destination is reached (or, when the app
+  // cannot move safely, the question simply ends and the next Back works as usual).
+  useEffect(() => {
+    if (!nav.request || space.saving || unsaved.losing(ANY_FORM).length > 0) return
+    const timer = setTimeout(() => {
+      if (unsaved.losing(ANY_FORM).length > 0) return
+      const now = navigation.snapshot()
+      if (now.ready) navigation.leave()
+      else if (now.unsure) navigation.keepEditing()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [nav.request, nav.ready, space.saving, unsaved, unsaved.forms, navigation])
+  // Reload, closing the tab or leaving the site: only the browser can ask, in its own words, and not every browser does.
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!unsaved.hasUnsaved()) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [unsaved])
   // A short notice that this tab now shows what another tab saved.
   const { notice, dismissNotice } = space
   useEffect(() => {
@@ -231,6 +316,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         path.unshift([...node.parentElement.children].indexOf(node))
       }
       lastFocus.current = path
+      if (event.target instanceof HTMLElement && event.target.matches('input, select, textarea')) lastField.current = event.target
     }
     const onScroll = () => { lastScroll.current = window.scrollY }
     main.addEventListener('focusin', onFocus)
@@ -279,11 +365,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     else setOwnHistoryView({ spaceId: open.data.space.id, view })
   }
   /** Opens Data on one block: the block opens, and the view and the focus go to its heading. */
-  const openDataBlock = (block: DataBlock) => {
+  const openDataBlock = (block: DataBlock) => confirmLeave(ANY_FORM, () => {
     changeDataView(setBlockOpen(dataView, block, true))
     dataTarget.current = block
-    go('data')
-  }
+    navigation.go('data')
+  })
 
   // Home's month bar sticks under the header (and the tab row on wide screens). Their real
   // height changes with the iPhone notch and the font size, so it is measured, not guessed.
@@ -360,8 +446,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     ownReturn.current = from === 'settings' ? { billsView: bills, chosenMonth: month } : null
     setDemoFrom(from)
     resetGoals(); setChosenMonth(null); clearDemoViews(); setConfirming(null)
-    if (from === 'settings') replace('home')
-    else go('home')
+    if (from === 'settings') navigation.replace('home')
+    else navigation.go('home')
   }
   /** Explore the Demo in Settings: it asks first when something typed (here or kept after a problem) would be dropped. */
   const requestDemo = () => {
@@ -397,13 +483,16 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnDataView(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
     return outcome
   }
-  const openGoal = (id: Id) => { setGoalId(id); go('goal') }
-  const openDebt = (id: Id | null) => { setDebtId(id); go('debt') }
+  // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
+  const showGoal = (id: Id) => { setGoalId(id); navigation.go('goal') }
+  const openGoal = (id: Id) => confirmLeave(ANY_FORM, () => showGoal(id))
+  const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => { setDebtId(id); navigation.go('debt') })
   /** Opens a bill; with `forMonth` (a payment chosen in Cards or History), on that month, which becomes the shared month. */
-  const openBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillDay(null); if (forMonth) setMonth(forMonth); go('bill') }
+  const showBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillDay(null); if (forMonth) setMonth(forMonth); navigation.go('bill') }
+  const openBill = (id: Id | null, forMonth?: YearMonth) => confirmLeave(ANY_FORM, () => showBill(id, forMonth))
   /** Bills opens a bill, or Add Bill on a day: Back finds Bills where it was, with the focus on the button used. */
-  const fromBills = (key: string, show: () => void) => { billsReturn.current = { y: window.scrollY, key }; show() }
-  const addBillOn = (date: CalendarDate) => fromBills('day-add', () => { setBillId(null); setBillDay(date); go('bill') })
+  const fromBills = (key: string, show: () => void) => confirmLeave(ANY_FORM, () => { billsReturn.current = { y: window.scrollY, key }; show() })
+  const addBillOn = (date: CalendarDate) => fromBills('day-add', () => { setBillId(null); setBillDay(date); navigation.go('bill') })
   /**
    * A new bill is saved. Added from a day of the calendar, it goes straight
    * back to that day with a short notice (the calendar keeps its place);
@@ -414,7 +503,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setBillsView(view => ({ ...view, mode: 'calendar', selected: billDay, added: { id, message } }))
     if (billsReturn.current) billsReturn.current.key = 'added-notice'
     setBillDay(null)
-    back()
+    // The saved form is still on screen for a moment: this Back may close it.
+    navigation.backAllowed()
   }
   const selectedGoal = open?.data.goals.find(goal => goal.id === goalId && goal.status === 'active') ?? null
   // New records belong to the one person in an Individual space, and are shared in a Duo.
@@ -427,20 +517,20 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     writeChartView(storage, view)
   }
   /** A purchase chosen on Home opens in History, on its month with no search or filter, ready to change. */
-  const openExpense = (id: Id) => {
+  const openExpense = (id: Id) => confirmLeave(ANY_FORM, () => {
     const expense = open?.data.expenses.find(e => e.id === id)
     if (expense) changeHistoryView({ ...historyView, filter: { ...NO_FILTER, period: { kind: 'month', month: expense.date.slice(0, 7) } }, openMonths: null, shown: {} })
     setHistoryFocus(id)
-    go('history')
-  }
+    navigation.go('history')
+  })
   /** History opens a bill or a goal: Back finds History scrolled where it was. */
-  const fromHistory = (show: () => void) => { historyScroll.current = window.scrollY; show() }
+  const fromHistory = (show: () => void) => confirmLeave(ANY_FORM, () => { historyScroll.current = window.scrollY; show() })
   /** A balance in History opens Accounts & Balances in Data, on its account. */
-  const openAccount = (id: Id) => {
+  const openAccount = (id: Id) => confirmLeave(ANY_FORM, () => {
     changeDataView({ ...setBlockOpen(dataView, 'accounts', true), account: open?.data.moneyAccounts.some(a => a.id === id) ? id : null })
     dataTarget.current = 'accounts'
-    go('data')
-  }
+    navigation.go('data')
+  })
   const shownHidden = inDemo ? demoPrefs.hidden : hiddenBlocks
   const saveHidden = (next: ReadonlySet<HomeBlock>) => {
     if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, hidden: next })); return }
@@ -465,12 +555,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
   const selectTab = (tab: Tab) => {
     if (tab === screen) return
-    if (tab === 'history') {
-      // From the tab bar, History opens as it was left (no purchase from Home); the first time, on the year of the month shown.
-      setHistoryFocus(null)
-      if (historyView.filter === null) changeHistoryView({ ...historyView, filter: firstFilter(month) })
-    }
-    go(tab)
+    confirmLeave(ANY_FORM, () => {
+      if (tab === 'history') {
+        // From the tab bar, History opens as it was left (no purchase from Home); the first time, on the year of the month shown.
+        setHistoryFocus(null)
+        if (historyView.filter === null) changeHistoryView({ ...historyView, filter: firstFilter(month) })
+      }
+      navigation.go(tab)
+    })
   }
   /** The logo: Home of the open space (or Welcome before one is open). Already there, it does nothing, so no history step is added. */
   const goToStart = () => {
@@ -479,6 +571,31 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
 
   const writeStatus = useMemo(() => ({ saving: space.saving, canWrite: space.canWrite, revision: space.revision }), [space.saving, space.canWrite, space.revision])
+
+  // Leave without saving?: the app's own question first; Back and Forward's when it is the only one.
+  const asking = appLeave && !appLeave.waiting ? 'app' : nav.request && !space.saving ? 'history' : null
+  const askingForms = asking === 'app' ? unsaved.losing(appLeave!.lost) : asking === 'history' ? unsaved.losing(ANY_FORM) : []
+  const endQuestion = () => {
+    setAppLeave(null)
+    if (nav.request) navigation.keepEditing()
+  }
+  const keepEditing = () => {
+    endQuestion()
+    const field = questionField.current
+    questionField.current = null
+    if (field?.isConnected) field.focus({ preventScroll: true })
+  }
+  const discardAndLeave = () => {
+    questionField.current = null
+    if (asking === 'history') { navigation.leave(); return }
+    const leave = appLeave
+    endQuestion()
+    leave?.run(true)
+  }
+  const leaveQuestion = askingForms.length > 0 && (
+    <LeaveDialog forms={askingForms} typedText={() => unsaved.typedText(askingForms.map(form => form.id))}
+      canDiscard={asking === 'app' ? !appLeave!.history || nav.ready : nav.ready} onKeep={keepEditing} onDiscard={discardAndLeave} />
+  )
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
   const showNav = !!open && isTab(screen)
@@ -540,8 +657,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       )}
       {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
       {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} />}
+      {leaveQuestion}
       <WriteStatusContext.Provider value={writeStatus}>
       <UnsavedChangesContext.Provider value={unsaved.registry}>
+      <LeaveGuardContext.Provider value={leaveGuard}>
       <main className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
@@ -564,7 +683,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         {open && <Fragment key={space.generation}>
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
-              <HomeScreen data={open.data} months={months} month={month} onMonthChange={setMonth} today={space.today}
+              <HomeScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 onChange={space.update} onOpen={go} onOpenDataBlock={openDataBlock} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
                 onOpenExpense={openExpense} emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
@@ -574,21 +693,22 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('bills') && <div className="screen" data-screen="bills">
             <AmountVisibilityProvider value={visibility}>
               <BillsScreen data={open.data} months={months} month={month} today={space.today} isDemo={open.kind === 'demo'} view={billsView} onViewChange={setBillsView}
-                onMonthChange={setMonth} onChange={space.update} onOpenBill={(id, key) => fromBills(key, () => openBill(id))} onAddBill={() => openBill(null)} onAddBillOn={addBillOn} />
+                onMonthChange={next => confirmLeave(form => form.month !== undefined && form.month !== next, () => { setBillsView(view => ({ ...view, added: null, selected: null })); setMonth(next) })}
+                onChange={space.update} onOpenBill={(id, key) => fromBills(key, () => showBill(id))} onAddBill={() => openBill(null)} onAddBillOn={addBillOn} />
             </AmountVisibilityProvider>
           </div>}
           {shows('cards') && <div className="screen" data-screen="cards">
-            <CardsScreen data={open.data} months={months} month={month} onMonthChange={setMonth} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
+            <CardsScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} onOpenDebt={openDebt} onAddDebt={() => openDebt(null)} />
           </div>}
           {shows('debt') && <div className="screen" data-screen="debt">
-            <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} months={months} month={month} onMonthChange={setMonth}
-              today={space.today} isDemo={open.kind === 'demo'} owner={newGoalOwner} newId={newId} onBack={back} onChange={space.update} onOpenBill={openBill}
-              onCreated={id => { setDebtId(id); replace('debt') }} onDeleted={() => { setDebtId(null); back() }} />
+            <DebtScreen key={debtId ?? 'new'} data={open.data} debtId={debtId} months={months} month={month} onMonthChange={changeMonth}
+              today={space.today} isDemo={open.kind === 'demo'} owner={newGoalOwner} newId={newId} onBack={back} onCancel={() => navigation.backAllowed()} onChange={space.update} onOpenBill={openBill}
+              onCreated={id => { setDebtId(id); replace('debt') }} onDeleted={() => { setDebtId(null); navigation.backAllowed() }} />
           </div>}
           {shows('bill') && <div className="screen" data-screen="bill">
-            <BillScreen key={billId ?? `new-${billDay ?? ''}`} data={open.data} billId={billId} dueDate={billDay} months={months} month={month} onMonthChange={setMonth} today={space.today} owner={newGoalOwner} newId={newId}
-              onBack={back} onChange={space.update} onOpenDebt={openDebt}
-              onCreated={billCreated} onDeleted={() => { setBillId(null); back() }} />
+            <BillScreen key={billId ?? `new-${billDay ?? ''}`} data={open.data} billId={billId} dueDate={billDay} months={months} month={month} onMonthChange={changeMonth} today={space.today} owner={newGoalOwner} newId={newId}
+              onBack={back} onCancel={() => navigation.backAllowed()} onChange={space.update} onOpenDebt={openDebt}
+              onCreated={billCreated} onDeleted={() => { setBillId(null); navigation.backAllowed() }} />
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
             {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
@@ -599,7 +719,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onChange={(data, base) => space.update(() => data, base)}
               onDeleted={async (data, base) => {
                 const outcome = await space.update(() => data, base)
-                if (isKept(outcome)) { setGoalId(null); back() }
+                if (isKept(outcome)) { setGoalId(null); navigation.backAllowed() }
                 return outcome
               }} onReviewEmergency={() => go('emergency')} />
           </div>}
@@ -618,7 +738,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               }} />
           </div>}
           {shows('emergency') && <div className="screen" data-screen="emergency">
-            <EmergencyScreen data={open.data} today={space.today} owner={newGoalOwner} newId={newId} onBack={back}
+            <EmergencyScreen data={open.data} today={space.today} owner={newGoalOwner} newId={newId} onBack={back} onCancel={() => navigation.backAllowed()}
               onSave={async (data, base) => {
                 const outcome = await space.update(() => data, base)
                 if (isKept(outcome)) emergencyLaterChange(false)
@@ -629,7 +749,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <HistoryScreen key={historyFocus ?? 'all'} data={open.data} months={months} month={month} today={space.today} newId={newId} focusId={historyFocus}
                 view={historyView} onViewChange={changeHistoryView}
-                onChange={space.update} onOpenBill={(id, forMonth) => fromHistory(() => openBill(id, forMonth))} onOpenGoal={id => fromHistory(() => openGoal(id))}
+                onChange={space.update} onOpenBill={(id, forMonth) => fromHistory(() => showBill(id, forMonth))} onOpenGoal={id => fromHistory(() => showGoal(id))}
                 onOpenAccount={openAccount} />
             </AmountVisibilityProvider>
           </div>}
@@ -652,6 +772,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
         </Fragment>}
       </main>
+      </LeaveGuardContext.Provider>
       </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>
       <footer className="shell-footer">

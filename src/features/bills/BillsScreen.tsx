@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { YearMonth } from '../../domain/calendar'
 import { billsForMonth, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills, type BillOccurrence } from '../../domain/finance/bills'
@@ -64,8 +64,15 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   const counts: Record<BillsFilter, number> = { all: summary.count, pending: summary.count - summary.paidCount, paid: summary.paidCount }
   // Any other change of day, view, filter or month ends the "Bill added" notice.
   const set = (patch: Partial<BillsView>) => onViewChange({ ...view, added: null, ...patch })
-  // A new month starts again from its own useful day.
-  const changeMonth = (next: YearMonth) => { set({ selected: null }); onMonthChange(next) }
+  // Calendar or List, and the filter: an amount being changed in the list stays only if its bill is still listed; otherwise the app asks first.
+  const guard = useLeaveGuard()
+  const setShown = (patch: Pick<Partial<BillsView>, 'mode' | 'filter'>) => {
+    const next = { ...view, ...patch }
+    const staying = new Set(next.mode === 'list' ? filterBills(all, next.filter).map(o => itemTag(o.bill.id)) : [])
+    guard(form => form.tag?.startsWith(ITEM_TAG) === true && !staying.has(form.tag), () => set(patch))
+  }
+  // A new month starts again from its own useful day (the app asks first when an amount typed for this month would close).
+  const changeMonth = (next: YearMonth) => onMonthChange(next)
   const dayBills = shown.filter(o => o.dueDate === selected)
 
   // Where the view and the focus go after the render: the day panel, the calendar, or the new bill once Show All shows it.
@@ -117,12 +124,12 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
       <div className="bills-toolbar no-print">
         <div className="segmented" role="group" aria-label="View">
           {MODES.map(mode => (
-            <button key={mode.id} type="button" aria-pressed={view.mode === mode.id} className={view.mode === mode.id ? 'is-active' : ''} onClick={() => set({ mode: mode.id })}>{mode.label}</button>
+            <button key={mode.id} type="button" aria-pressed={view.mode === mode.id} className={view.mode === mode.id ? 'is-active' : ''} onClick={() => setShown({ mode: mode.id })}>{mode.label}</button>
           ))}
         </div>
         <div className="segmented" role="group" aria-label="Show bills">
           {FILTERS.map(filter => (
-            <button key={filter} type="button" aria-pressed={view.filter === filter} className={view.filter === filter ? 'is-active' : ''} onClick={() => set({ filter })}>
+            <button key={filter} type="button" aria-pressed={view.filter === filter} className={view.filter === filter ? 'is-active' : ''} onClick={() => setShown({ filter })}>
               {FILTER_NAMES[filter]} <span className="filter-count">{counts[filter]}</span>
             </button>
           ))}
@@ -158,7 +165,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
             <section key={day.dueDate} className="bill-list-day" aria-labelledby={`bill-date-${day.dueDate}`}>
               <h2 id={`bill-date-${day.dueDate}`} className="bill-list-date">{formatLongDate(day.dueDate)}</h2>
               {day.occurrences.map(occurrence => (
-                <BillItem key={occurrence.bill.id} data={data} occurrence={occurrence} today={today} amounts={amounts} onChange={onChange} onOpenBill={id => onOpenBill(id, `details-${id}`)} />
+                <BillItem key={`${occurrence.bill.id}:${occurrence.month}`} data={data} occurrence={occurrence} today={today} amounts={amounts} filter={view.filter} onChange={onChange} onOpenBill={id => onOpenBill(id, `details-${id}`)} />
               ))}
             </section>
           ))}
@@ -285,8 +292,17 @@ function PrintList({ bills, monthLabel, amounts, data }: { bills: BillOccurrence
   )
 }
 
-function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
-  data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; amounts: BlockAmounts; onChange: Props['onChange']; onOpenBill: (id: Id) => void
+/** The place of a list bill's amount editor, so a change of view can tell whether it stays. */
+const ITEM_TAG = 'bills-item:'
+const itemTag = (billId: Id) => `${ITEM_TAG}${billId}`
+
+/**
+ * One bill of the list. Its amount editor belongs to this bill and this
+ * month (the list keys it by both), so an amount is only ever saved for the
+ * month it was typed for.
+ */
+function BillItem({ data, occurrence, today, amounts, filter, onChange, onOpenBill }: {
+  data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; amounts: BlockAmounts; filter: BillsFilter; onChange: Props['onChange']; onOpenBill: (id: Id) => void
 }) {
   const { bill, month, amount, paid, amountChangedThisMonth } = occurrence
   const [editing, setEditing] = useState(false)
@@ -297,7 +313,8 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
   const saver = useSaver()
   // The revision the amount editor was opened on.
   const [base, setBase] = useState(revision)
-  useUnsavedChanges(`Amount for ${monthName}: ${bill.name}`, editing ? { 'Amount': text } : null)
+  const amountForm = useUnsavedChanges(`Amount for ${monthName}: ${bill.name}`, editing ? { 'Amount': text } : null, { tag: itemTag(bill.id), month })
+  const guard = useLeaveGuard()
 
   const startEditing = () => { setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setBase(revision); saver.clearRefusal(); setEditing(true) }
   // The editor closes only once the change is kept; otherwise it stays open with what was typed.
@@ -320,7 +337,12 @@ function BillItem({ data, occurrence, today, amounts, onChange, onOpenBill }: {
       <div className="bill-line">
         <small>{bill.category} · {ownerName(data.space, bill.owner)}{amountChangedThisMonth && ' · Changed for this month'}</small>
         <button type="button" className={`paid-toggle${paid ? ' is-paid' : ''}`} aria-pressed={paid} aria-label={`${bill.name} paid in ${monthName}`}
-          aria-disabled={saver.blocked || undefined} onClick={() => void saver.save(() => onChange(current => setBillPaid(current, bill.id, month, !paid, today)))}>
+          aria-disabled={saver.blocked || undefined} onClick={() => {
+            const togglePaid = () => void saver.save(() => onChange(current => setBillPaid(current, bill.id, month, !paid, today)))
+            // With Pending or Paid chosen, the bill leaves the list: an amount being typed here would close with it.
+            if (filter === 'all') togglePaid()
+            else guard(form => form.id === amountForm.id, togglePaid)
+          }}>
           {paid ? '✓ Paid' : '○ Pending'}
         </button>
       </div>

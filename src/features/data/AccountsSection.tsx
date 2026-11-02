@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { recordBalance } from '../../domain/finance/debts'
@@ -35,8 +35,8 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
   const [formBase, setFormBase] = useState(revision)
   const [balanceBase, setBalanceBase] = useState(revision)
   const [sending, setSending] = useState<'form' | 'balance' | null>(null)
-  useUnsavedChanges(form?.id ? 'Edit account' : 'Add account', form ? { 'Name': form.name, 'Kind': form.kind, 'Balance': form.balance, 'As of': form.asOf } : null)
-  useUnsavedChanges(`Update balance: ${data.moneyAccounts.find(account => account.id === balanceFor?.id)?.name ?? ''}`,
+  const accountForm = useUnsavedChanges(form?.id ? 'Edit account' : 'Add account', form ? { 'Name': form.name, 'Kind': form.kind, 'Balance': form.balance, 'As of': form.asOf } : null)
+  const balanceForm = useUnsavedChanges(`Update balance: ${data.moneyAccounts.find(account => account.id === balanceFor?.id)?.name ?? ''}`,
     balanceFor ? { 'Balance': balanceFor.amount, 'As of': balanceFor.asOf } : null)
   /** Saves one change and says what happened. */
   const save = async (done: string, change: (data: FinanceData) => FinanceData, base?: number, what: typeof sending = null): Promise<SaveOutcome> => {
@@ -52,11 +52,16 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
     focusField.current = null
   })
 
+  // Opening the account form, or Update Balance, for another account takes the place of the one open: the app asks first.
+  const guard = useLeaveGuard()
+  const openForm = (next: AccountForm) => guard(f => f.id === accountForm.id, () => {
+    setFormBase(revision)
+    setForm(next)
+    focusField.current = 'account-name'
+  })
   const startNew = () => {
     onViewChange(setBlockOpen(view, 'accounts', true))
-    setFormBase(revision)
-    setForm({ id: null, name: '', kind: 'savings', balance: '', asOf: today })
-    focusField.current = 'account-name'
+    openForm({ id: null, name: '', kind: 'savings', balance: '', asOf: today })
   }
 
   const saveForm = async () => {
@@ -154,16 +159,12 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
                     </div>
                     : form?.id === account.id ? formBox
                     : <div className="inline-actions">
-                      <button type="button" className="button-small" aria-label={`Update Balance: ${account.name}`} onClick={() => {
+                      <button type="button" className="button-small" aria-label={`Update Balance: ${account.name}`} onClick={() => guard(f => f.id === balanceForm.id, () => {
                         setBalanceBase(revision)
                         setBalanceFor({ id: account.id, amount: amountText(balance), asOf: today })
                         focusField.current = 'account-new-balance'
-                      }}>Update Balance</button>
-                      <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => {
-                        setFormBase(revision)
-                        setForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })
-                        focusField.current = 'account-name'
-                      }}>Edit</button>
+                      })}>Update Balance</button>
+                      <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => openForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })}>Edit</button>
                       <button type="button" className="button-small" aria-label={`Delete: ${account.name}`} aria-disabled={blocked || undefined} onClick={() => {
                         if (deleteAccount(data, account.id) === null) { tell(`${account.name} has goal movements, so it stays. You can set its balance instead.`); return }
                         void save(`${account.name} deleted.`, current => deleteAccount(current, account.id) ?? current)

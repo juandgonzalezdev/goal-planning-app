@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useLeaveGuard } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -15,7 +16,7 @@ import type { ChangeSpace } from '../../ui/saveOutcome'
 import { billsByCategory } from '../../domain/finance/home'
 import { Donut } from './Donut'
 import { HomeBlockFrame } from './HomeBlock'
-import { PlannedBills } from './PlannedBills'
+import { PlannedBills, PLANNED_TAG } from './PlannedBills'
 
 type Props = {
   data: FinanceData
@@ -41,6 +42,8 @@ export function SpendingByCategory(props: Props) {
   const [mode, setMode] = useState<'spent' | 'planned'>('spent')
   const [chosen, setChosen] = useState<SpendingCategory | null>(null)
   const [ideasOpen, setIdeasOpen] = useState(false)
+  // Spent closes the planned list, with any amount being changed in it: the app asks first.
+  const guard = useLeaveGuard()
   const ideasId = useId()
   const { money, hidden } = useBlockAmounts('categories', data.space.currency)
   const spending = monthSpending(data, month)
@@ -55,7 +58,7 @@ export function SpendingByCategory(props: Props) {
       <div className="segment-row">
         <div className="segmented" role="group" aria-label="Show">
           {(['spent', 'planned'] as const).map(option => (
-            <button key={option} type="button" aria-pressed={mode === option} className={mode === option ? 'is-active' : ''} onClick={() => setMode(option)}>
+            <button key={option} type="button" aria-pressed={mode === option} className={mode === option ? 'is-active' : ''} onClick={() => guard(form => option === 'spent' && form.tag?.startsWith(PLANNED_TAG) === true, () => setMode(option))}>
               {option === 'spent' ? 'Spent' : 'Planned'}
             </button>
           ))}

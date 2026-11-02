@@ -29,6 +29,8 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
+  /** Cancel on a new card or loan: leaves without asking (Cancel is the user's choice to drop what was typed). */
+  onCancel?: () => void
   onChange: ChangeSpace
   onCreated: (id: Id) => void
   onDeleted: () => void
@@ -245,7 +247,7 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
   const debt = debtId ? data.debts.find(d => d.id === debtId) ?? null : null
   const linked = debt ? debtPayment(data, debt, draft.paymentFrom).bill : null
   const set = (patch: Partial<DebtDraft>) => setDraft({ ...draft, ...patch })
-  const cancel = () => (onDone ? onDone(null) : onBack())
+  const cancel = () => (onDone ? onDone(null) : (props.onCancel ?? onBack)())
   useUnsavedChanges(isNew ? 'Add card or loan' : `Edit: ${debt?.name ?? ''}`, {
     'Kind': draft.kind, 'Name': draft.name, 'Yearly interest (%)': draft.interest, 'Due day': draft.dueDay, 'Closing day': draft.closingDay,
     'Minimum payment': draft.minimumPayment, 'Start month': draft.startMonth, 'Final payment month': draft.finalPaymentMonth,

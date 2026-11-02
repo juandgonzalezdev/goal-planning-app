@@ -21,6 +21,8 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
+  /** Cancel: leaves without asking (Cancel is the user's choice to drop what was typed). */
+  onCancel?: () => void
   /** Saves the fund; `base` is the revision the draft was opened on. Says what happened. */
   onSave: (data: FinanceData, base: number) => Promise<SaveOutcome>
   onOpenGoal: (id: Id) => void
@@ -43,7 +45,7 @@ const SOURCES = [
  * assigned until Create Emergency Fund (or Save Review) is pressed.
  * Savings for other goals and investments are never counted in it.
  */
-export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onOpenGoal }: Props) {
+export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = onBack, onSave, onOpenGoal }: Props) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const fund = emergencyFund(data.goals)
   const estimate = estimateEssentials(data, today)
@@ -240,7 +242,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onSave, onO
           {sendingWith === true ? 'Saving…' : fund ? 'Save Review' : 'Create Emergency Fund'}
         </button>
         <button type="button" className="button-small" aria-disabled={saver.blocked || undefined} onClick={() => save(false)}>{sendingWith === false ? 'Saving…' : fund ? 'Save Without a Target' : 'Create Without a Target'}</button>
-        <button type="button" className="button-small" onClick={onBack}>Cancel</button>
+        <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </div>
   )

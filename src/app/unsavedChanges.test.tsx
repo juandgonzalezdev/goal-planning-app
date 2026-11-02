@@ -16,7 +16,7 @@ describe('the registry of unsaved changes', () => {
     const registry = renderHook(() => useUnsavedRegistry())
     const wrapper = ({ children }: { children: ReactNode }) =>
       <UnsavedChangesContext.Provider value={registry.result.current.registry}>{children}</UnsavedChangesContext.Provider>
-    const form = renderHook(({ fields }: { fields: TypedFields | null }) => useUnsavedChanges('Add bill', fields, empty), { initialProps: { fields: initial }, wrapper })
+    const form = renderHook(({ fields }: { fields: TypedFields | null }) => useUnsavedChanges('Add bill', fields, { empty }), { initialProps: { fields: initial }, wrapper })
     return { registry, form }
   }
 

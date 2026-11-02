@@ -30,7 +30,7 @@ export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: P
   const [copiesText, setCopiesText] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
   // A backup read and waiting for Replace is a change not made yet: it is never dropped silently.
-  useUnsavedChanges('Restore Backup', pending ? { 'Backup file of': pending.space.name } : null, {})
+  useUnsavedChanges('Restore Backup', pending ? { 'Backup file of': pending.space.name } : null, { empty: {} })
 
   const download = () => downloadFile(exportFinanceData(data), 'goal-planning-backup.json')
   const downloadCopies = async () => {

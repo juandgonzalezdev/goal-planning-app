@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useEditBase, useWriteBlocked } from '../../app/writeStatus'
 import { useUnsavedChanges, type TypedFields } from '../../app/unsavedChanges'
+
+/** The place of History's open record form (there is one at a time), so a change of the list can tell whether it closes. */
+export const HISTORY_FORM_TAG = 'history-form'
 import { Field } from '../../components/Field'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -47,7 +50,7 @@ type FormProps<T> = {
 /** A record form's save: its errors, why it was not saved, and "Saving…". */
 function useRecordSave(onSave: FormProps<unknown>['onSave'], title: string, fields: TypedFields) {
   const base = useEditBase()
-  useUnsavedChanges(title, fields)
+  useUnsavedChanges(title, fields, { tag: HISTORY_FORM_TAG })
   const blocked = useWriteBlocked()
   const [errors, setErrors] = useState<RecordError[]>([])
   const [refusal, setRefusal] = useState('')

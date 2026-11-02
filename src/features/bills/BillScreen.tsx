@@ -29,6 +29,8 @@ type Props = {
   owner: Owner
   newId: () => string
   onBack: () => void
+  /** Cancel on a new bill: leaves without asking, because Cancel is the user's choice to drop what was typed. */
+  onCancel?: () => void
   onChange: ChangeSpace
   onCreated: (id: Id, message: string) => void
   onDeleted: () => void
@@ -59,7 +61,11 @@ export function BillScreen(props: Props) {
   const [sending, setSending] = useState<'month' | 'usual' | 'paid' | 'delete' | null>(null)
   const [monthBase, setMonthBase] = useState(revision)
   const [usualBase, setUsualBase] = useState(revision)
-  useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText })
+  useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText }, { month: monthDraft?.month })
+  // The amount typed for one month belongs to that month: after another month is chosen (the app asks first), it is gone.
+  if (monthDraft && monthDraft.month !== month) setMonthDraft(null)
+  const [messageMonth, setMessageMonth] = useState(month)
+  if (messageMonth !== month) { setMessageMonth(month); setMessage('') }
   useUnsavedChanges(`New usual amount: ${bill?.name ?? ''}`, usual ? { 'Amount': usual.amount, 'From month': usual.from } : null)
   /** Saves one change and says what happened; an editor closes only when the change is kept. */
   const save = async (what: NonNullable<typeof sending>, done: string, change: (data: FinanceData) => FinanceData, base?: number): Promise<SaveOutcome> => {
@@ -85,7 +91,7 @@ export function BillScreen(props: Props) {
         <button type="button" className="back-link" onClick={() => (bill ? setEditing(false) : onBack())}><Icon name="arrowLeft" size={18} /> {bill ? 'Cancel' : 'Back'}</button>
         <h1 className="tab-title">{bill ? `Edit ${bill.name}` : 'Add Bill'}</h1>
         <BillForm data={data} bill={bill} month={month} dueDay={props.dueDate ? Number(props.dueDate.slice(8)) : undefined} today={today} owner={props.owner} newId={props.newId} onChange={onChange}
-          onCancel={() => (bill ? setEditing(false) : onBack())} onCreated={props.onCreated}
+          onCancel={() => (bill ? setEditing(false) : (props.onCancel ?? onBack)())} onCreated={props.onCreated}
           onSaved={done => { setEditing(false); setMessage(done) }} />
       </div>
     )
@@ -117,7 +123,7 @@ export function BillScreen(props: Props) {
         <h1 className="tab-title">{bill.name}</h1>
         <p className="muted-note">{bill.category} · Due {formatDueDay(bill.dueDay).toLowerCase()}</p>
       </div>
-      <MonthSwitch months={props.months} value={month} onChange={next => { setMonthDraft(null); setMessage(''); props.onMonthChange(next) }} />
+      <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
       <p className="muted-note" role="status">{message}</p>
 
       <section className="block" aria-labelledby="bill-month">

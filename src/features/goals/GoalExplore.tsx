@@ -35,7 +35,7 @@ export function GoalExplore({ data, goal, progress, today, isDemo, onChange }: P
   const [base, setBase] = useState(revision)
   const [sending, setSending] = useState(false)
   // Only a date can be saved here (Use This Date); the monthly amount is a calculation.
-  useUnsavedChanges(`Explore: ${goal.name}`, date !== '' ? { 'Date': date } : null, {})
+  useUnsavedChanges(`Explore: ${goal.name}`, date !== '' ? { 'Date': date } : null, { empty: {} })
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const from = referenceDay(today, isDemo)
   if (!progress.hasTarget || progress.remaining <= 0) return null

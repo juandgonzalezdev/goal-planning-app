@@ -96,21 +96,76 @@ Los avisos aparecen arriba, en el flujo normal de la página, no fijos
 ## 5. Formularios con cambios sin guardar
 
 - Cada formulario que guarda datos se registra con `useUnsavedChanges`
-  (`app/unsavedChanges.ts`). El borrador de New Goal cuenta aunque su pantalla
-  esté cerrada.
+  (`app/unsavedChanges.ts`). Los borradores de New Goal y Welcome Setup los
+  registra `App.tsx` como **conservados** (`kept`): cuentan aunque su pantalla
+  esté cerrada, y moverse por la app nunca los descarta.
+- Un formulario puede decir dónde vive: `tag` (por ejemplo el editor de una
+  factura de la lista, o el formulario abierto de History) y `month` (los tres
+  editores del importe de un mes). Con eso, un cambio dentro de una pantalla
+  sabe qué formularios cerraría.
 - **Copy What I Typed** copia todos los campos con contenido de cada formulario.
   Si el navegador no deja copiar (por ejemplo en `http://` de la red local),
   muestra el texto en un recuadro de solo lectura ya seleccionado. También
   existe **Show What I Typed**. Lo escrito no se guarda, no se envía y no se
   registra.
 - Mientras no se puede guardar, un formulario que se cierra sigue en la lista
-  como «(closed)» hasta descartarlo.
+  como «(closed)» hasta descartarlo. En ese estado moverse no pregunta, porque
+  nada se pierde.
 - Descartar siempre pide confirmación: Discard and Open Latest Version,
-  Discard and Try Again, Discard and Close, Discard and Open Demo y Discard and
-  Exit Demo.
-- **Límite conocido:** salir de un formulario con la barra de pestañas descarta
-  lo escrito sin preguntar, salvo New Goal y Welcome Setup, que conservan su
-  borrador. Ver [STATUS.md](STATUS.md).
+  Discard and Try Again, Discard and Close, Discard and Open Demo, Discard and
+  Exit Demo y Discard and Leave.
+
+### Leave without saving? (paso 1B)
+
+- `confirmLeave` (en `App.tsx`, y `useLeaveGuard()` para las pantallas) recibe
+  qué formularios cerraría un cambio y el cambio. Sin formularios con cambios
+  afectados, el cambio ocurre en el acto. Si se está guardando, espera la
+  respuesta; si después ya no se perdería nada, el cambio ocurre sin preguntar.
+  Si no, aparece **Leave without saving?** (`LeaveDialog` en
+  `components/UnsavedForms.tsx`) con la lista, **Keep Editing** (foco inicial y
+  Escape; vuelve el foco al campo), **Copy What I Typed** (solo esos formularios;
+  no sale) y **Discard and Leave** (hace el cambio una vez).
+- Lo usan: pestañas, logo, engranaje, botones Back, enlaces a otras pantallas,
+  el cambio de mes (solo si hay un importe escrito para otro mes), Calendar/List
+  y el filtro de Bills, Spent/Planned y la categoría de Spending by Category,
+  periodo, búsqueda, filtros y meses de History (solo si dejan de mostrar el
+  registro que se está cambiando, o si otro formulario ocupa su lugar), y abrir
+  otro formulario de Income o Accounts & Balances en lugar del abierto.
+- **Cancel** no pregunta: es la elección del usuario. Las vueltas después de
+  guardar o borrar usan `backAllowed()` y tampoco preguntan.
+- Los editores del importe de un mes van por factura **y** mes (`key`), así que
+  un importe nunca se guarda en otro mes.
+
+### Atrás y Adelante del navegador
+
+`app/navigation.ts` (`Navigation`). Cada paso del historial guarda
+`{ screen, chain, idx }` y nada de lo escrito. `chain` es aleatorio
+(`crypto.randomUUID`, o `getRandomValues`, o `Math.random` con la hora) y no se
+guarda en ningún almacenamiento; al recargar se adopta la cadena del paso actual.
+La distancia entre dos pasos solo se calcula dentro de una misma cadena.
+
+- Sin nada que perder, Atrás y Adelante funcionan como siempre.
+- Con algo que perder, la pantalla **no cambia**. Si el paso es de la misma
+  cadena y no hay ningún movimiento propio en curso, la app pide **una** vuelta
+  (`history.go(origen − llegada)`) y pregunta. Discard and Leave pide **un**
+  movimiento al **primer** destino, con permiso para esa única llegada.
+- Nada se decide por tiempo. Cada llegada se juzga solo por el paso al que
+  llega: solo una llegada al paso permitido, o sin nada que perder, cambia la
+  pantalla. Cualquier otra llegada termina el permiso.
+- Si llega un paso distinto del esperado mientras hay un movimiento propio en
+  curso, la app queda **«unsure»**: no vuelve a mover el historial; reescribe el
+  paso actual (`replaceState`, cadena nueva) con la pantalla del formulario.
+  Discard and Leave queda desactivado mientras dure, y tras 2 s el diálogo dice
+  «Navigation is taking longer than expected.» El estado termina cuando ya no hay
+  nada que perder.
+- Un paso sin cadena o de otra cadena: no se mueve nada; el paso pasa a una
+  cadena nueva con la pantalla del formulario. Discard and Leave le devuelve su
+  estado original y muestra su pantalla (Home si no tiene una legible).
+- Recargar, cerrar o salir del sitio: solo `beforeunload` (aviso del navegador)
+  mientras hay algo escrito, también un borrador conservado.
+- **Límites:** una llegada tardía sin nada que perder puede cambiar la pantalla;
+  tras Keep Editing en un paso reescrito, un Atrás puede parecer que no hace
+  nada; el gesto de Safari en iPhone está pendiente de verificación real.
 
 ## 6. Problemas al abrir y recuperación
 

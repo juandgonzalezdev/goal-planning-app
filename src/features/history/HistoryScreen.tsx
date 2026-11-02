@@ -17,11 +17,12 @@ import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
 import { AllAmountsToggle } from '../../ui/privacy'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useWriteBlocked } from '../../app/writeStatus'
+import { useLeaveGuard } from '../../app/unsavedChanges'
 import {
   firstFilter, isNarrowed, tagOf, openMonthsOf, periodLabel, plural, secondaryFilters, setAllMonths, showMore, shownIn, toggleMonth, TYPE_NAMES, withFilter,
   type HistoryView,
 } from './historyView'
-import { ExpenseForm, IncomeForm, TransferForm } from './RecordForms'
+import { ExpenseForm, HISTORY_FORM_TAG, IncomeForm, TransferForm } from './RecordForms'
 
 type Props = {
   data: FinanceData
@@ -91,9 +92,29 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
     return () => clearTimeout(timer)
   }, [focusId])
 
+  // The open record form closes when another one opens, or when the list stops showing its record (another period,
+  // search or filter, its month closed): the app asks first. Add Spending and Add Transfer stay above the list.
+  const guard = useLeaveGuard()
+  const shownAfter = (next: HistoryView, ref: { kind: string; id: Id }) => {
+    const nextFilter = next.filter ?? firstFilter(month)
+    const nextGroups = groupByMonth(filterActivity(log, nextFilter))
+    const key = `${ref.kind}:${ref.id}`
+    const group = nextGroups.find(g => g.entries.some(e => e.key === key))
+    if (!group || !openMonthsOf(next, nextFilter, nextGroups).includes(group.month)) return false
+    const index = group.entries.findIndex(e => e.key === key)
+    return index < Math.max(shownIn(next, group.month), focusExpense && key === `expense:${focusExpense.id}` ? index + 1 : 0)
+  }
+  const keepsForm = (nextEditing: Editing, next: HistoryView) => {
+    if (!editing) return true
+    if (nextEditing?.kind !== editing.kind || nextEditing.id !== editing.id) return false
+    return editing.id === null || shownAfter(next, { kind: editing.kind, id: editing.id })
+  }
+  const changeView = (next: HistoryView) => guard(form => form.tag === HISTORY_FORM_TAG && !keepsForm(editing, next), () => onViewChange(next))
+  const openEditor = (next: Editing, then?: () => void) =>
+    guard(form => form.tag === HISTORY_FORM_TAG && !keepsForm(next, view), () => { setEditing(next); then?.() })
   const change = (next: Partial<HistoryFilter>) => {
     const updated = { ...filter, ...next }
-    onViewChange(withFilter(view, updated, groupByMonth(filterActivity(log, updated))))
+    changeView(withFilter(view, updated, groupByMonth(filterActivity(log, updated))))
   }
   const clearFilters = () => change({ search: '', type: 'all', category: 'all', accountId: 'all' })
   const blocked = useWriteBlocked()
@@ -118,7 +139,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
     if (ref.kind === 'bill') onOpenBill(ref.billId, ref.month)
     else if (ref.kind === 'movement' || ref.kind === 'opening') onOpenGoal(ref.goalId)
     else if (ref.kind === 'balance') { const snapshot = data.balances.find(b => b.id === ref.id); if (snapshot) onOpenAccount(snapshot.accountId) }
-    else { setEditing(editing?.kind === ref.kind && editing.id === ref.id ? null : { kind: ref.kind, id: ref.id }); setConfirmDelete(null) }
+    else openEditor(editing?.kind === ref.kind && editing.id === ref.id ? null : { kind: ref.kind, id: ref.id }, () => setConfirmDelete(null))
   }
 
   const where = periodLabel(filter.period)
@@ -144,8 +165,8 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
       </div>
       <p className="muted-note">Only what was recorded, newest first. Nothing here is estimated.</p>
       <div className="inline-actions no-print">
-        <button type="button" className="button-small button-small-primary" onClick={() => setEditing({ kind: 'expense', id: null })}><Icon name="plus" size={16} /> Add Spending</button>
-        {data.moneyAccounts.length > 1 && <button type="button" className="button-small" onClick={() => setEditing({ kind: 'transfer', id: null })}><Icon name="plus" size={16} /> Add Transfer</button>}
+        <button type="button" className="button-small button-small-primary" onClick={() => openEditor({ kind: 'expense', id: null })}><Icon name="plus" size={16} /> Add Spending</button>
+        {data.moneyAccounts.length > 1 && <button type="button" className="button-small" onClick={() => openEditor({ kind: 'transfer', id: null })}><Icon name="plus" size={16} /> Add Transfer</button>}
       </div>
       {editing?.id === null && (editing.kind === 'expense'
         ? <ExpenseForm data={data} today={today} record={null} newId={newId} onSave={save('Spending added.')} onCancel={() => setEditing(null)} />
@@ -232,8 +253,8 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
           </h2>
           {groups.length > 0 && (
             <span className="inline-actions">
-              <button type="button" className="button-small" onClick={() => onViewChange(setAllMonths(view, groups, true))}>Expand All</button>
-              <button type="button" className="button-small" onClick={() => onViewChange(setAllMonths(view, groups, false))}>Collapse All</button>
+              <button type="button" className="button-small" onClick={() => changeView(setAllMonths(view, groups, true))}>Expand All</button>
+              <button type="button" className="button-small" onClick={() => changeView(setAllMonths(view, groups, false))}>Collapse All</button>
             </span>
           )}
         </div>
@@ -242,7 +263,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
           <div className="empty-block">
             <p>Nothing has been recorded yet.</p>
             <p>Records appear here when you add spending, mark a bill paid, or save for a goal.</p>
-            <button type="button" className="button-small no-print" onClick={() => setEditing({ kind: 'expense', id: null })}><Icon name="plus" size={16} /> Add Spending</button>
+            <button type="button" className="button-small no-print" onClick={() => openEditor({ kind: 'expense', id: null })}><Icon name="plus" size={16} /> Add Spending</button>
           </div>
         ) : inThePeriod.length === 0 ? (
           <div className="empty-block">
@@ -259,7 +280,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
           <div className="history-months no-print">
             {groups.map(group => (
               <MonthGroup key={group.month} group={group} open={open.includes(group.month)} shown={shownFor(group)}
-                onToggle={() => onViewChange(toggleMonth(view, open, group.month))} onShowMore={() => onViewChange(showMore(view, group.month))}>
+                onToggle={() => changeView(toggleMonth(view, open, group.month))} onShowMore={() => changeView(showMore(view, group.month))}>
                 {entry => <>
                   <EntryRow entry={entry} amounts={amounts} editing={!!editing && editing.id !== null && 'id' in entry.ref && entry.ref.kind === editing.kind && entry.ref.id === editing.id}
                     onOpen={() => openEntry(entry)} />

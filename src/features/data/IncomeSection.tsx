@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { yearMonthOf, type YearMonth } from '../../domain/calendar'
@@ -35,10 +35,10 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   const [editBase, setEditBase] = useState(revision)
   const [receivingBase, setReceivingBase] = useState(revision)
   const [sending, setSending] = useState<'source' | 'received' | null>(null)
-  useUnsavedChanges(editing?.id ? 'Edit income' : 'Add income', editing ? {
+  const sourceForm = useUnsavedChanges(editing?.id ? 'Edit income' : 'Add income', editing ? {
     'Name': editing.name, 'Usual amount': editing.amount, 'Pay day': editing.payDay, 'Start month': editing.startMonth, 'End month': editing.endMonth,
   } : null)
-  useUnsavedChanges(`Income received: ${data.incomeSources.find(source => source.id === receiving?.sourceId)?.name ?? ''}`,
+  const receivedForm = useUnsavedChanges(`Income received: ${data.incomeSources.find(source => source.id === receiving?.sourceId)?.name ?? ''}`,
     receiving ? { 'Month': receiving.month, 'Amount': receiving.amount, 'Date': receiving.date } : null)
   /** Saves one change and says what happened. */
   const save = async (done: string, change: (data: FinanceData) => FinanceData, base?: number, what: typeof sending = null): Promise<SaveOutcome> => {
@@ -49,9 +49,20 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   }
   /** Opens (or changes) the Record Received form; opening it on another month starts a new edit. */
   const changeReceiving = (form: ReceivedForm | null) => {
-    if (form && (form.sourceId !== receiving?.sourceId || form.month !== receiving?.month)) setReceivingBase(revision)
-    setReceiving(form)
+    const another = !!form && (form.sourceId !== receiving?.sourceId || form.month !== receiving?.month)
+    // Another month or source takes the place of the one being recorded: the app asks first.
+    guard(f => another && f.id === receivedForm.id, () => {
+      if (another) setReceivingBase(revision)
+      setReceiving(form)
+    })
   }
+  // The income form for another source (or a new one) takes the place of the one open: the app asks first.
+  const guard = useLeaveGuard()
+  const openSource = (next: SourceForm) => guard(f => f.id === sourceForm.id, () => {
+    setEditBase(revision)
+    setEditing(next)
+    focusField.current = 'income-name'
+  })
   const focusField = useRef<string | null>(null)
   // Status always uses today's month (the demo's date in the demo), never a month chosen to look at a payment.
   const reference = yearMonthOf(today)
@@ -68,9 +79,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
 
   const startNew = () => {
     onViewChange(setBlockOpen(view, 'income', true))
-    setEditBase(revision)
-    setEditing({ id: null, name: '', amount: '', payDay: '', startMonth: reference, endMonth: '' })
-    focusField.current = 'income-name'
+    openSource({ id: null, name: '', amount: '', payDay: '', startMonth: reference, endMonth: '' })
   }
 
   const saveSource = async () => {
@@ -157,11 +166,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
                       onNotReceived={m => void save(`${formatYearMonth(m)} is expected again.`, current => recordIncomeReceived(current, source, m, null) ?? current)} />
                     {editing?.id === source.id ? form : (
                       <div className="inline-actions">
-                        <button type="button" className="button-small" onClick={() => {
-                          setEditBase(revision)
-                          setEditing({ id: source.id, name: source.name, amount: amountText(source.amount), payDay: String(source.payDay), startMonth: source.startMonth, endMonth: source.endMonth ?? '' })
-                          focusField.current = 'income-name'
-                        }}>Edit {source.name}</button>
+                        <button type="button" className="button-small" onClick={() => openSource({ id: source.id, name: source.name, amount: amountText(source.amount), payDay: String(source.payDay), startMonth: source.startMonth, endMonth: source.endMonth ?? '' })}>Edit {source.name}</button>
                         <button type="button" className="button-small" aria-label={`Remove ${source.name}`}
                           aria-disabled={blocked || undefined} onClick={() => void save(`${source.name} removed. Income already received stays.`, current => deleteIncomeSource(current, source.id))}>Remove</button>
                       </div>

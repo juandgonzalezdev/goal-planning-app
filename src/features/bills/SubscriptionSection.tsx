@@ -30,7 +30,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   const [base, setBase] = useState(revision)
   const [sending, setSending] = useState(false)
   // A simulation waiting for Confirm is a change not made yet.
-  useUnsavedChanges(`Subscription: ${bill.name}`, simulation ? { 'Simulation': simulation.kind === 'pause' ? 'Pause' : 'Cancel' } : null, {})
+  useUnsavedChanges(`Subscription: ${bill.name}`, simulation ? { 'Simulation': simulation.kind === 'pause' ? 'Pause' : 'Cancel' } : null, { empty: {} })
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const info = bill.subscription
   const next = upcomingCharges(data, bill, today, 3)

@@ -9,3 +9,6 @@ export const EMPTY_SETUP: SetupDraft = { step: 0, name: '', partner: '', mode: '
 
 export const setupFromDraft = (draft: SetupDraft): SpaceSetup =>
   ({ mode: draft.mode, names: [draft.name, draft.partner], currency: draft.currency, theme: draft.theme })
+
+/** The Welcome Setup draft as the user sees it, for Copy What I Typed. */
+export const typedSetup = (draft: SetupDraft) => ({ 'Your name': draft.name, 'Second name': draft.partner, 'Space': draft.mode, 'Currency': draft.currency, 'Appearance': draft.theme })

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { amountText } from '../../ui/labels'
 import type { YearMonth } from '../../domain/calendar'
 import { setBillMonthAmount, type BillOccurrence } from '../../domain/finance/bills'
@@ -14,6 +14,10 @@ import { parseMoneyInput } from '../../ui/moneyInput'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { Donut } from './Donut'
+
+/** The place of a planned bill's amount editor, so choosing another category can tell whether it stays. */
+export const PLANNED_TAG = 'planned-bill:'
+const plannedTag = (billId: Id) => `${PLANNED_TAG}${billId}`
 
 type Props = {
   data: FinanceData
@@ -33,6 +37,7 @@ type Props = {
 export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props) {
   const [chosen, setChosen] = useState<BillCategory | null>(null)
   const [message, setMessage] = useState('')
+  const guard = useLeaveGuard()
   const { money, hidden } = useBlockAmounts('categories', data.space.currency)
   const breakdown = billsByCategory(data, month)
   // A category missing from this month is simply not chosen.
@@ -54,7 +59,12 @@ export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props)
     <div className={view === 'bars' ? 'category-bars' : 'tiles'}>
       {breakdown.categories.map(item => (
         <button key={item.category} type="button" aria-pressed={focus === item} className={focus === item ? 'is-active' : ''}
-          onClick={() => { setChosen(focus === item ? null : item.category); setMessage('') }}>
+          onClick={() => {
+            // Another category closes this one's list, with any amount being changed in it: the app asks first.
+            const next = focus === item ? null : item
+            const staying = new Set(next?.occurrences.map(o => plannedTag(o.bill.id)) ?? [])
+            guard(form => form.tag?.startsWith(PLANNED_TAG) === true && !staying.has(form.tag), () => { setChosen(next?.category ?? null); setMessage('') })
+          }}>
           <span><i className="owner-dot" style={{ background: CATEGORY_COLORS[item.category] }} aria-hidden="true" />{item.category}</span>
           <b>{money(item.total)}</b>
           {view === 'bars' && (
@@ -67,7 +77,7 @@ export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props)
     {focus && (
       <ul className="line-list category-bills" aria-label={`${focus.category} bills`}>
         {focus.occurrences.map(occurrence => (
-          <QuickAmount key={occurrence.bill.id} data={data} occurrence={occurrence} onChange={onChange} onOpenBill={onOpenBill} onSaved={setMessage} />
+          <QuickAmount key={`${occurrence.bill.id}:${occurrence.month}`} data={data} occurrence={occurrence} onChange={onChange} onOpenBill={onOpenBill} onSaved={setMessage} />
         ))}
       </ul>
     )}
@@ -93,7 +103,7 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
   const saver = useSaver()
   // The revision the amount editor was opened on.
   const [base, setBase] = useState(revision)
-  useUnsavedChanges(`Amount for this month: ${bill.name}`, text === null ? null : { 'Amount': text })
+  useUnsavedChanges(`Amount for ${monthName(month)}: ${bill.name}`, text === null ? null : { 'Amount': text }, { tag: plannedTag(bill.id), month })
 
   const save = async () => {
     const value = parseMoneyInput(text ?? '')

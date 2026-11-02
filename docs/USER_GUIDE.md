@@ -150,11 +150,41 @@ At the top of Home there is a month bar: the arrows go to the month before or af
 
 When you reload the page, these go back to the start.
 
+**Leaving a form you changed**
+
+If you typed something and haven't saved it, the app asks **Leave without saving?** before anything closes it. It lists the forms that would close, and it asks when you:
+
+- tap a tab, the logo, the gear, a **Back** button or a link to another screen,
+- use the browser's **Back** or **Forward** (also a long press on Back, or the back swipe on a phone),
+- choose another month while an amount for one month is being typed (on Bills, in Spending by Category, or on a bill's screen),
+- change the view, filter, search or period so that the form you are using is no longer shown (Bills, Spending by Category, History),
+- open another form that takes the place of the one you are using (for example **Edit** on another account).
+
+You can choose:
+
+- **Keep Editing**: nothing changes. You stay on the same screen, with the same month, filters and place on the page, and what you typed is still there.
+- **Copy What I Typed**: copies only those forms. The question stays open, so you can still keep editing or leave.
+- **Discard and Leave**: closes those forms without saving and goes where you asked, once.
+
+It doesn't ask when:
+
+- nothing was typed, or a form was only opened,
+- you tap **Cancel** (that's your own choice to drop it),
+- what you typed stays on screen anyway (for example when you close and open a block),
+- the form is **New Goal** or **Welcome Setup**: these keep what you typed while the app stays open, so you can look elsewhere and come back,
+- nothing can be saved because of a problem (see [When Something Goes Wrong](#18-when-something-goes-wrong)): then a form that closes stays in the warning at the top, to copy.
+
+If your last change is still being saved, the app waits for the answer. If it was saved, it moves without asking.
+
+An amount typed for one month is only ever saved for that month. If you choose another month, the app asks first, and with Discard and Leave the amount is dropped before the month changes.
+
 **Current limits:**
 
-- **Leaving a form with the tab bar or the browser's Back button loses what you typed, without asking.** Only **New Goal** and **Welcome Setup** keep what you typed while the app stays open. Save first, or copy what you typed.
-- Changing the month on a bill's screen closes the "amount for one month" form.
-- Reloading or closing the page loses anything typed that wasn't saved, including a New Goal draft.
+- **Reloading, closing the tab or leaving the site**: only the browser can warn you, in its own words, and it can't offer Copy What I Typed. Many phone browsers (Safari on iPhone in particular) often don't warn at all. Everything typed and not saved is lost, including the New Goal and Welcome Setup drafts.
+- **Back and Forward pressed several times very quickly**: if the browser's moves arrive in an order the app can't follow, it keeps your form and the question, but **Discard and Leave** stays off and, after a moment, it says "Navigation is taking longer than expected." Keep editing or copy what you typed; to leave, save or cancel the form first, then move.
+- When the app can't tell where a Back or Forward move came from (for example the first time after the app was updated), it keeps your form on that step. After **Keep Editing**, one press of Back may seem to do nothing.
+- In rare cases, a Back or Forward move that arrives late may change the screen after you left a form. It never closes a form you have changed.
+- **The back swipe on iPhone hasn't been checked on a real iPhone yet.** Safari may show the previous screen for a moment before the app comes back to your form.
 - When you come back to Home from another screen, Home starts at the top.
 - The goals list doesn't remember its filter (All, Flexible, With Date) when you come back to it.
 - Tapping **Income** on Home opens the Income block in Data, not the income source of that month.
