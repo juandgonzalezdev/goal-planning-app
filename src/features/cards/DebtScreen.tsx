@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
@@ -14,6 +14,7 @@ import { parseMoneyInput } from '../../ui/moneyInput'
 import { isKept, outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
 import { useEditBase, useSaver, useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { amountText, DEBT_KIND_NAMES } from '../../ui/labels'
+import { DebtBalanceOverTime } from '../charts/TimeCharts'
 import { applyDebtForm, draftFromDebt, emptyDebtDraft, readDebtDraft, type DebtDraft, type DebtDraftErrors } from './debtDraft'
 
 type Props = {
@@ -69,6 +70,14 @@ function DebtDetail(props: Props & { debtId: Id }) {
   const [balanceForm, setBalanceForm] = useState<{ amount: string; asOf: string; error?: string } | null>(null)
   const [deleting, setDeleting] = useState<'keep-bill' | 'delete-bill' | null>(null)
   const [message, setMessage] = useState('')
+  // The balance chosen on the chart, shown in Balance History.
+  const [shownBalance, setShownBalance] = useState<{ id: Id } | null>(null)
+  useEffect(() => {
+    if (!shownBalance) return
+    const row = document.getElementById(`balance-${shownBalance.id}`)
+    row?.focus({ preventScroll: true })
+    row?.scrollIntoView?.({ block: 'center' })
+  }, [shownBalance])
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
   // The revision the balance form was opened on, and which change is being saved.
@@ -87,6 +96,10 @@ function DebtDetail(props: Props & { debtId: Id }) {
       onDone={done => { setEditing(false); if (done) setMessage(done) }} />
   }
 
+  const openBalanceForm = () => {
+    setBalanceBase(revision); setBalanceForm({ amount: amountText(item.balance), asOf: today })
+    requestAnimationFrame(() => document.getElementById('debt-balance')?.focus())
+  }
   const saveBalance = async () => {
     if (!balanceForm) return
     const amount = parseMoneyInput(balanceForm.amount)
@@ -121,7 +134,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
         <span>{item.asOf ? `As of ${formatDate(item.asOf)} · the latest balance you entered` : 'Enter the balance from your bank or statement.'}</span>
       </section>
       {!balanceForm
-        ? <button type="button" className="button-small align-start" onClick={() => { setBalanceBase(revision); setBalanceForm({ amount: amountText(item.balance), asOf: today }) }}>Update Balance</button>
+        ? <button type="button" className="button-small align-start" onClick={openBalanceForm}>Update Balance</button>
         : <section className="block" aria-label="Update Balance">
           <div className="form-stack">
             <Field id="debt-balance" label={`Remaining Balance (${currency})`} inputMode="decimal" value={balanceForm.amount}
@@ -180,6 +193,9 @@ function DebtDetail(props: Props & { debtId: Id }) {
         )}
       </section>
 
+      <DebtBalanceOverTime data={data} debtId={debtId} today={today} money={money} plannedPayment={planned} yearlyInterestBasisPoints={debt.yearlyInterestBasisPoints}
+        onShowRecord={id => setShownBalance({ id })} onUpdateBalance={openBalanceForm} />
+
       <section className="block" aria-labelledby="debt-delete">
         <h2 id="debt-delete" className="section-title">Delete</h2>
         {!deleting
@@ -206,7 +222,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
           <h2 id="debt-history" className="section-title">Balance History</h2>
           <ul className="line-list">
             {history.map(snapshot => (
-              <li key={snapshot.id} className="line"><span>{formatDate(snapshot.asOf)} · {snapshot.source === 'entered' ? 'Entered' : 'From a goal movement'}</span><b>{money(snapshot.amount)}</b></li>
+              <li key={snapshot.id} id={`balance-${snapshot.id}`} tabIndex={-1} className={`line${shownBalance?.id === snapshot.id ? ' is-target' : ''}`}><span>{formatDate(snapshot.asOf)} · {snapshot.source === 'entered' ? 'Entered' : 'From a goal movement'}</span><b>{money(snapshot.amount)}</b></li>
             ))}
           </ul>
         </section>

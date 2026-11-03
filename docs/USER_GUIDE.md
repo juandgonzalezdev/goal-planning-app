@@ -362,6 +362,8 @@ In **Money › Accounts & Savings**, add each account with its kind: **Daily Spe
 
 **Savings by purpose**, under your accounts in Money, shows the same split as **Accounts & Savings** on Home: each goal, the Emergency Fund and Unassigned. It doesn't add anything to your Savings.
 
+**Savings over time**, under Savings by purpose, shows your savings at the end of each of the last 12 months. A month only has a point if you entered a savings balance in it; a month without one stays empty (**Not entered**), even though Money still shows your last balance. With one point you see the figure instead: update your balance next month to see how it changes. See **Reading the charts** in §14.
+
 Money you don't spend doesn't become savings by itself. Update your balances from your bank to keep them right.
 
 ## 10. Bills and Subscriptions
@@ -432,6 +434,7 @@ Keep **Add this payment to my monthly bills** checked. The Payment then shows in
 - **Update Balance**: enter the balance from your bank or statement, with the date it was true. The earlier balance stays in **Balance History**.
 - **Paying the bill never changes the Remaining Balance.** Update it from your statement.
 - **Estimate** shows about how many months it would take to pay off at the usual Payment, with the same interest. **What If I Pay Extra?** compares it with a higher payment. Both are calculations only, and your bank may calculate differently.
+- **Remaining Balance over time**: the last balance you entered in each of the last 12 months, as a solid line, and the **Estimate** as a dashed line labelled "Estimate if you pay … a month" (up to 12 months ahead). The estimate starts from your latest balance and only shows when that balance is from this month or last month. Choose a point and **Show in Balance History** takes you to that balance.
 - **Edit Details** and **Delete**. If a bill pays this card or loan, you choose whether to delete the bill too or keep it.
 
 > **Example (demo, 31 December 2026):** Cards & Loans on Home: 12 266,98 zł Remaining Balance = 0,00 + 2644,35 + 9622,63.
@@ -491,6 +494,8 @@ Both your goals and the Emergency Fund are part of your Savings, not extra money
 - It suggests a target for 1, 3 or 6 months, or another number of months from 0.5 to 24.
 - You decide whether to save it.
 
+**Saved over time** shows what the goal held after each record: what was already saved when you added it, then a step up for each Contribution and a step down for each Withdrawal. With a target, a dotted line marks it; with a date, a line marks the date. Choose a step, then **Show in Savings Activity** to see that record. With no record or only one, you see the figure or **Add Contribution** instead.
+
 **Change Name, Target or Date** edits a goal. **Delete Goal** removes it: what it held goes back to savings with no purpose, and no balance changes.
 
 ## 14. How Your Records Change the Numbers
@@ -512,11 +517,30 @@ Each record changes some figures and not others. **Account and loan balances onl
 
 **Why "Not explained by the records" can appear:** "How is this worked out?" only follows records that say which account they used. **Mark as Paid** records the account (unless you choose **Not sure**), but the app doesn't record an account for income you receive yet, nor for bills marked as paid before this version. Those amounts can show as **Not explained by the records**. Your Result is still right; only the "where did it go" lines are incomplete.
 
+### Reading the charts
+
+Four charts show change over time: **Income & Spending** (History),
+**Savings over time** (Money), **Saved over time** (goals) and
+**Remaining Balance over time** (cards and loans).
+
+| What you see | Meaning |
+| --- | --- |
+| Solid bar or line | What you recorded. |
+| Outlined bar | Income still expected this month or later. |
+| Dashed line labelled Estimate | A calculation, not a record. |
+| Not entered or Nothing recorded | A gap; the app does not invent values. |
+| A figure instead of a line | Fewer than two records. |
+
+Select a point to read it. Tab reaches the chart; arrows, Home and End move
+between records. **Show as Table** shows the same figures. Charts do not animate.
+With Hide All Amounts, History hides its chart and table. Money, goals and card
+details currently show amounts and their charts, as before.
+
 ## 15. History
 
 History lists everything you recorded, grouped by month and day, newest first.
 
-- **Year Overview**: income and spending for each month of the year. Choose a month to show it in the list and see its spending by category.
+- **Year Overview**: received income (solid), expected income (outlined, this month or later) and spending. Months with no records say Nothing recorded. Choose a month for its list and figures; arrows move between months, and Show as Table offers the same figures.
 - **Search**, and **More Filters** for the type of record, category and account. Each filter shows as a label you can remove. **Clear Filters** keeps the period.
 - **Show More** loads more records in a month. **Expand All** and **Collapse All** open or close the months.
 - A balance in History has the accessible action **Open account** for an account in Money › Accounts & Savings, or **Open card or loan** for a card or loan's details. **Back** returns to the same place with focus on that record. Tapping the History tab directly from Money after opening an account also restores the place and focus; visiting another main tab first clears that return position.

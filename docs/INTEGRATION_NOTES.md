@@ -35,3 +35,14 @@ recepción como adjunto por Juan; no se presupone acceso a esta carpeta.
   el resumen original. No se modifican los flujos de guardado ni navegación.
 - Comprobación propia: 10 pruebas (Layout y GlobalAdd), build y diff --check
   correctos. La disposición CSS real queda para la comprobación de navegador.
+
+## Rumbo 07
+
+- Adaptadas las inserciones documentales para conservar las acciones accesibles
+  de History y las explicaciones de regreso del 02, y las filas de pruebas
+  añadidas después de la entrega original. HistoryScreen se adaptó por hunks
+  de contexto exacto, conservando las etiquetas de sus registros.
+- Las gráficas de Money, metas y deudas siguen la visibilidad existente de
+  sus pantallas; la gráfica de History respeta Hide All Amounts.
+- Comprobación propia: 36 pruebas (Charts, series, PrivacyCharts y LinksReturn),
+  build y diff --check correctos. Sin comprobación CSS o táctil en navegador aún.

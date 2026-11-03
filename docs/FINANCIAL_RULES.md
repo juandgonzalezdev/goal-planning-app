@@ -344,6 +344,16 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
   El PDF sin importes sigue el mismo criterio. Se recuerda en este dispositivo.
   **No es cifrado ni protección de acceso.**
 
+## 11. Gráficos a lo largo del tiempo
+
+Las series están en `src/domain/finance/series.ts`. Solo leen registros y no guardan nada.
+
+- **Income & Spending** (`incomeSpendingByMonth`): ingresos recibidos y gasto de cada mes hasta el de hoy. Lo esperado solo existe desde el mes de hoy: el ingreso que no llegó en un mes pasado no se dibuja. Un mes empezado sin ingresos ni gasto es «Nothing recorded», no 0.
+- **Savings over time** (`savingsSeries`): un punto solo en los meses con algún saldo de ahorro anotado (escrito o de un movimiento de meta), con el total de Savings a fin de ese mes, como lo cuenta Money. Los meses sin saldo anotado quedan vacíos, aunque Money arrastre el último saldo.
+- **Saved over time** (`goalSteps`): lo ya ahorrado al crear la meta y cada movimiento en orden, con el acumulado. El último escalón es `goalSaved`.
+- **Remaining Balance over time** (`debtSeries`, `payoffPath`): el último saldo anotado en cada mes. La estimación usa el mismo cálculo que Estimate (pago planificado, mismo interés) y se dibuja aparte, discontinua, hasta 12 meses. Solo aparece si el último saldo es de este mes o del anterior.
+- Una línea nunca une dos registros a través de un mes vacío (`knownRuns`), y con menos de dos registros no hay línea.
+
 ## Dónde están las pruebas de estas reglas
 
 - `src/domain/finance/alexDemo.test.ts`: los criterios de la demo y 5 semillas ×

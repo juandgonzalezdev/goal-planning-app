@@ -1,19 +1,20 @@
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { FoldBlock } from '../../components/FoldBlock'
 import { Icon } from '../../components/Icon'
-import { monthsOfYear, type YearMonth } from '../../domain/calendar'
+import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
   activityLog, filterActivity, groupByDay, groupByMonth, inPeriod, typeHasCategory,
   type ActivityEntry, type ActivityType, type HistoryFilter, type HistoryMonth,
 } from '../../domain/finance/history'
 import { deleteExpense, deleteTransfer, type RecordError, type RecordResult } from '../../domain/finance/records'
-import { incomeReceived, monthSpending } from '../../domain/finance/spending'
+import { monthSpending } from '../../domain/finance/spending'
+import { incomeSpendingByMonth } from '../../domain/finance/series'
 import { SPENDING_CATEGORIES, type FinanceData, type Id, type SpendingCategory } from '../../domain/finance/types'
 import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
-import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
+import { formatDate, formatLongDate, formatShortYearMonth, formatYearMonth } from '../../ui/format'
 import { AllAmountsToggle, HiddenChart } from '../../ui/privacy'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useWriteBlocked } from '../../app/writeStatus'
@@ -326,18 +327,43 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
   )
 }
 
-/** Income and spending by month for the whole year, whatever the search or filters. A month opens its categories. */
+/**
+ * Income & Spending by month (chart 1 of Rumbo de diseño §7) for the whole
+ * year, whatever the search or filters. Received income and spending are
+ * solid; income still expected (this month and later months) is an
+ * outline; a month with nothing recorded says so instead of showing 0.
+ * A month opens its figures and categories and filters the list. The arrow
+ * keys move between months, and Show as Table gives the same figures.
+ */
 function YearOverview({ data, filter, today, amounts, expanded, onToggle, onChange }: {
   data: FinanceData; filter: HistoryFilter; today: CalendarDate; amounts: BlockAmounts; expanded: boolean
   onToggle: () => void; onChange: (next: Partial<HistoryFilter>) => void
 }) {
   const todayYear = Number(today.slice(0, 4))
   const year = filter.period.kind === 'year' ? filter.period.year : filter.period.kind === 'month' ? Number(filter.period.month.slice(0, 4)) : todayYear
-  const chart = monthsOfYear(year).filter(m => m <= today.slice(0, 7)).map(m => ({ month: m, income: incomeReceived(data, m).total, spending: monthSpending(data, m).total }))
-  const largest = Math.max(0, ...chart.flatMap(row => [row.income, row.spending]))
+  // With the amounts hidden, an empty month looks like any other (nothing tells it had no money), and later months are left out.
+  const chart = incomeSpendingByMonth(data, year, today)
+    .filter(row => row.started || !amounts.hidden)
+    .map(row => ({ ...row, empty: row.nothingRecorded && !amounts.hidden }))
+  const largest = Math.max(0, ...chart.flatMap(row => [row.income + row.expected, row.spending]))
   const chosenMonth = filter.period.kind === 'month' ? filter.period.month : null
+  const chosen = chart.find(row => row.month === chosenMonth) ?? null
   const categories = chosenMonth ? monthSpending(data, chosenMonth).byCategory : []
   const width = (value: number) => barPercent(value, largest)
+  const [showTable, setShowTable] = useState(false)
+  const tableId = useId()
+  const rows = useRef<(HTMLButtonElement | null)[]>([])
+  const hasExpected = chart.some(row => row.expected > 0)
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const next = { ArrowDown: index + 1, ArrowRight: index + 1, ArrowUp: index - 1, ArrowLeft: index - 1, Home: 0, End: chart.length - 1 }[event.key]
+    if (next === undefined || next < 0 || next >= chart.length) return
+    event.preventDefault()
+    rows.current[next]?.focus()
+  }
+  const spokenRow = (row: (typeof chart)[number]) => !row.started
+    ? `${formatYearMonth(row.month)}: expected income ${amounts.spoken(row.expected)}, not received yet`
+    : row.empty ? `${formatYearMonth(row.month)}: nothing recorded`
+    : `${formatYearMonth(row.month)}: income ${amounts.spoken(row.income)}${row.expected > 0 ? `, still expected ${amounts.spoken(row.expected)}` : ''}, spent ${amounts.spoken(row.spending)}`
   return (
     <FoldBlock title="Year Overview" period={`${year} · all records`} summary="Income and spending by month" expanded={expanded} onToggle={onToggle}
       className="history-overview">
@@ -345,27 +371,67 @@ function YearOverview({ data, filter, today, amounts, expanded, onToggle, onChan
       {chart.length === 0 ? <p className="muted-note">Nothing has happened in {year} yet.</p> : <>
         {amounts.hidden
           ? <HiddenChart amounts={amounts} />
-          : <p className="chart-legend" aria-hidden="true"><span><i className="owner-dot legend-income" />Income received</span><span><i className="owner-dot legend-spending" />Spent</span></p>}
-        <ul className="month-bars history-bars" aria-label={`Income and spending by month in ${year}`}>
-          {chart.map(row => (
+          : <p className="chart-legend" aria-hidden="true">
+            <span><i className="owner-dot legend-income" />Income received</span>
+            {hasExpected && <span><i className="owner-dot legend-expected" />Expected</span>}
+            <span><i className="owner-dot legend-spending" />Spent</span>
+          </p>}
+        <ul className="month-bars history-bars" aria-label={`Income and spending by month in ${year}. Use the arrow keys to move between months.`}>
+          {chart.map((row, index) => (
             <li key={row.month}>
-              <button type="button" className={`monthly-row${chosenMonth === row.month ? ' is-active' : ''}`} aria-pressed={chosenMonth === row.month}
-                aria-label={`${formatYearMonth(row.month)}: income ${amounts.spoken(row.income)}, spent ${amounts.spoken(row.spending)}. Show this month`}
+              <button type="button" ref={element => { rows.current[index] = element }} className={`monthly-row${chosenMonth === row.month ? ' is-active' : ''}`} aria-pressed={chosenMonth === row.month}
+                aria-label={`${spokenRow(row)}. Show this month`} onKeyDown={event => onKeyDown(event, index)}
                 onClick={() => onChange({ period: chosenMonth === row.month ? { kind: 'year', year } : { kind: 'month', month: row.month }, category: 'all' })}>
                 <span>{SHORT_MONTHS[Number(row.month.slice(5, 7)) - 1]}</span>
-                {!amounts.hidden && (
-                  <span className="pair-bars" aria-hidden="true">
-                    <span className="bar thin"><span className="legend-income" style={{ width: `${width(row.income)}%` }} /></span>
-                    <span className="bar thin"><span className="legend-spending" style={{ width: `${width(row.spending)}%` }} /></span>
-                  </span>
-                )}
-                <small className={!amounts.hidden && row.income - row.spending < 0 ? 'amount-out' : ''}>{amounts.money(row.income - row.spending)}</small>
+                {row.empty
+                  ? <span className="chart-not-entered" aria-hidden="true">Nothing recorded</span>
+                  : !amounts.hidden && (
+                    <span className="pair-bars" aria-hidden="true">
+                      <span className="bar thin stacked">
+                        {row.income > 0 && <span className="legend-income" style={{ width: `${width(row.income)}%` }} />}
+                        {row.expected > 0 && <span className="legend-expected" style={{ width: `${width(row.expected)}%` }} />}
+                      </span>
+                      {row.started && <span className="bar thin"><span className="legend-spending" style={{ width: `${width(row.spending)}%` }} /></span>}
+                    </span>
+                  )}
+                {!row.started ? <small>Expected</small>
+                  : row.empty ? <small>—</small>
+                  : <small className={!amounts.hidden && row.income - row.spending < 0 ? 'amount-out' : ''}>{amounts.money(row.income - row.spending)}</small>}
               </button>
             </li>
           ))}
         </ul>
         <p className="field-help">The amount on the right is the result: income received − spent. Choose a month to show it in the list and see its spending by category.</p>
+        {!amounts.hidden && <>
+          <button type="button" className="text-button" aria-expanded={showTable} aria-controls={tableId} onClick={() => setShowTable(!showTable)}>{showTable ? 'Hide Table' : 'Show as Table'}</button>
+          <div id={tableId} hidden={!showTable} className="table-scroll">
+            {showTable && (
+              <table className="chart-table year-table">
+                <caption>Income and spending by month in {year}</caption>
+                <thead><tr><th scope="col">Month</th><th scope="col">Received</th>{hasExpected && <th scope="col">Expected</th>}<th scope="col">Spent</th><th scope="col">Result</th></tr></thead>
+                <tbody>
+                  {chart.map(row => (
+                    <tr key={row.month}>
+                      <th scope="row">{formatShortYearMonth(row.month)}</th>
+                      <td>{row.started ? (row.empty ? 'Nothing recorded' : amounts.money(row.income)) : '—'}</td>
+                      {hasExpected && <td>{row.expected > 0 ? amounts.money(row.expected) : '—'}</td>}
+                      <td>{row.started && !row.empty ? amounts.money(row.spending) : '—'}</td>
+                      <td>{row.started && !row.empty ? amounts.money(row.income - row.spending) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>}
       </>}
+      {chosen && (
+        <p className="chosen-month-figures" aria-live="polite">
+          <b>{formatYearMonth(chosen.month)}</b>: {!chosen.started ? `Expected ${amounts.money(chosen.expected)}. Nothing has happened yet.`
+            : chosen.empty ? 'Nothing recorded.'
+            : `Received ${amounts.money(chosen.income)}${chosen.expected > 0 ? ` · Still expected ${amounts.money(chosen.expected)}` : ''} · Spent ${amounts.money(chosen.spending)}`}
+        </p>
+      )}
       {chosenMonth && categories.length > 0 && (
         <div role="group" aria-label={`Spending by category in ${formatYearMonth(chosenMonth)}`} className="category-bars">
           {categories.map(group => (

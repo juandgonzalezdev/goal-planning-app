@@ -54,6 +54,11 @@ export function formatYearMonth(month: YearMonth): string {
   return `${LONG_MONTH_NAMES[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`
 }
 
+/** '2026-10' shown as 'Oct 2026', for the labels under a chart. */
+export function formatShortYearMonth(month: YearMonth): string {
+  return `${LONG_MONTH_NAMES[Number(month.slice(5, 7)) - 1].slice(0, 3)} ${month.slice(0, 4)}`
+}
+
 /** The weekday of a date, e.g. 'Saturday'. Calculated in UTC, so the time zone can never change it. */
 export function weekdayOf(date: CalendarDate): string {
   const [year, month, day] = date.split('-').map(Number)

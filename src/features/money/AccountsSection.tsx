@@ -13,6 +13,7 @@ import { MoneyBlockFrame } from './MoneyBlockFrame'
 import { MoneyBlocksContext, setBlockOpen } from './moneyBlocks'
 import type { SectionProps } from './MoneyScreen'
 import { SavingsByPurpose } from './SavingsByPurpose'
+import { SavingsOverTime } from '../charts/TimeCharts'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
@@ -192,6 +193,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, onOp
         })}
       </ul>
       <SavingsByPurpose data={data} asOf={today} money={money} hidden={false} onOpenGoal={onOpenGoal} />
+      <SavingsOverTime data={data} today={today} money={money} />
     </MoneyBlockFrame>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -15,6 +15,7 @@ import { draftFromGoal, NOTE_MAX_LENGTH, readGoalDraft, readMovementDraft, type 
 import { GoalExplore } from './GoalExplore'
 import { GoalPace } from './GoalPace'
 import { emergencyCover } from '../../domain/finance/emergency'
+import { GoalSavedOverTime } from '../charts/TimeCharts'
 
 type Props = {
   data: FinanceData
@@ -73,6 +74,14 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
   const [editBase, setEditBase] = useState(revision)
   const [sending, setSending] = useState<'movement' | 'edit' | 'delete' | null>(null)
   const [refusal, setRefusal] = useState<{ what: 'edit' | 'delete'; text: string } | null>(null)
+  // The record chosen on the chart, shown in Savings Activity ('opening' for what was already saved).
+  const [shownRecord, setShownRecord] = useState<{ key: string } | null>(null)
+  useEffect(() => {
+    if (!shownRecord) return
+    const row = document.getElementById(`goal-record-${shownRecord.key}`)
+    row?.focus({ preventScroll: true })
+    row?.scrollIntoView?.({ block: 'center' })
+  }, [shownRecord])
   // A movement counts once something is typed in it; the goal's edit form, once it differs from the goal.
   const typedMovement = movement.amount.trim() !== '' || movement.note.trim() !== ''
   useUnsavedChanges(`Goal movement: ${goal.name}`, typedMovement ? {
@@ -177,6 +186,13 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
         <GoalExplore data={data} goal={goal} progress={progress} today={today} isDemo={isDemo} onChange={onChange} />
       </>}
 
+      <GoalSavedOverTime data={data} goal={goal} today={today} money={money} onShowRecord={key => setShownRecord({ key })}
+        onAddContribution={() => {
+          setMovement({ ...movement, kind: 'contribution' }); setEffect(defaultEffect('contribution'))
+          const input = document.getElementById('move-amount')
+          input?.focus({ preventScroll: true }); input?.scrollIntoView?.({ block: 'center' })
+        }} />
+
       <section className="block" aria-labelledby="goal-move">
         <h2 id="goal-move" className="section-title">Add or Take Out</h2>
         <div className="month-switch" role="group" aria-label="Type of change">
@@ -264,13 +280,13 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
           ? <p className="muted-note">No contributions yet.</p>
           : <ul className="line-list">
             {activity.map(item => (
-              <li key={item.id} className="line">
+              <li key={item.id} id={`goal-record-${item.id}`} tabIndex={-1} className={`line${shownRecord?.key === item.id ? ' is-target' : ''}`}>
                 <span>{formatDate(item.date)}{item.note ? ` · ${item.note}` : ''}<small>{EFFECT_NAMES[item.effect]}</small></span>
                 <b className={item.amount >= 0 ? 'amount-in' : ''}>{item.amount >= 0 ? '+' : '−'}{money(Math.abs(item.amount))}</b>
               </li>
             ))}
             {goal.openingBalance > 0 && (
-              <li className="line"><span>{formatDate(goal.createdOn)}<small>Already saved when it was added</small></span><b>{money(goal.openingBalance)}</b></li>
+              <li id="goal-record-opening" tabIndex={-1} className={`line${shownRecord?.key === 'opening' ? ' is-target' : ''}`}><span>{formatDate(goal.createdOn)}<small>Already saved when it was added</small></span><b>{money(goal.openingBalance)}</b></li>
             )}
           </ul>}
       </section>

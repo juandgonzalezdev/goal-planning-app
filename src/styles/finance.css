@@ -937,3 +937,43 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
   .shell.has-sidebar .home-blocks:not(.is-customizing) > .home-block-slot:not(:last-child:nth-child(odd)) .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shell.has-sidebar .home-blocks:not(.is-customizing) > .home-block-slot:not(:last-child:nth-child(odd)) .pay-list { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Charts over time (Rumbo de diseño §7): solid = recorded, outline = expected, dashed = estimate, an empty stretch = Not entered. */
+.legend-expected { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--color-positive); }
+.chart-legend .legend-expected { box-shadow: inset 0 0 0 2px var(--color-positive); }
+.bar.stacked > .legend-expected { border-radius: 0 10px 10px 0; }
+.chart-not-entered { font-size: 12px; color: var(--color-text-muted); font-style: italic; }
+.chosen-month-figures { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.chart-table caption { text-align: left; font-size: 12px; color: var(--color-text-muted); padding-bottom: 4px; }
+.chart-section { display: grid; gap: 8px; min-width: 0; }
+.chart-section > .text-button, .time-chart > .text-button { justify-self: start; min-height: 44px; }
+.time-chart { display: grid; gap: 6px; min-width: 0; }
+.legend-line { display: inline-block; width: 18px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 2px solid var(--color-accent); }
+.legend-line.is-estimate { border-top-style: dashed; }
+.legend-line.is-level { border-top: 1px dashed var(--color-text-muted); }
+.time-chart-plot { position: relative; height: 168px; margin-top: 18px; touch-action: pan-y; }
+.time-chart-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.time-chart-base { stroke: var(--color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.time-chart-level { stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.time-chart-line { fill: none; stroke: var(--color-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.time-chart-line.is-estimate { stroke-dasharray: 6 5; stroke-linecap: butt; }
+.time-chart-scale { position: absolute; top: -18px; left: 0; font-size: 11px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; pointer-events: none; }
+.time-chart-gap { position: absolute; bottom: 4px; text-align: center; font-size: 11px; font-style: italic; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: clip; pointer-events: none; }
+.time-chart-note { position: absolute; font-size: 11px; color: var(--color-text-muted); pointer-events: none; white-space: nowrap; }
+.time-chart-note.is-level { right: 0; transform: translateY(-120%); }
+.time-chart-note.is-mark { bottom: 100%; transform: translateX(-100%); padding-right: 4px; }
+.time-chart-hit { position: absolute; inset: 0; cursor: pointer; }
+.time-chart-point {
+  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--color-surface); background: var(--color-accent); pointer-events: none; min-height: 0; min-width: 0;
+}
+.time-chart-point.is-selected { width: 16px; height: 16px; margin: -8px 0 0 -8px; box-shadow: 0 0 0 2px var(--color-accent); }
+.time-chart-point:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.time-chart-axis { position: relative; height: 16px; font-size: 11px; color: var(--color-text-muted); }
+.time-chart-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.time-chart-axis span:first-child { transform: none; }
+.time-chart-axis span:last-child:not(:first-child) { transform: translateX(-100%); }
+.time-chart-detail p { margin: 0; font-variant-numeric: tabular-nums; }
+.goal-record-row.is-target, .line-list > li.line.is-target { box-shadow: inset 3px 0 0 var(--color-primary); padding-left: 10px; }
+.time-chart-scale.is-zero { transform: translateY(-110%); }
