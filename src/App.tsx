@@ -13,6 +13,7 @@ import { Icon } from './components/Icon'
 import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
+import { clearGuideProgress, readGuideProgress, writeGuideProgress } from './data/uiPrefs'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
@@ -31,6 +32,11 @@ import { EMPTY_NEW_GOAL, typedGoalDraft, type NewGoalState } from './features/go
 import { GoalsScreen } from './features/goals/GoalsScreen'
 import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
+import { HelpScreen } from './features/help/HelpScreen'
+import type { GuideChapter } from './features/help/guideContent'
+import { GuideContext } from './features/help/tips'
+import { GettingStarted } from './features/home/GettingStartedPanel'
+import { DEMO_PROGRESS, guideShown, readProgress, resumeGuide, skipStep, type GuideProgress, type GuideStep } from './features/home/gettingStarted'
 import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/history/historyView'
 import { NO_FILTER } from './domain/finance/history'
 import { monthIncome } from './domain/finance/income'
@@ -167,6 +173,11 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // How Home is arranged. The own space's layout is remembered on this device for that space;
   // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
   const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
+  // Getting Started: the own space's progress is remembered on this device for that space; the demo's lasts while it is open.
+  const [demoGuide, setDemoGuide] = useState<GuideProgress>(DEMO_PROGRESS)
+  const [ownGuide, setOwnGuide] = useState<{ spaceId: string; progress: GuideProgress } | null>(null)
+  // The chapter Help & Guide opens on ("Read more in the guide").
+  const [guideChapter, setGuideChapter] = useState<GuideChapter | null>(null)
   const [ownLayout, setOwnLayout] = useState<{ spaceId: string; layout: HomeLayout } | null>(null)
   // Show all in Left to Pay: for this session only, separately for the demo and the own space, so Back from a bill finds its row.
   const [demoShowAllBills, setDemoShowAllBills] = useState(false)
@@ -464,6 +475,21 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setOwnLayout({ spaceId: open.data.space.id, layout })
     writeHomeLayout(storage, open.data.space.id, layoutToSave(layout))
   }
+  const guideProgress = !open ? DEMO_PROGRESS
+    : open.kind === 'demo' ? demoGuide
+      : ownGuide?.spaceId === open.data.space.id ? ownGuide.progress : readProgress(readGuideProgress(storage, open.data.space.id))
+  const changeGuide = (progress: GuideProgress) => {
+    if (!open) return
+    if (open.kind === 'demo') { setDemoGuide(progress); return }
+    setOwnGuide({ spaceId: open.data.space.id, progress })
+    writeGuideProgress(storage, open.data.space.id, progress)
+  }
+  /** Help & Guide, on a chapter when given (the keyboard goes to its title). */
+  const openGuide = (chapter?: GuideChapter) => confirmLeave(ANY_FORM, () => {
+    setGuideChapter(chapter ?? null)
+    if (chapter) addFocus.current = `#help-toggle-${chapter}`
+    navigation.go('help')
+  })
   const showAllBills = !open ? false
     : open.kind === 'demo' ? demoShowAllBills
       : ownShowAllBills?.spaceId === open.data.space.id ? ownShowAllBills.value : false
@@ -573,7 +599,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     }
   }
   /** Everything the demo shows on top of its records goes back to the start: layout, views, screen preferences, choices. */
-  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoShowAllBills(false); setDemoMoneyView(INITIAL_MONEY_VIEW); setDemoGoalsFilter('all'); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
+  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoShowAllBills(false); setDemoMoneyView(INITIAL_MONEY_VIEW); setDemoGoalsFilter('all'); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setDemoGuide(DEMO_PROGRESS); setConfirmReset(false) }
   // What the own space shows and is not kept per space (the Bills view and the month): set aside while the demo is open.
   const ownReturn = useRef<{ billsView: BillsView; chosenMonth: typeof chosenMonth } | null>(null)
   /**
@@ -621,7 +647,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    */
   const erase = async (): Promise<EraseOutcome> => {
     const outcome = await space.eraseOwnSpace()
-    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
+    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); clearGuideProgress(storage); setOwnGuide(null); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
     return outcome
   }
   // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
@@ -724,6 +750,26 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     return [...record.map(choice => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice) })),
       ...plan.map((choice, index) => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice), startsGroup: index === 0 }))]
   })()
+  /**
+   * Getting Started on Home: each step opens what already exists, as + Add does (Back or Cancel comes back to Home,
+   * on + Add). Accounts opens Money › Accounts & Savings on Add Account; the last step shows + Add itself.
+   */
+  const guideAction = (step: GuideStep) => {
+    if (step === 'income') addFrom('income')
+    else if (step === 'bills') addFrom('bill')
+    else if (step === 'goals') addFrom('goal')
+    else if (step === 'day-to-day') {
+      window.scrollTo?.(0, 0)
+      document.querySelector<HTMLElement>('.shell-add > .menu-root > button')?.focus({ preventScroll: true })
+    } else confirmLeave(ANY_FORM, () => {
+      addReturn.current = { ...navigation.current(), y: window.scrollY }
+      if (step === 'debts') showDebt(null)
+      else {
+        showMoneyBlock('accounts')
+        addFocus.current = '[data-money-block="accounts"] .block-actions button'
+      }
+    })
+  }
   /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
   const cancelAdd = () => navigation.backAllowed()
   /** History opens a bill, a goal or an account: Back finds History scrolled where it was, with the focus on that record. */
@@ -838,6 +884,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
     </button>
   )
+  const helpButton = <button type="button" className="nav-settings" onClick={() => openGuide()}><Icon name="help" size={18} /> Help</button>
   const settingsButton = sidebar
     ? <button type="button" className="nav-settings" onClick={() => go('settings')}><Icon name="settings" size={18} /> Settings</button>
     : <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
@@ -894,11 +941,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         </div>
       )}
       {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
-      {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} top={sidebar ? brand : undefined} bottom={sidebar ? settingsButton : undefined} />}
+      {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} top={sidebar ? brand : undefined} bottom={sidebar ? <>{helpButton}{settingsButton}</> : undefined} />}
       {leaveQuestion}
       <WriteStatusContext.Provider value={writeStatus}>
       <UnsavedChangesContext.Provider value={unsaved.registry}>
       <LeaveGuardContext.Provider value={leaveGuard}>
+      <GuideContext.Provider value={open ? openGuide : null}>
       <main className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
@@ -929,7 +977,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))}
-                emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)} />
+                emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
+                guide={guideShown(open.data, guideProgress) && <GettingStarted data={open.data} progress={guideProgress} isDemo={open.kind === 'demo'}
+                  onAction={guideAction} onSkip={step => changeGuide(skipStep(guideProgress, step))} onHide={() => changeGuide({ ...guideProgress, hidden: true })} />} />
             </AmountVisibilityProvider>
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
@@ -1004,9 +1054,13 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onOpenDebt={id => fromMoney('debts', id ? `debt-${id}` : 'add-debt', () => { setDebtId(id); navigation.go('debt') })}
               onOpenGoal={id => fromMoney('accounts', `goal-${id}`, () => showGoal(id))} onOpenReports={openReports} />
           </div>}
+          {shows('help') && <div className="screen" data-screen="help">
+            <HelpScreen key={guideChapter ?? 'all'} isDemo={open.kind === 'demo'} chapter={guideChapter} guideOnHome={guideShown(open.data, guideProgress)}
+              onShowGuide={() => changeGuide(resumeGuide())} onBack={back} />
+          </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}
-              onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
+              onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onOpenHelp={() => openGuide()} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
               onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
                 <ConfirmDiscard question="Opening the demo closes what you typed here. It cannot be brought back." confirm="Discard and Open Demo" onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />
@@ -1018,6 +1072,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
         </Fragment>}
       </main>
+      </GuideContext.Provider>
       </LeaveGuardContext.Provider>
       </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>

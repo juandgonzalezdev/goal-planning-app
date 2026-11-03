@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { HelpTip } from '../../components/HelpTip'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
-import { addGoalMovement, deleteGoal, goalMovementsOf, goalProgress, updateGoal, type MovementError, type MovementKind } from '../../domain/finance/goals'
+import { addGoalMovement, deleteGoal, goalMovementsOf, goalProgress, goalSaved, updateGoal, type MovementError, type MovementKind } from '../../domain/finance/goals'
 import { savingsSummary } from '../../domain/finance/savings'
 import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Goal, MovementEffect } from '../../domain/finance/types'
@@ -64,6 +65,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
   const [accountId, setAccountId] = useState(savingsAccounts[0]?.id ?? '')
   const [movementErrors, setMovementErrors] = useState<MovementDraftErrors & { saved?: string }>({})
   const [savedMessage, setSavedMessage] = useState('')
+  const [reachedNow, setReachedNow] = useState(false)
   const [editing, setEditing] = useState<GoalDraft | null>(null)
   const [editErrors, setEditErrors] = useState<GoalDraftErrors>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -120,8 +122,15 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
     })
     if (result.status === 'rejected') { setMovementErrors({ amount: errorText(result.error) }); return }
     const outcome = await send('movement', () => onChange(result.data, base))
-    setSavedMessage(outcomeText(`${movement.kind === 'contribution' ? 'Added' : 'Took out'} ${money(read.amount)} (${EFFECT_NAMES[effect].toLowerCase()}).`, outcome))
+    // The message only says what was confirmed as saved; the bar then moves from the old amount to the new one.
+    const after = goalSaved(goal, result.data.goalMovements)
+    const how = EFFECT_NAMES[effect].toLowerCase()
+    setSavedMessage(outcomeText(movement.kind === 'contribution'
+      ? `Added ${money(read.amount)} to ${goal.name} (${how}).`
+      : `Took out ${money(read.amount)} (${how}). ${goal.name} now has ${money(after)}.`, outcome))
     if (!isKept(outcome)) return
+    // Goal reached: once, when this contribution takes it to its target.
+    setReachedNow(goal.target !== null && progress.saved < goal.target && after >= goal.target)
     setMovementErrors({})
     setMovement(emptyMovement(movement.kind))
   }
@@ -177,6 +186,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
               <div style={{ width: `${progress.percent}%`, background: ownerColor(data.space, goal.owner) }} />
             </div>
             <span>{progress.remaining > 0 ? `${money(progress.remaining)} still needed` : 'Goal reached'}</span>
+            {reachedNow && <span className="goal-reached-badge" role="status"><Icon name="check" size={16} /> Goal reached</span>}
           </>
           : <span>Saved · no target set</span>}
       </section>
@@ -209,6 +219,7 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
             {effectOption('taken-out', 'Out of my savings', 'You spent it or moved it out of Savings. Savings go down.', !hasAccounts)}
           </>}
         </fieldset>
+        {movement.kind === 'contribution' && <div className="help-tips"><HelpTip topic="new-savings" label /></div>}
         {!hasAccounts && <p className="field-help">No savings account is entered, so only the goal is recorded. Add your savings account in Money to see your savings divided by purpose.</p>}
         <div className="form-stack">
           {needsAccount && savingsAccounts.length > 1 && (

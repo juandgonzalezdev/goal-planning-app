@@ -47,9 +47,9 @@ describe('Sidebar on wide screens', () => {
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Go to Home' })).toHaveLength(1)
     expect(header().getByRole('button', { name: 'Add' })).toBeTruthy()
-    // Reading order in the sidebar: the logo, the five tabs, then Settings.
+    // Reading order in the sidebar: the logo, the five tabs, then Help and Settings.
     expect(nav().getAllByRole('button').map(item => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim()))
-      .toEqual(['Go to Home', 'Home', 'Bills', 'Goals', 'Money', 'History', 'Settings'])
+      .toEqual(['Go to Home', 'Home', 'Bills', 'Goals', 'Money', 'History', 'Help', 'Settings'])
   })
 
   it('a detail screen and Settings keep the header with the logo and the gear', async () => {

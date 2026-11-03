@@ -62,6 +62,8 @@ type Props = {
   onOpenExpense: (id: Id, spot: HomeSpot) => void
   emergencyLater: boolean
   onEmergencyLater: () => void
+  /** Getting Started, above the areas while it is shown (not while customizing). */
+  guide?: ReactNode
 }
 
 /** A drag only starts after the finger or mouse moves this far, so a tap on the handle moves nothing. */
@@ -82,7 +84,7 @@ type Drag = { area: HomeArea; pointerId: number; startY: number; started: boolea
  * come): never worked back from today's balance.
  */
 export function HomeScreen(props: Props) {
-  const { data, months, month, onMonthChange, today, layout, onLayoutChange } = props
+  const { data, months, month, onMonthChange, today, layout, onLayoutChange, guide } = props
   const individual = data.space.mode === 'individual'
   // The date Money & Goals uses: the end of the month shown, or today when that end is still to come.
   const asOf = monthEnd(month) < today ? monthEnd(month) : today
@@ -245,6 +247,7 @@ export function HomeScreen(props: Props) {
         </span>
       </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
+      {!customizing && guide}
       <HomeBlocksContext.Provider value={control}>
         <div className={`home-blocks${customizing ? ' is-customizing' : ''}${drag?.started ? ' is-dragging' : ''}`} ref={blocksRef}>
           {layout.order.map(area => <div key={area} className="home-block-slot">{areas[area]}</div>)}

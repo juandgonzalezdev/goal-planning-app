@@ -1,3 +1,4 @@
+import { HelpTip } from '../../components/HelpTip'
 import { useId, useState } from 'react'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -52,6 +53,11 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
           <small>Result</small><b>{future ? '—' : money(r.result)}</b>
           <small>{resultNote}</small>
         </div>
+      </div>
+      <div className="help-tips">
+        <HelpTip topic="result" label hiddenAmounts={amounts.hidden} />
+        <HelpTip topic="expected-received" label hiddenAmounts={amounts.hidden} />
+        <HelpTip topic="planned-spent" label hiddenAmounts={amounts.hidden} />
       </div>
       {r.income.extraordinary > 0 && (
         <p className="muted-note">Income includes {money(r.income.extraordinary)} of one-off income. Without it, the result would be {money(r.result - r.income.extraordinary)}.</p>

@@ -7,6 +7,7 @@ import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Theme } from '../../domain/finance/types'
 import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSetup'
+import { HelpTip } from '../../components/HelpTip'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
 import { ExchangeSection } from './ExchangeSection'
@@ -26,6 +27,8 @@ type Props = {
   /** While the space can only be shown: "Download Both Copies". */
   onDownloadCopies?: () => Promise<boolean>
   onBack: () => void
+  /** Help & Guide: the guide, Getting Started and the Monthly Check-in. */
+  onOpenHelp: () => void
   onThemeChange: (theme: Theme) => Promise<SaveOutcome>
   onErase: () => Promise<EraseOutcome>
   /** False while the own space can only be shown: Erase waits until it can be opened as usual. */
@@ -44,7 +47,7 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
   'busy': 'Still saving the last change. Try again in a moment.',
 }
 
-export function SettingsScreen({ data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
+export function SettingsScreen({ data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [eraseText, setEraseText] = useState('')
   const [themeText, setThemeText] = useState('')
@@ -66,6 +69,12 @@ export function SettingsScreen({ data, isDemo, months, month, today, onReplace, 
     <div className="tab-screen">
       <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
       <h1 className="tab-title">Settings</h1>
+
+      <section className="block" aria-labelledby="settings-help">
+        <h2 id="settings-help" className="section-title">Help &amp; Guide</h2>
+        <p className="field-help">How the app works, Getting Started and your Monthly Check-in.</p>
+        <button type="button" className="button-secondary align-start" onClick={onOpenHelp}>Open Help &amp; Guide</button>
+      </section>
 
       <section className="block">
         <h2 className="section-title">Account &amp; Workspace</h2>
@@ -105,6 +114,7 @@ export function SettingsScreen({ data, isDemo, months, month, today, onReplace, 
           {demoQuestion && <div className="callout callout-warning" role="alert">{demoQuestion}</div>}
         </> : <>
           <PrivacyFacts />
+          <div className="help-tips"><HelpTip topic="hide-amounts" label /></div>
           {!confirming && <button type="button" className="button-danger" disabled={!canErase} onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}
           {confirming && (
             <div className="callout callout-warning" role="alert">
@@ -123,6 +133,7 @@ export function SettingsScreen({ data, isDemo, months, month, today, onReplace, 
         <h2 id="settings-reports-title" className="section-title">Reports &amp; Backup</h2>
         <ReportSection data={data} isDemo={isDemo} months={months} month={month} today={today} />
         <ExchangeSection data={data} isDemo={isDemo} onReplace={onReplace} onDownloadCopies={onDownloadCopies} />
+        <div className="help-tips"><HelpTip topic="backup" label /></div>
       </section>
 
       {!isDemo && onExploreDemo && (

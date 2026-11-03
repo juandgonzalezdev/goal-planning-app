@@ -13,6 +13,7 @@ import { MoneyBlockFrame } from './MoneyBlockFrame'
 import { MoneyBlocksContext, setBlockOpen } from './moneyBlocks'
 import type { SectionProps } from './MoneyScreen'
 import { SavingsByPurpose } from './SavingsByPurpose'
+import { HelpTip } from '../../components/HelpTip'
 import { SavingsOverTime } from '../charts/TimeCharts'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
@@ -127,6 +128,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, onOp
     <MoneyBlockFrame block="accounts" summary={summary}
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
       <p className="field-help">Balances you read in your bank or count yourself, with their date. A new balance keeps the old one in History.</p>
+      <div className="help-tips"><HelpTip topic="savings" label /></div>
       {form?.id === null && formBox}
       {items.length === 0 && !form && (
         <div className="empty-state">

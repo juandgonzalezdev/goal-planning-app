@@ -114,6 +114,15 @@ A strip at the top says **Demo · Invented data**. It has:
 
 ## 5. Getting Started
 
+After **Create My Space**, **Getting Started** appears at the top of Home. It shows one step at a time, in the order below, and a row with the six steps (done, skipped or still to do).
+
+- Each step has a button that opens the form that already exists (for example **Add Income** opens Money › Income with a new income), and **Skip for now** (step 3 also has **I Have None**, step 5 **Not Now**). After a skip, the keyboard goes to the next step's question.
+- A step is done when your space has what it asks for. Nothing is filled in for you.
+- Step 4 lists the payments your cards and loans already added (**Already in your bills: …**), so you don't add them twice.
+- Step 6 ends with **Show Me Add** (it takes you to **+ Add**) and **Done**.
+- **Hide this guide** takes it off Home. **Settings › Help & Guide › Show Getting Started on Home** brings it back; skipped steps come back too.
+- Your progress is kept on this device, for this space only. It isn't part of your space or its backup. In the demo it starts hidden, lasts only while the demo is open, and Reset Demo or Exit Demo forget it.
+
 Add things in this order, and skip anything that doesn't apply to you. You can come back to any step later.
 
 | Step | Where | What to add | Why this order |
@@ -139,7 +148,7 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 | --- | --- |
 | Phone (narrower than 740 px) | The tabs are at the bottom of the screen. The header has the logo, **+ Add** and the gear. Home is one column. |
 | Tablet (740 to 1023 px) | The tabs are at the top. The header is the same as on a phone. Home is one column. |
-| Computer (1024 px or wider) | The tabs are in a **sidebar** on the left: the logo at the top, the five tabs, and **Settings** at the end. The header keeps only **+ Add**. Home is one column up to 1199 px. |
+| Computer (1024 px or wider) | The tabs are in a **sidebar** on the left: the logo at the top, the five tabs, and **Help** and **Settings** at the end. The header keeps only **+ Add**. Home is one column up to 1199 px. |
 | Wide computer (1200 px or wider) | As above, and Home shows its areas in **two columns**. |
 
 - In two columns, Home's areas follow the order you chose in **Customize Home**: left to right, then the next row. The keyboard and a screen reader follow the same order. If the number of areas is odd, the last one takes the whole row.
@@ -153,7 +162,13 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three.
 - **History**: everything you recorded.
 - The logo at the top takes you to Home.
-- The gear opens Settings, where **Reports & Backup** is. Money has a link to it at the end (**Open Reports & Backup**).
+- The gear opens Settings, where **Help & Guide** and **Reports & Backup** are. Money has a link to it at the end (**Open Reports & Backup**).
+
+**Help & Guide**
+
+**Settings › Help & Guide** (and **Help** in the sidebar on a computer) has a short version of this guide, in chapters that open and close, **Getting Started** and **Your Monthly Check-in**. In the demo it says that Alex's information is invented.
+
+A **?** next to a figure opens a short note under it: two or three sentences, an example from the demo and **Read more in the guide**, which opens Help & Guide on that chapter. They are next to: **Result**, **Expected and Received** and **Planned Bills and Spent** (This Month), **Savings** (Money › Accounts & Savings), **Remaining Balance** (a card or loan), **New savings and Savings I already have** (adding to a goal), **Download Backup and Download Both Copies** and **Hiding amounts** (Settings).
 
 **+ Add**
 
@@ -496,6 +511,8 @@ Both your goals and the Emergency Fund are part of your Savings, not extra money
 
 **Saved over time** shows what the goal held after each record: what was already saved when you added it, then a step up for each Contribution and a step down for each Withdrawal. With a target, a dotted line marks it; with a date, a line marks the date. Choose a step, then **Show in Savings Activity** to see that record. With no record or only one, you see the figure or **Add Contribution** instead.
 
+**After saving.** Only once the change is saved, the message says what it did: "Added 200,00 zł to Trip to Japan (new savings)." or "Took out 200,00 zł (back to unassigned savings). Trip to Japan now has 1600,00 zł." The goal's bar moves to the new amount in about 300 ms (it goes down at the same speed, with no red). When a Contribution reaches the target, **Goal reached** shows once. With **Reduce motion** on your device, nothing moves: the amount changes at once and the message stays. In Left to Pay, a bill marked as paid leaves the list and a short message with a check takes its place.
+
 **Change Name, Target or Date** edits a goal. **Delete Goal** removes it: what it held goes back to savings with no purpose, and no balance changes.
 
 ## 14. How Your Records Change the Numbers
@@ -535,6 +552,7 @@ Select a point to read it. Tab reaches the chart; arrows, Home and End move
 between records. **Show as Table** shows the same figures. Charts do not animate.
 With Hide All Amounts, History hides its chart and table. Money, goals and card
 details currently show amounts and their charts, as before.
+The help notes on This Month also hide their numeric examples while that area's amounts are hidden.
 
 ## 15. History
 

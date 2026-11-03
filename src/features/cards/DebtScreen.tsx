@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
+import { HelpTip } from '../../components/HelpTip'
 import { Icon } from '../../components/Icon'
 import { MonthSwitch } from '../../components/MonthSwitch'
 import type { YearMonth } from '../../domain/calendar'
@@ -129,7 +130,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
       <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
 
       <section className="goal-hero" aria-label="Remaining Balance">
-        <span>Remaining Balance</span>
+        <span>Remaining Balance <HelpTip topic="remaining-balance" /></span>
         <b className="goal-hero-saved">{item.balance === null ? 'Not entered' : money(item.balance)}</b>
         <span>{item.asOf ? `As of ${formatDate(item.asOf)} · the latest balance you entered` : 'Enter the balance from your bank or statement.'}</span>
       </section>

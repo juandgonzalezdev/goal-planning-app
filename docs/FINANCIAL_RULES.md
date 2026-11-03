@@ -301,7 +301,7 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
   (`goal-planning-app.home-layout`, ligado al id del espacio); en la demo duran
   mientras está abierta y nunca se guardan.
 - Las preferencias de pantalla de la demo (importes ocultos, Donut o Bars,
-  Maybe Later) también viven solo en memoria.
+  Maybe Later) y el progreso de Getting Started también viven solo en memoria.
 - **Exit Demo** descarta todos los cambios. Si hay algo escrito sin guardar,
   pregunta antes.
 

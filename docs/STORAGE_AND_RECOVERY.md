@@ -21,7 +21,7 @@ errores.
 | Espacios ilegibles apartados por Use Older Copy | Almacén `quarantine` | Cada uno con su propia clave. Nunca se borran ni se sobrescriben |
 | La copia antigua (versiones anteriores de la app) | `localStorage`, clave `goal-planning-app.my-space` | Solo se lee y nunca se cambia, salvo con Erase |
 | La marca de borrado | `localStorage`, clave `goal-planning-app.erased` | Mientras existe, la copia antigua no se vuelve a abrir |
-| Preferencias de pantalla del espacio propio | `localStorage`: `goal-planning-app.hidden-amounts`, `.bills-chart`, `.emergency-later` y `.home-layout` (este último ligado al id del espacio) | Son de este dispositivo, no del espacio, y no van en la copia de seguridad |
+| Preferencias de pantalla del espacio propio | `localStorage`: `goal-planning-app.hidden-amounts`, `.bills-chart`, `.emergency-later`, `.home-layout` y `.getting-started` (estos dos ligados al id del espacio) | Son de este dispositivo, no del espacio, y no van en la copia de seguridad |
 | La demo | Solo en memoria | Nunca se guarda (sección 8) |
 
 Los espacios nuevos reciben un id aleatorio (`newId`). Los creados antes
@@ -48,7 +48,8 @@ conservan `my-space`.
   abiertos los bloques cuyo nombre coincide con una parte abierta; This Month y
   Left to Pay aparecen cerrados. Es solo la vista: ningún dato se pierde.
 - Reset Layout solo cambia `home-layout`; nunca toca `hidden-amounts`.
-- La demo no lee ni escribe ninguna de las dos claves.
+- `getting-started` se guarda como `{ spaceId, progress: { hidden, skipped, finished } }`. Un valor ilegible vuelve a una guía nueva (nunca la oculta para siempre). Erase All Data lo borra.
+- La demo no lee ni escribe ninguna de estas claves.
 
 ## 2. Migración desde la copia antigua
 

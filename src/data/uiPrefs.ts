@@ -101,3 +101,37 @@ export function clearHomeLayout(storage: Storage | null): void {
     // Nothing to do: it is only a screen preference.
   }
 }
+
+const GUIDE_KEY = 'goal-planning-app.getting-started'
+
+/**
+ * Getting Started progress of the own space, on this device only (never in
+ * the space's data or its backup). The demo never uses this. The value is
+ * returned as read; the screen checks it.
+ */
+export function readGuideProgress(storage: Storage | null, spaceId: string): unknown {
+  try {
+    const value: unknown = JSON.parse(storage?.getItem(GUIDE_KEY) ?? 'null')
+    const record = typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+    return record?.spaceId === spaceId ? record.progress : null
+  } catch {
+    return null
+  }
+}
+
+export function writeGuideProgress(storage: Storage | null, spaceId: string, progress: unknown): void {
+  try {
+    storage?.setItem(GUIDE_KEY, JSON.stringify({ spaceId, progress }))
+  } catch {
+    // Not remembered; the guide still follows it until the page closes.
+  }
+}
+
+/** Forgets Getting Started progress (when the own space is erased). */
+export function clearGuideProgress(storage: Storage | null): void {
+  try {
+    storage?.removeItem(GUIDE_KEY)
+  } catch {
+    // Nothing to forget.
+  }
+}

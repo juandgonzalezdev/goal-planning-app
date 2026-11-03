@@ -24,7 +24,7 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const region = (name: string) => text(regionOf(name))
-const stat = (label: string) => text(within(regionOf('This Month').querySelector<HTMLElement>('.month-figures')!).getByText(label).parentElement)
+const stat = (label: string) => text(within(regionOf('This Month').querySelector<HTMLElement>('.home-stats')!).getByText(label).parentElement)
 const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
 const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
 const amount = /\d,\d\d zł/

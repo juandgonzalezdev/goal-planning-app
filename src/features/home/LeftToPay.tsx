@@ -107,7 +107,7 @@ export function LeftToPay({ data, month, today, isDemo, showAll, onShowAllChange
       <div className="left-to-pay">
         <b className="year-total">{money(r.planned.leftToPay)}{status.status === 'amounts-missing' && <small> + unknown</small>}</b>
         <LeftToPayMessage bills={r.planned} month={month} />
-        {paidNote?.month === month && <p className="muted-note" tabIndex={-1} ref={element => { if (element && focusNote.current) { focusNote.current = false; element.focus() } }}>{paidNote.text}</p>}
+        {paidNote?.month === month && <p className="muted-note paid-note" tabIndex={-1} ref={element => { if (element && focusNote.current) { focusNote.current = false; element.focus() } }}><span className="paid-check" aria-hidden="true"><Icon name="check" size={14} /></span>{paidNote.text}</p>}
         {all.length > 0 && <p className="muted-note pay-reference">{reference}</p>}
         {all.length > 0 && (
           <div id="left-to-pay-list" className="pay-groups">

@@ -46,3 +46,21 @@ recepción como adjunto por Juan; no se presupone acceso a esta carpeta.
   sus pantallas; la gráfica de History respeta Hide All Amounts.
 - Comprobación propia: 36 pruebas (Charts, series, PrivacyCharts y LinksReturn),
   build y diff --check correctos. Sin comprobación CSS o táctil en navegador aún.
+
+## Rumbo 08
+
+- Aplicación parcial comprobada y hunks exactos en App, LeftToPay y manual;
+  adaptación de la fila de Help en PROJECT_MAP. No se retiraron las guardas
+  de Show Fewer ni las correcciones de pagos, borrado o enlaces.
+- Ayuda, progreso local de Getting Started y animaciones siguen el alcance
+  del resumen. No se cambian dependencias ni el esquema del respaldo.
+- Las primeras pruebas/build detectaron colisión de resolución en Windows
+  entre GettingStarted.tsx y gettingStarted.ts: el componente pasa a llamarse
+  GettingStartedPanel.tsx, conservando su API. Se repiten los controles afectados.
+- Privacidad: las tres ayudas de This Month omiten sus ejemplos numéricos
+  cuando el área oculta importes; el texto explicativo permanece. Añadida
+  regresión que oculta los importes con una nota ya abierta.
+- La ayuda integrada de cuentas explica también la confirmación del borrado
+  de cuentas con solo saldos y el bloqueo por movimientos vinculados.
+- Tras adaptar Windows y privacidad: 28 pruebas afectadas en 4 archivos
+  (Help, gettingStarted, Layout y MarkPaid) y build correctos.
