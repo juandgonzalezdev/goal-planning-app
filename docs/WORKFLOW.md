@@ -1,0 +1,85 @@
+# Flujo de trabajo entre Juan, Codex y Claude
+
+Las reglas comunes están en [AGENTS.md](../AGENTS.md). Este documento describe
+cómo llevarlas a la práctica. [WORK_STATUS.md](WORK_STATUS.md) conserva el estado,
+las confirmaciones y los pendientes; no se duplican aquí.
+[DEVELOPMENT.md](DEVELOPMENT.md) describe las herramientas y los recorridos técnicos.
+
+## Secuencia de una tarea
+
+1. **Alcance de Juan.** Identificar el resultado esperado, archivos permitidos,
+   exclusiones y criterios de aceptación. Consultar WORK_STATUS.md y el estado
+   de Git según el acceso real, siguiendo AGENTS.md.
+2. **Implementación y pruebas de Codex.** Codex actúa como editor en el flujo
+   habitual. Implementa el alcance y entrega
+   un diff identificable junto con las comprobaciones necesarias.
+3. **Revisión de Claude.** Claude revisa exactamente la entrega recibida,
+   en el rol y con las limitaciones de acceso definidos en AGENTS.md.
+   Señala errores y riesgos con
+   referencias a archivos y líneas, efecto observable y reproducción propuesta.
+   Distingue hallazgos de inspección, hipótesis y resultados recibidos del editor.
+4. **Correcciones.** El mismo editor resuelve los hallazgos y comunica para cada
+   uno la corrección y su evidencia, o el motivo por el que sigue pendiente.
+   El revisor inspecciona el diff actualizado recibido. Un cambio de alcance
+   vuelve a Juan antes de implementar trabajo que no esté autorizado.
+5. **Prueba manual breve de Juan.** Entregar un recorrido corto y concreto con
+   datos ficticios, pasos y resultado esperado, centrado en el cambio y sus
+   riesgos. Registrar el resultado con las reglas de atribución de AGENTS.md.
+6. **Integración autorizada.** Entregar el resultado revisado y las limitaciones
+   antes de la decisión de Juan. El editor ejecuta solo las operaciones
+   autorizadas conforme a AGENTS.md, con la lista de archivos revisada,
+   y comunica el estado final de Git.
+
+## Entrega entre asistentes
+
+Cada entrega debe ser autosuficiente y contener:
+
+| Dato | Contenido mínimo |
+| --- | --- |
+| Tarea y alcance | Identificador, objetivo, editor, revisor y exclusiones. |
+| Rama y base | Nombre de rama y hash de la base: comprobados directamente si hay acceso a Git; si no, atribuidos al estado proporcionado por el editor. |
+| Contenido | Archivos y comportamiento cambiado; diff o commits exactos. Distinguir cambios preparados, sin preparar y archivos nuevos. |
+| Comprobaciones | Comandos o recorridos realmente ejecutados, resultado, fecha y contenido al que corresponden. Separar resultados propios, comunicados por Juan y procedentes de otras entregas. |
+| Limitaciones | Qué no se ejecutó, incidencias abiertas, riesgos y pruebas manuales pendientes. |
+| Siguiente paso | Quién debe actuar, qué revisar o probar y qué autorización falta. |
+
+Si no hay commit, adjuntar el diff correspondiente y el contenido de los archivos
+nuevos: un hash de base no describe los cambios locales. Identificar la versión
+de esa entrega para que una revisión no se atribuya a cambios posteriores.
+Aplicar las reglas de alcance y datos de AGENTS.md.
+
+## Ubicación y transporte de revisiones
+
+Las revisiones se entregan como **archivo adjunto** a Juan, que lo proporciona
+a Codex. Cuando Juan lo solicite, Codex puede copiar el adjunto a
+`docs/reviews/REVISION-<tarea>.md` (por ejemplo, `REVISION-03.md`), conservando
+autor, fecha, alcance y limitaciones del informe original. No se guarda una
+revisión en el repositorio por iniciativa propia.
+
+Antes de revisar, el revisor verifica que ha recibido AGENTS.md y la entrega
+autosuficiente descrita arriba. Una ruta local o un enlace a otra conversación
+no garantiza acceso. Si falta material imprescindible, lo pide a Juan;
+no presupone que pueda consultar carpetas o ejecutar comandos del editor.
+
+El informe identifica tarea, autor, fecha, rama, base y versión del diff revisado.
+Cada hallazgo incluye prioridad, referencia, problema, efecto y comprobación
+propuesta. La entrega posterior relaciona cada hallazgo con su resolución.
+
+## Comprobaciones sin repeticiones innecesarias
+
+Aplicar la regla de reutilización de resultados de AGENTS.md. El editor consulta
+DEVELOPMENT.md para los comandos y empieza por las pruebas afectadas cuando
+la corrección es localizada. Si procede una suite completa por el alcance o
+riesgo del cambio, usa `npm test -- --maxWorkers=2` y explica por qué.
+La entrega registra las comprobaciones pendientes y cualquier bloqueo, como
+un timeout del navegador. El informe del revisor analiza esa evidencia recibida.
+
+## Trabajo pausado y cambios separados
+
+Seguir la regla de pausa y preservación de AGENTS.md. El editor con acceso a Git
+verifica la separación usando consultas con `GIT_OPTIONAL_LOCKS=0`: compara
+antes y después la lista y el diff preparados y, cuando se exige conservar
+exactamente el índice, su huella. Entrega el diff sin preparar por separado,
+incluyendo los archivos nuevos. El revisor recibe esos resultados identificados
+como comprobaciones del editor; no se le encarga verificar el índice local.
+WORK_STATUS.md sigue siendo el registro de estado, sujeto al alcance autorizado.
