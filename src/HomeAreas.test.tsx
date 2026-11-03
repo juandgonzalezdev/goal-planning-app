@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { markPaid } from './test/bills'
 import { addFromHome, chooseHomeOption } from './test/homeControls'
 
 freshDatabaseForEachTest()
@@ -125,7 +126,7 @@ describe('Left to Pay', () => {
   it('puts the focus on Left to Pay when the bill was paid on its screen', async () => {
     await openAlex()
     await fire.click(payRow('Phone & Internet'))
-    await fire.click(button('Phone & Internet paid in December 2026'))
+    await markPaid('Phone & Internet', 'December 2026')
     await fire.click(button('Back'))
     await waitFor(() => expect(onHome()).toBe(true))
     expect(text(regionOf('Left to Pay'))).toContain('All your December bills are paid.')

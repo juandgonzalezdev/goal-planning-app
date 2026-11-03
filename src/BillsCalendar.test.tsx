@@ -137,7 +137,7 @@ describe('Bills calendar', () => {
     expect(water.getAttribute('aria-label')).toBe('Water, 80,00 zł, paid. Open bill'.replace(' zł', '\u00a0zł'))
     await fire.click(water)
     expect(heading('Water')).toBeTruthy()
-    expect(screen.getByText('Paid on 12 Feb 2028')).toBeTruthy()
+    expect(screen.getByText(/^Paid on 12 Feb 2028/)).toBeTruthy()
     expect(monthSelect().value).toBe('2028-02')
   })
 

@@ -281,7 +281,7 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     expect(text(regionOf('Cards & Loans'))).toContain('Monthly Payments · December 2026')
   })
 
-  it('opens an account to update its balance, edit or delete it, and keeps an unknown balance unknown', async () => {
+  it('keeps an unknown balance unknown and confirms deletion of an account with only balances', async () => {
     await openMoney()
     await openBlock('Accounts & Savings')
     await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Add Account/ }))
@@ -298,8 +298,34 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     await fire.click(button('Save Balance'))
     expect(text(piggy)).toContain('45,00 zł')
     expect(button('Edit: Shoebox')).toBeTruthy()
+    expect(button('Delete: Shoebox').getAttribute('aria-disabled')).toBeNull()
     await fire.click(button('Delete: Shoebox'))
+    const question = () => screen.getByRole('group', { name: 'Delete Shoebox?' })
+    expect(text(question())).toContain('every balance update for it from History')
+    await fire.click(within(question()).getByRole('button', { name: 'Cancel' }))
+    expect(within(regionOf('Accounts & Savings')).getByRole('button', { name: /^Shoebox/ })).toBeTruthy()
+    await fire.click(button('Delete: Shoebox'))
+    await fire.click(within(question()).getByRole('button', { name: 'Delete Account and Balances' }))
     expect(within(regionOf('Accounts & Savings')).queryByRole('button', { name: /^Shoebox/ })).toBeNull()
+    await fire.click(tab('History'))
+    expect(screen.queryByRole('button', { name: /^Balance updateShoebox/ })).toBeNull()
+  })
+
+  it('can remove an account created by mistake with an initial balance', async () => {
+    await openMoney()
+    await openBlock('Accounts & Savings')
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Add Account/ }))
+    await fire.change(screen.getByLabelText('Account Name'), { target: { value: 'Mistaken account' } })
+    await fire.change(screen.getByLabelText(/^Balance \(/), { target: { value: '123' } })
+    await fire.click(button('Save Account'))
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /^Mistaken account/ }))
+    await fire.click(button('Delete: Mistaken account'))
+    const question = screen.getByRole('group', { name: 'Delete Mistaken account?' })
+    expect(text(question)).toContain('This cannot be undone')
+    await fire.click(within(question).getByRole('button', { name: 'Delete Account and Balances' }))
+    expect(within(regionOf('Accounts & Savings')).queryByRole('button', { name: /^Mistaken account/ })).toBeNull()
+    await fire.click(tab('History'))
+    expect(screen.queryByRole('button', { name: /^Balance updateMistaken account/ })).toBeNull()
   })
 
   it('shows the goals and the Emergency Fund in Goals, saying they are part of Savings', async () => {

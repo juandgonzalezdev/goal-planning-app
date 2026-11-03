@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUnsavedChanges } from '../../app/unsavedChanges'
+import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { amountText } from '../../ui/labels'
 import { Icon } from '../../components/Icon'
@@ -7,7 +7,9 @@ import { MonthSwitch } from '../../components/MonthSwitch'
 import { yearsAround, type YearMonth } from '../../domain/calendar'
 import { MonthYearField } from '../../components/MonthYearField'
 import { BillForm } from './BillForm'
-import { billsForMonth, deleteBill, setBillMonthAmount, setBillPaid, setUsualAmountFrom, usualAmountFor } from '../../domain/finance/bills'
+import { billsForMonth, deleteBill, markBillNotPaid, setBillMonthAmount, setUsualAmountFrom, usualAmountFor } from '../../domain/finance/bills'
+import { ConfirmNotPaid, MarkPaidForm } from './MarkPaid'
+import { paidText } from './payment'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { formatAmount, formatDate, formatDueDay, formatYearMonth } from '../../ui/format'
@@ -54,6 +56,12 @@ export function BillScreen(props: Props) {
   const setMonthText = (text: string | null) => setMonthDraft(text === null ? null : { month, text })
   const [usual, setUsual] = useState<{ amount: string; from: string; error?: string } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Mark as Paid (its form) or Mark as Not Paid (its question), for the month they were opened on.
+  const [paying, setPaying] = useState<{ month: YearMonth; step: 'form' | 'not-paid' } | null>(null)
+  const payStep = paying?.month === month ? paying.step : null
+  // After the form or the question closes, the keyboard goes back to the button that opened it.
+  const [payReturn, setPayReturn] = useState(false)
+  const closePaying = () => { setPaying(null); setPayReturn(true) }
   const [message, setMessage] = useState('')
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
@@ -61,7 +69,9 @@ export function BillScreen(props: Props) {
   const [sending, setSending] = useState<'month' | 'usual' | 'paid' | 'delete' | null>(null)
   const [monthBase, setMonthBase] = useState(revision)
   const [usualBase, setUsualBase] = useState(revision)
-  useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText }, { month: monthDraft?.month })
+  const amountForm = useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText }, { month: monthDraft?.month })
+  const guard = useLeaveGuard()
+  const paymentTag = `bill-payment:${billId}`
   // The amount typed for one month belongs to that month: after another month is chosen (the app asks first), it is gone.
   if (monthDraft && monthDraft.month !== month) setMonthDraft(null)
   const [messageMonth, setMessageMonth] = useState(month)
@@ -100,7 +110,7 @@ export function BillScreen(props: Props) {
   const usualNow = usualAmountFor(bill, month)
   const debt = bill.debtId ? data.debts.find(d => d.id === bill.debtId) ?? null : null
   const monthLabel = formatYearMonth(month)
-  const paidOn = data.billMonths.find(record => record.billId === bill.id && record.month === month)?.paidOn
+  const record = data.billMonths.find(item => item.billId === bill.id && item.month === month)
 
   const saveMonthAmount = async (value: number | null | undefined, done: string) => {
     const outcome = await save('month', done, current => setBillMonthAmount(current, bill.id, month, value), monthBase)
@@ -136,14 +146,28 @@ export function BillScreen(props: Props) {
               <b>{occurrence.amount === null ? 'Unknown' : money(occurrence.amount)}</b>
             </div>
             <div className="bill-line">
-              <small>{occurrence.paid ? (paidOn ? `Paid on ${formatDate(paidOn)}` : 'Paid') : `Due ${formatDate(occurrence.dueDate)}`}</small>
-              <button type="button" className={`paid-toggle${occurrence.paid ? ' is-paid' : ''}`} aria-pressed={occurrence.paid} aria-label={`${bill.name} paid in ${monthLabel}`}
-                aria-disabled={blocked || undefined} onClick={() => void save('paid', occurrence.paid ? 'Marked as not paid.' : 'Marked as paid.', current => setBillPaid(current, bill.id, month, !occurrence.paid, today))}>
-                {occurrence.paid ? '✓ Paid' : '○ Pending'}
-              </button>
+              <small>{occurrence.paid ? paidText(data, record) : `Due ${formatDate(occurrence.dueDate)}`}</small>
+              <b className={`paid-state${occurrence.paid ? ' is-paid' : ''}`}>{occurrence.paid ? '✓ Paid' : '○ Pending'}</b>
             </div>
+            {record?.interest !== undefined && occurrence.paid && <p className="muted-note">Interest in this payment: {money(record.interest)}</p>}
+            {payStep === null && (
+              <button type="button" className="button-small align-start" autoFocus={payReturn} aria-label={`${occurrence.paid ? 'Mark as Not Paid' : 'Mark as Paid'}: ${bill.name}, ${monthLabel}`}
+                onClick={() => guard(form => form.id === amountForm.id, () => { setMonthText(null); setMessage(''); setPayReturn(false); setPaying({ month, step: occurrence.paid ? 'not-paid' : 'form' }) })}>
+                {occurrence.paid ? 'Mark as Not Paid' : 'Mark as Paid'}
+              </button>
+            )}
+            {payStep === 'form' && !occurrence.paid && (
+              <MarkPaidForm data={data} occurrence={occurrence} today={today} onChange={onChange} tag={paymentTag}
+                onSaved={done => { closePaying(); setMessage(done) }} onCancel={closePaying} />
+            )}
+            {payStep === 'not-paid' && occurrence.paid && (
+              <ConfirmNotPaid occurrence={occurrence} sending={sending === 'paid'} onCancel={closePaying} onConfirm={() => {
+                if (blocked || sending) return
+                void save('paid', `${bill.name} marked as not paid for ${monthLabel}.`, current => markBillNotPaid(current, bill.id, month)).then(outcome => { if (isKept(outcome)) closePaying() })
+              }} />
+            )}
             {monthText === null
-              ? <button type="button" className="text-button" onClick={() => { setMonthBase(revision); setMonthText(amountText(occurrence.amount)) }}>Change Amount for {monthLabel}</button>
+              ? <button type="button" className="text-button" onClick={() => guard(form => form.tag === paymentTag, () => { setPaying(null); setPayReturn(false); setMonthBase(revision); setMonthText(amountText(occurrence.amount)) })}>Change Amount for {monthLabel}</button>
               : <div className="amount-editor">
                 <Field id="bill-month-amount" label={`Amount for ${monthLabel} (${currency})`} inputMode="decimal" value={monthText} onChange={setMonthText} />
                 <div className="inline-actions">

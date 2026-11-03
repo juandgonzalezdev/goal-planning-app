@@ -203,7 +203,7 @@ export function HomeScreen(props: Props) {
         </div>
       </HomeAreaFrame>
     ),
-    'left-to-pay': <LeftToPay data={data} month={month} today={today} showAll={props.showAllBills} onShowAllChange={props.onShowAllBillsChange}
+    'left-to-pay': <LeftToPay data={data} month={month} today={today} showAll={props.showAllBills} onShowAllChange={props.onShowAllBillsChange} onChange={props.onChange}
       onOpenBills={() => props.onOpen('bills', { area: 'left-to-pay', key: 'bills-link' })} onOpenBill={id => props.onOpenBill(id, { area: 'left-to-pay', key: `pay-${id}` })} />,
     'money-goals': (
       <HomeAreaFrame area="money-goals" period={`Latest balances by ${formatDate(asOf)}`}

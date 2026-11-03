@@ -1,4 +1,4 @@
-import { dateInMonth, isYearMonth, type YearMonth } from '../calendar'
+import { dateInMonth, isCalendarDate, isYearMonth, type YearMonth } from '../calendar'
 import { characterCount } from '../goal'
 import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
@@ -128,6 +128,72 @@ export const setBillPaid = (data: FinanceData, billId: Id, month: YearMonth, pai
     const rest: BillMonth = { ...record, paid }
     delete rest.paidOn
     return paid && paidOn ? { ...rest, paidOn } : rest
+  })
+
+/** What Mark as Paid records for one month of a bill. */
+export interface PaymentFields {
+  /** The month's amount. When it differs from what the month had, only that month changes. */
+  amount: MoneyAmount
+  paidOn: CalendarDate
+  /** The account it was paid from, or null for "Not sure". Cards are not accounts. */
+  paidFrom: Id | null
+  /** Loan bills only: the interest inside this payment, from the statement. null: not known, and never guessed. */
+  interest: MoneyAmount | null
+}
+
+export type PaymentError = 'not-due' | 'invalid-amount' | 'invalid-date' | 'date-after-today' | 'unknown-account' | 'interest-not-loan' | 'invalid-interest' | 'interest-above-amount'
+
+export function validatePayment(data: FinanceData, billId: Id, month: YearMonth, fields: PaymentFields, today: CalendarDate): PaymentError[] {
+  const errors: PaymentError[] = []
+  const bill = data.bills.find(item => item.id === billId)
+  if (!bill || !isBillDueIn(bill, month)) return ['not-due']
+  if (!isMinorAmount(fields.amount) || fields.amount < 0) errors.push('invalid-amount')
+  if (!isCalendarDate(fields.paidOn)) errors.push('invalid-date')
+  else if (fields.paidOn > today) errors.push('date-after-today')
+  if (fields.paidFrom !== null && !data.moneyAccounts.some(account => account.id === fields.paidFrom)) errors.push('unknown-account')
+  if (fields.interest !== null) {
+    const debt = bill.debtId ? data.debts.find(item => item.id === bill.debtId) : undefined
+    if (debt?.kind !== 'loan') errors.push('interest-not-loan')
+    else if (!isMinorAmount(fields.interest) || fields.interest < 0) errors.push('invalid-interest')
+    else if (isMinorAmount(fields.amount) && fields.interest > fields.amount) errors.push('interest-above-amount')
+  }
+  return errors
+}
+
+/**
+ * Mark as Paid, as one change: the month's amount (only when it differs, and
+ * only that month), paid, the date, the account and, for a loan, the interest
+ * the statement shows. Nothing else changes: not the usual amount, not other
+ * months, and never a debt's Remaining Balance. Invalid fields change nothing.
+ */
+export function markBillPaid(data: FinanceData, billId: Id, month: YearMonth, fields: PaymentFields, today: CalendarDate): FinanceData {
+  if (validatePayment(data, billId, month, fields, today).length > 0) return data
+  const bill = data.bills.find(item => item.id === billId)!
+  const current = billsForMonth(data, month).find(item => item.bill.id === billId)!
+  return withBillMonth(data, billId, month, record => {
+    const next: BillMonth = { ...record, paid: true, paidOn: fields.paidOn }
+    delete next.paidFrom
+    delete next.interest
+    if (fields.amount !== current.amount) {
+      // Back to the usual amount needs no amount of its own.
+      if (fields.amount === usualAmountFor(bill, month)) delete next.amount
+      else next.amount = fields.amount
+    }
+    if (fields.paidFrom !== null) next.paidFrom = fields.paidFrom
+    if (fields.interest !== null) next.interest = fields.interest
+    return next
+  })
+}
+
+/** Mark as Not Paid: the month is not paid again, without its date, account or interest. Its amount stays. */
+export const markBillNotPaid = (data: FinanceData, billId: Id, month: YearMonth) =>
+  withBillMonth(data, billId, month, record => {
+    const next: BillMonth = { ...record, paid: false }
+    delete next.paidOn
+    delete next.paidFrom
+    delete next.interest
+    delete next.recordedAt
+    return next
   })
 
 /**

@@ -278,9 +278,11 @@ Both are parts of This Month.
 
 ### Left to Pay
 
-The unpaid bills of the chosen month, by due date. A bill whose due date has passed shows as overdue. Tap a bill to open it, or **Bills** to open the tab.
+The unpaid bills of the chosen month, by due date. A bill whose due date has passed shows as overdue. Tap a bill to open it, or **Bills** to open the tab. **Mark as Paid** under a bill opens its short form right there (see [Bills and Subscriptions](#10-bills-and-subscriptions)).
 
 Home shows the first five. When there are more than five, **Show All** (with the number of bills) shows the whole list on Home, and **Show Fewer** goes back to five. Show All stays while the app is open, also after you open a bill and come **Back**.
+
+If Show Fewer would hide a payment form you changed, the app asks first. **Keep Editing** keeps the full list and your changes; **Discard and Leave** closes that form and shows five bills.
 
 > **Example (demo, January 2027):** Alex has 11 unpaid bills, so Home shows five and **Show All 11**.
 
@@ -320,6 +322,8 @@ Recording income doesn't change any account balance. See [How Your Records Chang
 In **Money › Accounts & Savings**, add each account with its kind: **Daily Spending**, **Savings**, **Investments** or **Other**.
 
 - **Update Balance** records a new balance with its date. The earlier balance stays in History.
+- **Delete** can remove an account with no movements, even if it has saved balances (for example, an account created by mistake with an initial balance). It asks first: confirming deletes the account and all its balance updates from History, and cannot be undone. **Cancel** keeps the account and its balances. Other accounts and their records stay.
+- Bill payments, income, spending, transfers in either direction and goal movements keep the account from being deleted. The reason appears beside Delete before you try to save. The account and all its history stay; you can update its balance instead. Balances alone do not block deletion.
 - If you don't know a balance, leave it empty. It shows as **Not entered**, never as 0.
 - **Savings** is what your savings accounts hold. Goals and the Emergency Fund are purposes inside your savings, not extra money:
 
@@ -339,7 +343,7 @@ The **Bills** tab shows the bills of the chosen month.
   - Tap a day, then **View day details**, to see its bills.
   - **+ Add Bill** adds a bill on that day.
   - **Back to calendar** returns to the calendar.
-- **List** shows every bill with **○ Pending** or **✓ Paid**. Tap it to change it.
+- **List** shows every bill with **Mark as Paid** or **✓ Paid** (with the date and the account). See **Mark as Paid** below.
   - **Change Amount for [month]** changes that month only.
   - **Details** opens the bill.
 - The **All / Pending / Paid** filter changes the list only. The month's totals stay the same.
@@ -350,8 +354,27 @@ In a bill's own screen:
 
 - **This month's amount** can be different from the usual amount. **Not Known Yet** leaves it unknown, which is never treated as 0. **Use Usual Amount** goes back to the usual amount.
 - **Change Usual Amount** changes it from a month you choose. Earlier months stay the same.
-- **Paid** marks the chosen month as paid. It records **today** as the payment date, and it doesn't record which account you paid from. It doesn't change any account or loan balance.
+- **Mark as Paid** or **Mark as Not Paid** for the chosen month (see below). A paid month shows **Paid on [date] · [account]** and, for a loan, the interest you entered.
 - **Edit Details** and **Delete Bill**.
+
+**Mark as Paid**
+
+**Mark as Paid** opens the same short form on Home (Left to Pay), in the Bills list and on the bill. Nothing is marked with a single tap.
+
+| Field | What it suggests | Rules |
+| --- | --- | --- |
+| **Amount** | The month's amount. | If you change it, only that month changes. When the amount isn't known yet, you have to enter it. With the amounts hidden, the form doesn't show it and keeps it as it is. |
+| **Paid on** | The due date if it has passed, otherwise today. | It must be a real calendar date and can't be after today. |
+| **Paid from** | Your account if you have exactly one **Daily Spending** account. Otherwise you choose. | Only accounts: a card isn't an account. **Not sure** saves no account, and then this payment won't match your account balances. |
+| **Interest in this payment** | Empty. Shown only for a loan. | Optional, from your statement. Without it, the interest isn't counted in Spent: the app never guesses it. It can't be more than the amount. |
+
+**Save as Paid** saves the amount and the payment together, as one change. Paying never changes a card's or loan's **Remaining Balance**: update it from your statement. There are no partial payments, and no Undo. To correct a payment, use **Mark as Not Paid** and mark it again.
+
+**Mark as Not Paid** asks first. It removes the date, the account and the interest saved for that month; the month's amount stays.
+
+In the list, **✓ Paid** is announced as **Paid. Mark as Not Paid**, followed by the bill and month. Pressing **Mark as Paid** again asks before closing a form you changed. **Mark as Paid** and **Change Amount** use one editor at a time in the list and bill details: switching asks before discarding changes. **Keep Editing** preserves what you typed; **Cancel** explicitly closes its form and discards that draft.
+
+On Home, a bill you mark as paid leaves Left to Pay, and a message says it was saved. In the Bills list with **Pending** chosen, the bill leaves the list in the same way.
 
 **Subscriptions** also show:
 
@@ -458,7 +481,7 @@ Each record changes some figures and not others. **Account and loan balances onl
 | **Goal: Out of my savings** | No change. | The savings account goes down. | It adds a new balance on the movement's date. |
 | **Goal: Savings I already have / Back to unassigned** | No change. | No change. | Only the purpose of the money changes. |
 
-**Why "Not explained by the records" can appear:** "How is this worked out?" only follows records that say which account they used. Today, the app doesn't record an account for income you receive or for bills you mark as paid. So in your own space these amounts often show as **Not explained by the records**. Your Result is still right; only the "where did it go" lines are incomplete.
+**Why "Not explained by the records" can appear:** "How is this worked out?" only follows records that say which account they used. **Mark as Paid** records the account (unless you choose **Not sure**), but the app doesn't record an account for income you receive yet, nor for bills marked as paid before this version. Those amounts can show as **Not explained by the records**. Your Result is still right; only the "where did it go" lines are incomplete.
 
 ## 15. History
 

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Icon } from '../../components/Icon'
 import type { YearMonth } from '../../domain/calendar'
-import { billsForMonth, groupBillsByDay, setBillMonthAmount, setBillPaid, summarizeBills, type BillOccurrence } from '../../domain/finance/bills'
+import { billsForMonth, groupBillsByDay, markBillNotPaid, setBillMonthAmount, summarizeBills, type BillOccurrence } from '../../domain/finance/bills'
+import { ConfirmNotPaid, MarkPaidForm } from './MarkPaid'
+import { billMonthOf, paidText } from './payment'
 import { ownerColor, ownerName } from '../../domain/finance/space'
 import type { FinanceData, Id, RecurringBill } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -10,7 +12,7 @@ import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { AllAmountsToggle } from '../../ui/privacy'
-import { isKept, type ChangeSpace } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { LeftToPayMessage } from '../home/LeftToPay'
 import { MonthSwitch } from '../../components/MonthSwitch'
@@ -57,6 +59,13 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   const summary = summarizeBills(all)
   const shown = filterBills(all, view.filter)
   const amounts = useAllAmounts(data.space.currency)
+  // What Mark as Paid or Mark as Not Paid just did in the list, for this month. A bill that leaves the
+  // list (Pending or Paid chosen) leaves the keyboard on this message.
+  const [paidNote, setPaidNote] = useState<{ month: YearMonth; text: string } | null>(null)
+  const notePaid = (text: string, leaves: boolean) => {
+    setPaidNote({ month, text })
+    if (leaves) requestAnimationFrame(() => document.getElementById(PAID_NOTE_ID)?.focus())
+  }
   // A bill just added from the day panel: the calendar shows its day in this month.
   const added = view.added ? { ...view.added, bill: data.bills.find(b => b.id === view.added?.id), here: all.find(o => o.bill.id === view.added?.id) } : null
   const selected = selectedDay(month, added?.here?.dueDate ?? view.selected, today, shown)
@@ -161,12 +170,13 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
 
       {summary.count > 0 && view.mode === 'list' && (
         <div className="bill-list no-print">
+          <p id={PAID_NOTE_ID} className="muted-note" role="status" tabIndex={-1}>{paidNote?.month === month ? paidNote.text : ''}</p>
           {shown.length === 0 && <div className="empty-block"><p>No {view.filter} bills in {monthLabel}.</p></div>}
           {groupBillsByDay(shown).map(day => (
             <section key={day.dueDate} className="bill-list-day" aria-labelledby={`bill-date-${day.dueDate}`}>
               <h2 id={`bill-date-${day.dueDate}`} className="bill-list-date">{formatLongDate(day.dueDate)}</h2>
               {day.occurrences.map(occurrence => (
-                <BillItem key={`${occurrence.bill.id}:${occurrence.month}`} data={data} occurrence={occurrence} today={today} amounts={amounts} filter={view.filter} onChange={onChange} onOpenBill={id => onOpenBill(id, `details-${id}`)} />
+                <BillItem key={`${occurrence.bill.id}:${occurrence.month}`} data={data} occurrence={occurrence} today={today} amounts={amounts} filter={view.filter} onChange={onChange} onPaid={notePaid} onOpenBill={id => onOpenBill(id, `details-${id}`)} />
               ))}
             </section>
           ))}
@@ -298,6 +308,7 @@ function PrintList({ bills, monthLabel, amounts, data }: { bills: BillOccurrence
 
 /** The place of a list bill's amount editor, so a change of view can tell whether it stays. */
 const ITEM_TAG = 'bills-item:'
+const PAID_NOTE_ID = 'bill-list-paid-note'
 const itemTag = (billId: Id) => `${ITEM_TAG}${billId}`
 
 /**
@@ -305,11 +316,19 @@ const itemTag = (billId: Id) => `${ITEM_TAG}${billId}`
  * month (the list keys it by both), so an amount is only ever saved for the
  * month it was typed for.
  */
-function BillItem({ data, occurrence, today, amounts, filter, onChange, onOpenBill }: {
-  data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; amounts: BlockAmounts; filter: BillsFilter; onChange: Props['onChange']; onOpenBill: (id: Id) => void
+function BillItem({ data, occurrence, today, amounts, filter, onChange, onPaid, onOpenBill }: {
+  data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; amounts: BlockAmounts; filter: BillsFilter; onChange: Props['onChange']
+  /** What was saved, and whether the bill leaves the list because of it (Pending or Paid chosen). */
+  onPaid: (message: string, leaves: boolean) => void
+  onOpenBill: (id: Id) => void
 }) {
   const { bill, month, amount, paid, amountChangedThisMonth } = occurrence
   const [editing, setEditing] = useState(false)
+  // Mark as Paid opens its form here; Mark as Not Paid asks here first.
+  const [paying, setPaying] = useState<'form' | 'not-paid' | null>(null)
+  const toggle = useRef<HTMLButtonElement>(null)
+  // Closing the form or the question leaves the keyboard on the button that opened it.
+  const closePaying = () => { setPaying(null); toggle.current?.focus() }
   const [text, setText] = useState('')
   const [error, setError] = useState(false)
   const monthName = formatYearMonth(month)
@@ -320,7 +339,9 @@ function BillItem({ data, occurrence, today, amounts, filter, onChange, onOpenBi
   const amountForm = useUnsavedChanges(`Amount for ${monthName}: ${bill.name}`, editing ? { 'Amount': text } : null, { tag: itemTag(bill.id), month })
   const guard = useLeaveGuard()
 
-  const startEditing = () => { setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setBase(revision); saver.clearRefusal(); setEditing(true) }
+  const startEditing = () => guard(form => form.tag === itemTag(bill.id) && form.id !== amountForm.id, () => {
+    setPaying(null); setText(amount === null ? '' : (amount / 100).toFixed(2)); setError(false); setBase(revision); saver.clearRefusal(); setEditing(true)
+  })
   // The editor closes only once the change is kept; otherwise it stays open with what was typed.
   const saveAmount = async (value: number | null | undefined) => {
     const outcome = await saver.save(() => onChange(current => setBillMonthAmount(current, bill.id, month, value), base))
@@ -340,16 +361,30 @@ function BillItem({ data, occurrence, today, amounts, filter, onChange, onOpenBi
       </div>
       <div className="bill-line">
         <small>{bill.category} · {ownerName(data.space, bill.owner)}{amountChangedThisMonth && ' · Changed for this month'}</small>
-        <button type="button" className={`paid-toggle${paid ? ' is-paid' : ''}`} aria-pressed={paid} aria-label={`${bill.name} paid in ${monthName}`}
-          aria-disabled={saver.blocked || undefined} onClick={() => {
-            const togglePaid = () => void saver.save(() => onChange(current => setBillPaid(current, bill.id, month, !paid, today)))
-            // With Pending or Paid chosen, the bill leaves the list: an amount being typed here would close with it.
-            if (filter === 'all') togglePaid()
-            else guard(form => form.id === amountForm.id, togglePaid)
+        <button type="button" className={`paid-toggle${paid ? ' is-paid' : ''}`} ref={toggle} aria-expanded={paying !== null}
+          aria-label={`${paid ? 'Paid. Mark as Not Paid' : 'Mark as Paid'}: ${bill.name}, ${monthName}`} onClick={() => {
+            const open = () => { setPaying(paying ? null : paid ? 'not-paid' : 'form') }
+            // The amount being typed here closes when the form opens: the app asks first.
+            if (editing) guard(form => form.id === amountForm.id, () => { setEditing(false); open() })
+            else guard(form => form.tag === itemTag(bill.id), open)
           }}>
-          {paid ? '✓ Paid' : '○ Pending'}
+          {paid ? '✓ Paid' : 'Mark as Paid'}
         </button>
       </div>
+      {paid && <small className="paid-detail">{paidText(data, billMonthOf(data, occurrence))}</small>}
+      {paying === 'form' && !paid && (
+        <MarkPaidForm data={data} occurrence={occurrence} today={today} hidden={amounts.hidden} onChange={onChange} tag={itemTag(bill.id)}
+          onSaved={done => { closePaying(); onPaid(done, filter === 'pending') }} onCancel={closePaying} />
+      )}
+      {paying === 'not-paid' && paid && (
+        <ConfirmNotPaid occurrence={occurrence} sending={saver.sending} onCancel={closePaying} onConfirm={() => {
+          if (saver.blocked || saver.sending) return
+          const unpay = () => void saver.save(() => onChange(current => markBillNotPaid(current, bill.id, month))).then(outcome => {
+            if (isKept(outcome)) { closePaying(); onPaid(outcomeText(`${bill.name} marked as not paid for ${monthName}.`, outcome), filter === 'paid') }
+          })
+          unpay()
+        }} />
+      )}
       {!editing && (
         <div className="inline-actions">
           <button type="button" className="text-button" aria-label={`Change Amount for ${monthName}: ${bill.name}`} onClick={startEditing}>Change Amount for {monthName}</button>

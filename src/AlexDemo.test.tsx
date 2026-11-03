@@ -7,6 +7,7 @@ import { createSpaceData } from './domain/finance/space'
 import { STORAGE_KEY } from './data/localStore'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
+import { markPaid } from './test/bills'
 import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
@@ -108,7 +109,7 @@ describe('Alex demo: Home', () => {
     expect(region('Left to Pay')).toContain('You still have bills to pay in December.')
     await fire.click(tab('Bills'))
     await showBillsList()
-    await fire.click(button('Phone & Internet paid in December 2026'))
+    await markPaid('Phone & Internet', 'December 2026')
     await fire.click(tab('Home'))
     expect(region('Left to Pay')).toContain('All your December bills are paid.')
     expect(stat('Spent')).toContain('5167,34 zł')
@@ -431,7 +432,7 @@ describe('Alex demo: keeping and resetting (15)', () => {
     await openAlex(storage)
     await fire.click(tab('Bills'))
     await showBillsList()
-    await fire.click(button('Phone & Internet paid in December 2026'))
+    await markPaid('Phone & Internet', 'December 2026')
     await startDemoReset()
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     await fire.click(button('Exit Demo'))

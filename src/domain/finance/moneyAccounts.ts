@@ -70,8 +70,20 @@ export function saveAccount(data: FinanceData, id: Id, fields: AccountFields): A
   return { status: 'ok', data: { ...data, moneyAccounts: exists ? data.moneyAccounts.map(a => (a.id === id ? account : a)) : [...data.moneyAccounts, account] } }
 }
 
-/** Deletes an account and its balances. A savings account that goal movements point at is kept. */
+/** Movement references block deletion; balance snapshots alone can be removed with the account. */
+export function accountDeletionReason(data: FinanceData, id: Id): string | null {
+  const linked = [
+    data.billMonths.some(record => record.paidFrom === id) && 'bill payments',
+    data.income.some(record => record.accountId === id) && 'income',
+    data.expenses.some(record => record.accountId === id) && 'spending',
+    data.transfers.some(record => record.fromAccountId === id || record.toAccountId === id) && 'transfers',
+    data.goalMovements.some(record => record.accountId === id) && 'goal movements',
+  ].filter(Boolean)
+  return linked.length ? `This account has linked records (${linked.join(', ')}), so it cannot be deleted. Its history stays. You can update its balance instead.` : null
+}
+
+/** Accounts used by movements stay. Otherwise delete the account and its balance snapshots. */
 export function deleteAccount(data: FinanceData, id: Id): FinanceData | null {
-  if (data.goalMovements.some(movement => movement.accountId === id)) return null
-  return { ...data, moneyAccounts: data.moneyAccounts.filter(a => a.id !== id), balances: data.balances.filter(b => b.accountId !== id) }
+  if (accountDeletionReason(data, id)) return null
+  return { ...data, moneyAccounts: data.moneyAccounts.filter(a => a.id !== id), balances: data.balances.filter(record => record.accountId !== id) }
 }

@@ -6,6 +6,7 @@ import { STORAGE_KEY } from './data/localStore'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, refuseWrites, settle, storedData, freshDatabaseForEachTest } from './test/space'
+import { markPaid } from './test/bills'
 import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption } from './test/homeControls'
 
@@ -242,7 +243,7 @@ describe('Demo', () => {
     await fire.click(tab('Bills'))
     await pickMonth('2026-11')
     await showBillsList()
-    await fire.click(button('Furniture Loan paid in November 2026'))
+    await markPaid('Furniture Loan', 'November 2026')
     expect(stat('Left to Pay')).toContain('5300,98 zł')
     expect(storage.length).toBe(0)
 
@@ -782,14 +783,12 @@ describe('Bills', () => {
     await fire.click(tab('Bills'))
     await pickMonth('2026-11')
     await showBillsList()
-    const rent = button('Rent paid in November 2026')
-    expect(rent.getAttribute('aria-pressed')).toBe('false')
-    await fire.click(rent)
-    expect(button('Rent paid in November 2026').getAttribute('aria-pressed')).toBe('true')
+    await markPaid('Rent', 'November 2026')
+    expect(button('Paid. Mark as Not Paid: Rent, November 2026').textContent).toBe('✓ Paid')
     expect(await planned('Left to Pay')).toContain('3050,98 zł')
 
     await pickMonth('2026-10')
-    expect(button('Rent paid in October 2026').getAttribute('aria-pressed')).toBe('true')
+    expect(button('Paid. Mark as Not Paid: Rent, October 2026').textContent).toBe('✓ Paid')
     expect(await planned('Left to Pay')).toContain('0,00 zł')
   })
 

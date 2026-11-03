@@ -86,6 +86,25 @@ personal.
   Needed / Could adjust / Optional).
 - Un pago guarda **cuándo** se pagó y **desde qué cuenta**. Pagado después del
   vencimiento = "Paid late"; sin pagar tras el vencimiento = "Overdue".
+- **Mark as Paid (M1)** es siempre un formulario corto (Home, lista de Bills y
+  detalle). Guarda en **un solo cambio** (`markBillPaid`): el importe del mes
+  (solo si cambia, y solo ese mes; si vuelve al habitual no guarda importe
+  propio), `paid`, `paidOn` (vencimiento si ya pasó, si no hoy; nunca después
+  de hoy), `paidFrom` (solo cuentas, no tarjetas; "Not sure" no guarda cuenta)
+  e `interest` (solo préstamos, opcional, nunca mayor que el importe). Un
+  importe desconocido exige escribirlo. Nunca inventa intereses ni cambia el
+  Remaining Balance. Sin pagos parciales ni Undo.
+- **Mark as Not Paid** pide confirmación y quita `paidOn`, `paidFrom` e
+  `interest` de ese mes (`markBillNotPaid`); el importe del mes se conserva.
+- `paidOn` se valida con `isCalendarDate`: una fecha inexistente no se normaliza
+  a otro día y no se guarda.
+- Una cuenta con pagos (`paidFrom`), ingresos, gastos, transferencias
+  de entrada o salida o movimientos de metas no se puede borrar. La interfaz
+  explica las referencias antes de guardar y el dominio vuelve a comprobarlas.
+  Si solo tiene saldos, se permite borrar la cuenta y todos sus snapshots,
+  con confirmación explícita de que también desaparecen sus actualizaciones
+  de History y no se puede deshacer. Cancel conserva cuenta y saldos.
+  Los saldos por sí solos no bloquean el borrado. No se tocan otras cuentas.
 
 ## 5b. Obligación, gasto, transferencia y deuda
 

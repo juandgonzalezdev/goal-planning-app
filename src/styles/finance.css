@@ -884,3 +884,14 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .income-context .inline-actions { flex-wrap: wrap; }
 .payment-list li.is-target { box-shadow: inset 3px 0 0 var(--color-primary, currentColor); padding-left: 10px; }
 .income-context .button-small { min-height: 44px; }
+
+/* Mark as Paid (M1): the short form, and the paid state shown on a bill. */
+.paid-state { flex-shrink: 0; font-size: 13px; font-weight: 650; color: var(--color-text-muted); }
+.paid-state.is-paid { color: var(--color-positive); }
+.mark-paid { margin-top: 8px; }
+.mark-paid-title { margin: 0; display: grid; gap: 2px; }
+.mark-paid-title small { font-size: 12px; color: var(--color-text-muted); }
+.mark-paid select { min-height: 44px; }
+.mark-paid .button-small, .callout .button-small { min-height: 44px; }
+.pay-row-actions { padding: 0 0 4px; }
+.pay-row-actions .text-button { min-height: 44px; }
