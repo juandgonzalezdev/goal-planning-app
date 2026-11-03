@@ -21,6 +21,8 @@ type Props = {
   onOpenGoal: (id: Id) => void
   /** No Emergency Fund yet: Start an Emergency Fund opens its draft. */
   onStartEmergency: () => void
+  /** + Add › Add a Contribution, with more than one goal: say to choose the goal first. */
+  addHint?: boolean
 }
 
 /**
@@ -28,7 +30,7 @@ type Props = {
  * goal, its progress and what is still to go. The Emergency Fund is not
  * added to Saved in Goals, and both are part of Savings, not extra money.
  */
-export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, onNew, onOpenGoal, onStartEmergency }: Props) {
+export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, onNew, onOpenGoal, onStartEmergency, addHint = false }: Props) {
   const fund = emergencyFund(data.goals)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const summary = summarizeGoals(data)
@@ -41,6 +43,7 @@ export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, on
         <h1 className="tab-title">{title}</h1>
         <button type="button" className="button-small button-small-primary" data-return-key="add-goal" onClick={onNew}><Icon name="plus" size={16} /> Add Goal</button>
       </div>
+      {addHint && <p id="goals-add-hint" className="callout" tabIndex={-1}>Choose the goal (or the Emergency Fund) to add a Contribution to. It opens on the amount.</p>}
       <section className="block" aria-labelledby="goals-emergency">
         <h2 id="goals-emergency" className="section-title">Emergency Fund</h2>
         {fund

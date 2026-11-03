@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { fire } from './space'
+import type { ADD_LABELS } from '../app/addMenu'
 
 /** Home options (the three-dots menu above the Home blocks): opens it and chooses Expand All, Collapse All or Customize Home. */
 export async function chooseHomeOption(name: 'Expand All' | 'Collapse All' | 'Customize Home') {
@@ -13,8 +14,8 @@ export async function startDemoReset() {
   await fire.click(within(screen.getByRole('group', { name: 'About the demo' })).getByRole('button', { name: 'Reset Demo' }))
 }
 
-/** + Add on Home: opens it and chooses one of its four options. */
-export async function addFromHome(name: 'Add Income' | 'Add Spending' | 'Add Bill' | 'Add Goal') {
+/** + Add in the header (on any tab): opens it and chooses one of its options. */
+export async function addFromHome(name: (typeof ADD_LABELS)[keyof typeof ADD_LABELS]) {
   await fire.click(screen.getByRole('button', { name: 'Add' }))
   await fire.click(within(screen.getByRole('menu', { name: 'Add' })).getByRole('menuitem', { name }))
 }

@@ -533,11 +533,6 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .home-parts { display: grid; gap: 10px; }
 .home-part { padding: 10px 12px; }
 .home-area.is-balances .home-part { background: var(--color-surface); }
-.home-add { display: flex; justify-content: flex-end; }
-.home-add .popover { min-width: 13rem; }
-/* + Add and its options: at least 44 px tall, for touch. Only here; other small buttons keep 40 px. */
-.home-add > .menu-root > .button-small { min-height: 44px; padding-inline: 16px; }
-.home-add .menu-item { min-height: 44px; }
 /* While customizing, each area shows only its heading; its content stays in the page (with anything typed). */
 .home-blocks.is-customizing .area-body { display: none; }
 .home-blocks.is-customizing .home-area { gap: 6px; }

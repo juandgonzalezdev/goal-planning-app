@@ -119,3 +119,16 @@ button.shell-brand:focus-visible { outline: 3px solid var(--color-focus); outlin
   .shell-main { padding-top: 40px; }
   .screen-actions .button-primary { min-height: 52px; }
 }
+
+/* + Add in the shared header, on every tab, before Settings. Its button and options are at least 44 px tall. */
+.shell-add { margin-left: auto; }
+.shell-add > .menu-root > .button-small { min-height: 44px; padding-inline: 14px; }
+.shell-add .popover { right: 0; left: auto; min-width: 14.5rem; max-width: calc(100vw - 2 * var(--space-gutter)); }
+.shell-add .menu-item { min-height: 44px; }
+.menu-separator { height: 1px; margin: 4px 0; background: var(--color-border); list-style: none; }
+.shell-add > .menu-root > .button-small { white-space: nowrap; }
+/* Very narrow screens: + Add keeps its icon, and its name for screen readers, so the title still fits. */
+@media (max-width: 359px) {
+  .shell-add > .menu-root > .button-small { min-width: 44px; padding-inline: 12px; justify-content: center; }
+  .shell-add .menu-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}

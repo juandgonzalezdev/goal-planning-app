@@ -35,7 +35,9 @@ import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/
 import { NO_FILTER } from './domain/finance/history'
 import { monthIncome } from './domain/finance/income'
 import { matchesValidity } from './domain/finance/validity'
-import { HomeScreen, type HomeAdd, type HomeSpot } from './features/home/HomeScreen'
+import { HomeScreen, type HomeSpot } from './features/home/HomeScreen'
+import { ADD_LABELS, addChoices, type AddChoice } from './app/addMenu'
+import { MenuButton, type MenuOption } from './components/MenuButton'
 import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
@@ -200,9 +202,13 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // Back (or Forward) to that same step finds Home there again, as a browser keeps a page's place, until another
   // link on Home is used. Home reached as a new step (a tab, the logo) starts at the top.
   const homeReturn = useRef<{ chain: string; idx: number; y: number; spot: HomeSpot } | null>(null)
-  const [homeMonthBack, setHomeMonthBack] = useState<{ chain: string; idx: number; month: YearMonth } | null>(null)
+  const [monthBack, setMonthBack] = useState<{ chain: string; idx: number; month: YearMonth } | null>(null)
   // + Add Income or Add Spending: the form to open when Money or History opens, once.
-  const [addRequest, setAddRequest] = useState<'income' | 'spending' | null>(null)
+  const [addRequest, setAddRequest] = useState<'income' | 'expense' | 'transfer' | null>(null)
+  // + Add in the header: Back (or Cancel) to the step it was used on puts the keyboard on it again, in the same place.
+  const addReturn = useRef<{ chain: string; idx: number; y: number } | null>(null)
+  // Add a Contribution with more than one goal: Goals says to choose one (and the goal opens on its amount).
+  const [goalsAddHint, setGoalsAddHint] = useState(false)
   // What gets the focus when the next screen opens: a field's id (+ Add) or a selector (an account, an income month).
   const addFocus = useRef<string | null>(null)
   // Reports & Backup asked for from Money: Settings opens with the focus on that section.
@@ -222,12 +228,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   if (lastScreen !== screen) {
     setLastScreen(screen)
     if (billsView.added && screen !== 'bills' && screen !== 'bill') setBillsView({ ...billsView, added: null })
-    // Back to the step of Home a Coming up bill was opened from: Home's month again. Any other move forgets it.
-    if (homeMonthBack && screen !== 'bill' && screen !== 'debt') {
+    // Back to the step a Coming up bill (or + Add's Mark a Bill as Paid) was opened from: that step's month again.
+    if (monthBack) {
       const step = navigation.current()
-      if (screen === 'home' && step.chain === homeMonthBack.chain && step.idx === homeMonthBack.idx) setMonth(homeMonthBack.month)
-      setHomeMonthBack(null)
+      if (step.chain === monthBack.chain && step.idx === monthBack.idx) { setMonth(monthBack.month); setMonthBack(null) }
     }
+    if (goalsAddHint && screen !== 'goals' && screen !== 'goal') setGoalsAddHint(false)
   }
   const open = space.open
   // Another tab erased the space: nothing chosen in it stays (the screen falls back to Welcome by itself).
@@ -303,6 +309,15 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       const input = /^[#[.]/.test(field) ? mainRef.current?.querySelector<HTMLElement>(field) : document.getElementById(field)
       if (input) { input.focus({ preventScroll: true }); input.scrollIntoView?.({ block: 'center' }); return }
     }
+    // Back (or Cancel) to the step + Add was used on: the keyboard on + Add again, in the same place.
+    const addBack = addReturn.current
+    const here = navigation.current()
+    if (addBack && addBack.chain === here.chain && addBack.idx === here.idx) {
+      addReturn.current = null
+      document.querySelector<HTMLElement>('.shell-add > .menu-root > button')?.focus({ preventScroll: true })
+      window.scrollTo?.(0, addBack.y)
+      return
+    }
     // Back to Home, on the step a link was used from: the same place, with the focus on that link (or, when it is gone
     // or inside a closed part, on the part's heading, else the area's heading, else + Add).
     const homeBack = screen === 'home' ? homeReturn.current : null
@@ -316,7 +331,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       const target = usable(keyed?.matches('button') ? keyed : keyed?.querySelector<HTMLElement>('button'))
         ?? usable(section ? root?.querySelector<HTMLElement>('.block-toggle') : null)
         ?? usable(area ? home?.querySelector<HTMLElement>(`#home-area-${area}`) : null)
-        ?? home?.querySelector<HTMLElement>('.home-add button')
+        ?? home?.querySelector<HTMLElement>('.area-title')
       target?.focus({ preventScroll: true })
       window.scrollTo?.(0, homeBack.y)
       target?.scrollIntoView?.({ block: 'nearest' })
@@ -652,7 +667,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const fromHome = (spot: HomeSpot, show: () => void, keepMonth?: YearMonth) => confirmLeave(ANY_FORM, () => {
     homeReturn.current = { ...navigation.current(), y: window.scrollY, spot }
     // A bill of Coming up opens in its own month; Back to this step of Home shows Home's month again.
-    setHomeMonthBack(keepMonth ? { ...navigation.current(), month: keepMonth } : null)
+    setMonthBack(keepMonth ? { ...navigation.current(), month: keepMonth } : null)
     show()
   })
   /**
@@ -660,19 +675,54 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    * their form once (Back and Forward do not open it again); Cancel there closes it and goes back to Home; saving
    * keeps that screen, with the new record, and Back goes to Home. A bill or a goal works as from Bills and Goals.
    */
-  const addFromHome = (what: HomeAdd, spot: HomeSpot) => fromHome(spot, () => {
-    if (what === 'income') {
+  /**
+   * + Add in the header, on any tab: the form or place that already exists for each choice, one step after where it was
+   * used (forms changed elsewhere ask first). Back, or Cancel on a form it opened, goes back there with the keyboard on it.
+   */
+  const addFrom = (choice: AddChoice) => confirmLeave(ANY_FORM, () => {
+    if (!open) return
+    const step = navigation.current()
+    addReturn.current = { ...step, y: window.scrollY }
+    const data = open.data
+    if (choice === 'income') {
       changeMoneyView({ ...setBlockOpen(moneyView, 'income', true), incomeSource: null, incomeMonth: null })
       setAddRequest('income'); addFocus.current = 'income-name'
       navigation.go('money')
-    } else if (what === 'spending') {
+    } else if (choice === 'spending' || choice === 'transfer') {
       setHistoryFocus(null)
       if (historyView.filter === null) changeHistoryView({ ...historyView, filter: firstFilter(month) })
-      setAddRequest('spending'); addFocus.current = 'expense-new-date'
+      setAddRequest(choice === 'spending' ? 'expense' : 'transfer'); addFocus.current = choice === 'spending' ? 'expense-new-date' : 'transfer-new-date'
       navigation.go('history')
-    } else if (what === 'bill') showBill(null)
+    } else if (choice === 'income-received') showIncomeFor(thisMonth)
+    else if (choice === 'balance') {
+      // One account: it opens on Update Balance. More: Accounts & Savings, to choose one.
+      if (data.moneyAccounts.length === 1) {
+        const account = data.moneyAccounts[0]
+        showAccount(account.id)
+        addFocus.current = `[aria-label="Update Balance: ${account.name.replace(/"/g, '\\"')}"]`
+      } else showMoneyBlock('accounts')
+    } else if (choice === 'contribution') {
+      const goals = data.goals.filter(goal => goal.status === 'active')
+      if (goals.length === 1) { showGoal(goals[0].id); addFocus.current = '#move-amount' } else {
+        setGoalsAddHint(true); addFocus.current = '#goals-add-hint'
+        navigation.go('goals')
+      }
+    } else if (choice === 'payment') {
+      // This month's bills still to pay, in the list, where each has Mark as Paid. Back finds the month it was on.
+      if (month !== thisMonth) setMonthBack({ ...step, month })
+      setMonth(thisMonth)
+      setBillsView({ ...billsView, mode: 'list', filter: 'pending', added: null, selected: null })
+      addFocus.current = '.bill-list [aria-label^="Mark as Paid:"]'
+      navigation.go('bills')
+    } else if (choice === 'bill') showBill(null)
     else navigation.go('new-goal')
   })
+  const addOptions: MenuOption[] = (() => {
+    if (!open) return []
+    const { record, plan } = addChoices(open.data, space.today)
+    return [...record.map(choice => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice) })),
+      ...plan.map((choice, index) => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice), startsGroup: index === 0 }))]
+  })()
   /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
   const cancelAdd = () => navigation.backAllowed()
   /** History opens a bill, a goal or an account: Back finds History scrolled where it was, with the focus on that record. */
@@ -787,6 +837,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
           <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
         </button>
+        {open && showNav && <div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div>}
         {open && screen !== 'settings' && (
           <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
         )}
@@ -870,7 +921,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
                 onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}
-                onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAdd={addFromHome}
+                onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)} />
             </AmountVisibilityProvider>
           </div>}
@@ -894,7 +945,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
             {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
             <GoalsScreen data={open.data} today={space.today} filter={goalsFilter} onFilterChange={changeGoalsFilter}
-              onNew={() => fromGoals('add-goal', () => navigation.go('new-goal'))} onOpenGoal={id => fromGoals(`goal-${id}`, () => showGoal(id))}
+              addHint={goalsAddHint}
+              onNew={() => fromGoals('add-goal', () => navigation.go('new-goal'))} onOpenGoal={id => fromGoals(`goal-${id}`, () => { showGoal(id); if (goalsAddHint) addFocus.current = '#move-amount' })}
               onStartEmergency={() => fromGoals('start-emergency', () => navigation.go('emergency'))} />
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
@@ -932,7 +984,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <HistoryScreen key={historyFocus ?? 'all'} data={open.data} months={months} month={month} today={space.today} newId={newId} focusId={historyFocus}
                 view={historyView} onViewChange={changeHistoryView}
-                startAdding={addRequest === 'spending'} onStartedAdding={() => setAddRequest(null)} onCancelAdding={cancelAdd}
+                startAdding={addRequest === 'expense' || addRequest === 'transfer' ? addRequest : null} onStartedAdding={() => setAddRequest(null)} onCancelAdding={cancelAdd}
                 onChange={space.update} onOpenBill={(id, forMonth, key) => fromHistory(key, () => showBill(id, forMonth))} onOpenGoal={(id, key) => fromHistory(key, () => showGoal(id))}
                 onOpenAccount={(id, key) => fromHistory(key, () => open.data.debts.some(debt => debt.id === id) ? showDebt(id) : showAccount(id))} />
             </AmountVisibilityProvider>

@@ -15,3 +15,14 @@ recepción como adjunto por Juan; no se presupone acceso a esta carpeta.
 - Comprobación propia: 55 pruebas en 5 archivos (NextDays, toPay, MarkPaid,
   HomeAreas y LinksReturn), lint, build y diff --check correctos.
   Build conserva el aviso de tamaño y jsdom avisa de scrollTo.
+
+## Rumbo 05
+
+- Conflictos de contexto en App, HistoryScreen y PROJECT_MAP: se integraron
+  los cambios del menú global sobre los archivos actuales. Se conservaron el
+  destino correcto de Balance update y las etiquetas Open account / Open card
+  or loan de Rumbo 02. La ayuda de borrado y Show Fewer del 03 permanece.
+- No se han cambiado dependencias ni el esquema de datos.
+- Comprobación propia: 63 pruebas en 6 archivos (GlobalAdd, HomeAreas,
+  LinksReturn, NextDays, MarkPaid y accountDeletion), lint, build y diff --check
+  correctos. No se repitió la suite completa en este paso localizado.

@@ -3,7 +3,8 @@ import { Icon } from './Icon'
 import { IconTip } from './IconTip'
 import { usePopover } from './usePopover'
 
-export type MenuOption = { label: string; onSelect: () => void; disabled?: boolean }
+/** `startsGroup`: a line before this option, to separate kinds of actions. */
+export type MenuOption = { label: string; onSelect: () => void; disabled?: boolean; startsGroup?: boolean }
 
 type Props = {
   /** The button's name (heard by screen readers, and shown on hover and focus). */
@@ -66,7 +67,7 @@ export function MenuButton({ label, options, className = '', text = false }: Pro
       {text
         ? <button ref={buttonRef} type="button" className="button-small button-small-primary" aria-haspopup="menu" aria-expanded={open}
           aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
-          <Icon name="plus" size={16} /> {label}
+          <Icon name="plus" size={16} /> <span className="menu-text">{label}</span>
         </button>
         : <button ref={buttonRef} type="button" className="icon-button tool-button has-tip" aria-label={label} aria-haspopup="menu" aria-expanded={open}
           aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
@@ -75,11 +76,12 @@ export function MenuButton({ label, options, className = '', text = false }: Pro
         </button>}
       {open && (
         <ul ref={menuRef} id={`${id}-menu`} className="popover menu-list" role="menu" aria-label={label} onKeyDown={onMenuKeyDown}>
-          {options.map(option => (
+          {options.map(option => [
+            option.startsGroup && <li key={`${option.label}-line`} role="separator" className="menu-separator" />,
             <li key={option.label} role="none">
               <button type="button" role="menuitem" tabIndex={-1} className="menu-item" disabled={option.disabled} onClick={() => choose(option)}>{option.label}</button>
-            </li>
-          ))}
+            </li>,
+          ])}
         </ul>
       )}
     </div>

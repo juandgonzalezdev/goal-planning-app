@@ -43,8 +43,8 @@ type Props = {
   onOpenGoal: (id: Id, key: string) => void
   /** Opens this account in Money, or the card or loan's own details. */
   onOpenAccount: (id: Id, key: string) => void
-  /** + Add Spending on Home: Add Spending opens once. */
-  startAdding?: boolean
+  /** + Add in the header: Add Spending or Add Transfer opens once. */
+  startAdding?: 'expense' | 'transfer' | null
   /** That form is open: the request is used up. */
   onStartedAdding?: () => void
   /** Cancel in that form: back to Home. */
@@ -75,11 +75,11 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
   const amounts = useAllAmounts(data.space.currency)
   const focusExpense = focusId ? data.expenses.find(e => e.id === focusId) ?? null : null
   const filter = view.filter ?? firstFilter(month)
-  // + Add Spending on Home opens Add Spending once; a purchase chosen on Home opens its own form.
-  const [editing, setEditing] = useState<Editing>(() => (startAdding ? { kind: 'expense', id: null, fromHome: true }
+  // + Add opens Add Spending or Add Transfer once; a purchase chosen on Home opens its own form.
+  const [editing, setEditing] = useState<Editing>(() => (startAdding ? { kind: startAdding, id: null, fromHome: true }
     : focusExpense ? { kind: 'expense', id: focusExpense.id } : null))
   useEffect(() => { if (startAdding) onStartedAdding?.() }, [startAdding, onStartedAdding])
-  /** Cancel closes the form; Add Spending opened from + Add on Home also goes back there. */
+  /** Cancel closes the form; a form opened from + Add also goes back to where + Add was used. */
   const cancelEditing = () => {
     const fromHome = editing?.fromHome
     setEditing(null)
@@ -187,7 +187,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
       </div>
       {editing?.id === null && (editing.kind === 'expense'
         ? <ExpenseForm data={data} today={today} record={null} newId={newId} onSave={save('Spending added.')} onCancel={cancelEditing} />
-        : <TransferForm data={data} today={today} record={null} newId={newId} onSave={save('Transfer added.')} onCancel={() => setEditing(null)} />)}
+        : <TransferForm data={data} today={today} record={null} newId={newId} onSave={save('Transfer added.')} onCancel={cancelEditing} />)}
       <p className="muted-note no-print" role="status">{message}</p>
 
       <YearOverview data={data} filter={filter} today={today} amounts={amounts} expanded={view.overviewOpen}

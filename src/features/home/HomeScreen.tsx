@@ -31,7 +31,6 @@ import { DEFAULT_LAYOUT, isOpen, moveArea, setAllOpen, setOpen, type HomeLayout,
 export interface HomeSpot { area?: HomeArea; section?: HomeSection; key?: string }
 
 /** What + Add opens: the forms that already exist in Money, History, Bills and Goals. */
-export type HomeAdd = 'income' | 'spending' | 'bill' | 'goal'
 
 type Props = {
   data: FinanceData
@@ -61,7 +60,6 @@ type Props = {
   onOpenBill: (id: Id, spot: HomeSpot, forMonth?: YearMonth) => void
   isDemo: boolean
   onOpenExpense: (id: Id, spot: HomeSpot) => void
-  onAdd: (what: HomeAdd, spot: HomeSpot) => void
   emergencyLater: boolean
   onEmergencyLater: () => void
 }
@@ -222,7 +220,6 @@ export function HomeScreen(props: Props) {
       </HomeAreaFrame>
     ),
   }
-  const add = (what: HomeAdd) => () => props.onAdd(what, { key: 'add-menu' })
 
   return (
     <div className="tab-screen home-screen">
@@ -240,14 +237,6 @@ export function HomeScreen(props: Props) {
           </div>}
         </div>
       </div>
-      {!customizing && <div className="home-add" data-return-key="add-menu">
-        <MenuButton label="Add" text options={[
-          { label: 'Add Income', onSelect: add('income') },
-          { label: 'Add Spending', onSelect: add('spending') },
-          { label: 'Add Bill', onSelect: add('bill') },
-          { label: 'Add Goal', onSelect: add('goal') },
-        ]} />
-      </div>}
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
         <p className="muted-note" id="customize-home-help">Drag an area by its handle, or use Move up and Move down. Nothing else changes.</p>
         <span className="inline-actions">

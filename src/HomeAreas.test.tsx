@@ -187,19 +187,24 @@ describe('Back to Home', () => {
 })
 
 describe('+ Add', () => {
-  it('offers the four forms that already exist, as a menu that works with the keyboard', async () => {
+  it('offers the forms that already exist, records first, as a menu that works with the keyboard', async () => {
     await openAlex()
     await fire.click(addButton())
     const menu = screen.getByRole('menu', { name: 'Add' })
-    expect(within(menu).getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Add Income', 'Add Spending', 'Add Bill', 'Add Goal'])
-    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Add Income' }))
-    await fire.keyDown(document.activeElement!, { key: 'ArrowDown' })
+    expect(within(menu).getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+      'Add Spending', 'Record Income Received', 'Add Transfer', 'Update a Balance', 'Add a Contribution', 'Mark a Bill as Paid',
+      'Add Income', 'Add Bill', 'Add Goal'])
+    // A line between what happened (records) and what is planned.
+    expect(within(menu).getAllByRole('separator')).toHaveLength(1)
     expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Add Spending' }))
+    await fire.keyDown(document.activeElement!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Record Income Received' }))
     await fire.keyDown(document.activeElement!, { key: 'Escape' })
     expect(screen.queryByRole('menu', { name: 'Add' })).toBeNull()
     expect(document.activeElement).toBe(addButton())
-    // It is not in the month bar, and there is one Add Goal on Home: in + Add.
+    // It is in the shared header, not in the month bar, and there is one Add Goal on Home: in + Add.
     expect(document.querySelector('.home-month-bar')!.contains(addButton())).toBe(false)
+    expect(document.querySelector('.shell-header')!.contains(addButton())).toBe(true)
     expect(screen.queryByRole('button', { name: /Add Goal/ })).toBeNull()
   })
 

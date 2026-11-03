@@ -122,7 +122,7 @@ Add things in this order, and skip anything that doesn't apply to you. You can c
 | 2 | **Money › Accounts & Savings** | The account you spend from, any cash, savings and investments, each with today's balance. If you don't know a balance, leave it empty. | You enter money you already have only once. Goals use the savings you enter here. |
 | 3 | **Money › Cards & Loans › Add Card or Loan** | Each card or loan, with its Remaining Balance and monthly Payment. Keep **Add this payment to my monthly bills** checked. | The Payment is added to your bills for you, so you won't add it twice. |
 | 4 | **Bills › Add Bill** | Rent, phone, insurance, subscriptions and anything else you pay regularly. Check the list first: your card and loan payments are already there. | Each payment is entered only once. |
-| 5 | **Home › + Add › Add Goal** (optional) | Something you want to save for, such as a trip. | A goal gives part of your savings a purpose. It doesn't add money. |
+| 5 | **+ Add › Add Goal** (optional) | Something you want to save for, such as a trip. | A goal gives part of your savings a purpose. It doesn't add money. |
 | 6 | Every day or week | Add spending, mark bills as paid and record income when it arrives. | Home stays up to date. |
 
 **Avoid counting money twice:**
@@ -143,16 +143,23 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - The logo at the top takes you to Home.
 - The gear opens Settings, where **Reports & Backup** is. Money has a link to it at the end (**Open Reports & Backup**).
 
-**+ Add on Home**
+**+ Add**
 
-Next to the month bar, **+ Add** opens a short list. Each choice opens a form that already exists elsewhere in the app:
+**+ Add** is in the header, next to the gear, on every tab (Home, Bills, Goals, Money and History). It isn't in the month bar, and there is only one. It opens a short list. First what happened (records), then, after a line, what you plan. Each choice opens a form or place that already exists elsewhere in the app. A choice only shows when it applies (for example **Add Transfer** needs two accounts).
 
-| Choice | Opens | Cancel or Back | After saving |
-| --- | --- | --- | --- |
-| **Add Income** | Money › Income, with a new income source form | **Cancel** closes the form and returns to Home. **Back** returns to Home. | You stay in Money. **Back** returns to Home. |
-| **Add Spending** | History, with a new spending form | **Cancel** closes the form and returns to Home. **Back** returns to Home. | You stay in History. **Back** returns to Home. |
-| **Add Bill** | a new bill | **Cancel** or **Back** returns to Home. | The new bill is shown. **Back** returns to Home. |
-| **Add Goal** | New Goal | **Cancel** or **Back** returns to Home. What you typed is kept while the app stays open. | The new goal is shown. **Back** returns to Home. |
+| Choice | Shows when | Opens |
+| --- | --- | --- |
+| **Add Spending** | always | History, with a new spending form |
+| **Record Income Received** | an income source is active this month | Money › Income for this month: with one source, its payment of this month; with more, the note that lists them (see **Where links take you**) |
+| **Add Transfer** | you have two or more accounts | History, with a new transfer form |
+| **Update a Balance** | you have an account | Money › Accounts & Savings. With one account, it opens on **Update Balance**; with more, you choose the account. |
+| **Add a Contribution** | you have an active goal or Emergency Fund | With one, that goal, on the amount. With more, Goals says to choose one, and the goal opens on the amount. |
+| **Mark a Bill as Paid** | a bill of this month isn't paid yet | Bills › List, this month, **Pending** bills, on the first **Mark as Paid** |
+| **Add Income** | always | Money › Income, with a new income source form |
+| **Add Bill** | always | a new bill |
+| **Add Goal** | always | New Goal. What you typed is kept while the app stays open. |
+
+**Cancel** on a form that + Add opened, or **Back**, returns to where you used + Add, in the same place, with the keyboard on **+ Add**. After saving, you stay where the form is, and **Back** returns there too. **Mark a Bill as Paid** shows this month in Bills; **Back** returns to the month you were looking at.
 
 If you typed something and leave in another way (a tab, the browser's Back), the app asks first, as described under **Leaving a form you changed** below. Each choice opens its form once: coming back to Money or History later doesn't open a new form again.
 
@@ -170,7 +177,7 @@ At the top of Home there is a month bar: the arrows go to the month before or af
 
 **Back from a detail** goes to where you opened it. A card or loan opened from Money returns to Money, with the same block open, in the same place, on the card or loan you opened. Opened from Home or from a bill, it returns there.
 
-**Back to Home** returns to the same place on Home, with the keyboard on the line or link you used (for example the bill in Left to Pay, the goal in Goals, or **+ Add**). If that line is no longer there (for example the bill was paid or deleted), it goes to the heading of its part or area. If you had chosen **Show All** in Left to Pay, the full list is still shown.
+**Back to Home** returns to the same place on Home, with the keyboard on the line or link you used (for example the bill in Left to Pay or the goal in Goals). If that line is no longer there (for example the bill was paid or deleted), it goes to the heading of its part or area. If you had chosen **Show All** in Left to Pay, the full list is still shown.
 
 **Back to Goals and History** works the same way: the same filter (and in History the same period, search, filters, open months and records shown), the same place on the page, and the keyboard on the goal, the Emergency Fund card, **Add Goal** or the record you opened.
 
@@ -308,7 +315,7 @@ The heading says **Latest balances by** a date. That date is the end of the chos
 - **Goals**:
   - Your goals and how much each one holds. They are part of your Savings, not extra money.
   - It may suggest starting an emergency fund. **Maybe Later** hides the suggestion.
-- **Open Goals** (next to the area's name) opens the Goals tab. To add a goal, use **+ Add › Add Goal**.
+- **Open Goals** (next to the area's name) opens the Goals tab. To add a goal, use **+ Add › Add Goal** in the header.
 
 **Balances are snapshots.** A balance is true on the date you entered it. Home shows the latest balance up to the end of the month you are looking at (or up to today, for the current month). The app never works out past balances from today's balance.
 
@@ -438,7 +445,7 @@ The **Goals** tab shows:
 
 Both your goals and the Emergency Fund are part of your Savings, not extra money.
 
-**Add Goal** (from the Goals tab, or **+ Add › Add Goal** on Home):
+**Add Goal** (from the Goals tab, or **+ Add › Add Goal** in the header):
 
 - A **name** is required.
 - A **target amount** is optional. Without a target, the goal shows how much it holds, with no percentage.
@@ -594,7 +601,7 @@ This is a suggested routine, not a reminder. The app doesn't send notifications.
 4. **If you set money aside for a goal:** add it to the goal with **Add or Take Out**.
 5. **At the end of the month:** look at This Month and "How is this worked out?", check that Left to Pay is empty, then **Download Backup**.
 
-**+ Add** on Home opens the Income, Spending, Bill and Goal forms without leaving your routine.
+**+ Add** in the header records spending, income received, transfers, balances, Contributions and bill payments, and adds income, bills and goals, from any tab.
 
 ## 20. Not Available Yet
 
