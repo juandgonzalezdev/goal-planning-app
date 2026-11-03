@@ -26,7 +26,7 @@ const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTM
 const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
 const onHome = () => tab('Home').getAttribute('aria-current') === 'page'
 const shown = () => document.querySelector<HTMLElement>('[data-screen]')?.dataset.screen
-const unpaid = () => [...regionOf('Left to Pay').querySelectorAll('.pay-list li')].map(row => text(row.querySelector('span')).replace(/(Due|Overdue since) .*/, ''))
+const unpaid = () => [...regionOf('Left to Pay').querySelectorAll('.pay-groups .pay-list li')].map(row => text(row.querySelector('span')).replace(/(Due|Overdue since) .*/, ''))
 const payRow = (name: string) => within(regionOf('Left to Pay')).getByRole('button', { name: new RegExp(`^${name.replace(/[()&]/g, '\\$&')},`) })
 const addButton = () => button('Add')
 const question = () => screen.queryByRole('alertdialog', { name: 'Leave without saving?' })

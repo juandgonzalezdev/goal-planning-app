@@ -57,7 +57,9 @@ type Props = {
   onOpenSpent: (month: YearMonth, spot: HomeSpot) => void
   onOpenGoal: (id: Id, spot: HomeSpot) => void
   onOpenDebt: (id: Id, spot: HomeSpot) => void
-  onOpenBill: (id: Id, spot: HomeSpot) => void
+  /** Opens a bill; `forMonth` when it belongs to another month than Home's (Coming up). */
+  onOpenBill: (id: Id, spot: HomeSpot, forMonth?: YearMonth) => void
+  isDemo: boolean
   onOpenExpense: (id: Id, spot: HomeSpot) => void
   onAdd: (what: HomeAdd, spot: HomeSpot) => void
   emergencyLater: boolean
@@ -204,7 +206,8 @@ export function HomeScreen(props: Props) {
       </HomeAreaFrame>
     ),
     'left-to-pay': <LeftToPay data={data} month={month} today={today} showAll={props.showAllBills} onShowAllChange={props.onShowAllBillsChange} onChange={props.onChange}
-      onOpenBills={() => props.onOpen('bills', { area: 'left-to-pay', key: 'bills-link' })} onOpenBill={id => props.onOpenBill(id, { area: 'left-to-pay', key: `pay-${id}` })} />,
+      onOpenBills={() => props.onOpen('bills', { area: 'left-to-pay', key: 'bills-link' })} isDemo={props.isDemo}
+      onOpenBill={(id, forMonth) => (forMonth === month ? props.onOpenBill(id, { area: 'left-to-pay', key: `pay-${id}` }) : props.onOpenBill(id, { area: 'left-to-pay', key: `next-${id}` }, forMonth))} />,
     'money-goals': (
       <HomeAreaFrame area="money-goals" period={`Latest balances by ${formatDate(asOf)}`}
         actions={<button type="button" className="button-small" data-return-key="goals-link" onClick={() => props.onOpen('goals', { area: 'money-goals', key: 'goals-link' })}>Open Goals <Icon name="arrowRight" size={16} /></button>}>

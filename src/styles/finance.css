@@ -895,3 +895,10 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .mark-paid .button-small, .callout .button-small { min-height: 44px; }
 .pay-row-actions { padding: 0 0 4px; }
 .pay-row-actions .text-button { min-height: 44px; }
+
+/* Left to Pay with an explicit reference: Overdue, Due later, Not marked as paid, Planned, and Coming up apart. */
+.pay-reference { margin-top: 2px; }
+.pay-groups { display: grid; gap: 10px; }
+.pay-group { display: grid; gap: 4px; }
+.pay-group-title { margin: 6px 0 0; font-size: 13px; font-weight: 650; color: var(--color-text-muted); }
+.coming-up { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--color-border-strong); }

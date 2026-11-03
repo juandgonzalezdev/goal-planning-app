@@ -200,6 +200,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // Back (or Forward) to that same step finds Home there again, as a browser keeps a page's place, until another
   // link on Home is used. Home reached as a new step (a tab, the logo) starts at the top.
   const homeReturn = useRef<{ chain: string; idx: number; y: number; spot: HomeSpot } | null>(null)
+  const [homeMonthBack, setHomeMonthBack] = useState<{ chain: string; idx: number; month: YearMonth } | null>(null)
   // + Add Income or Add Spending: the form to open when Money or History opens, once.
   const [addRequest, setAddRequest] = useState<'income' | 'spending' | null>(null)
   // What gets the focus when the next screen opens: a field's id (+ Add) or a selector (an account, an income month).
@@ -221,6 +222,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   if (lastScreen !== screen) {
     setLastScreen(screen)
     if (billsView.added && screen !== 'bills' && screen !== 'bill') setBillsView({ ...billsView, added: null })
+    // Back to the step of Home a Coming up bill was opened from: Home's month again. Any other move forgets it.
+    if (homeMonthBack && screen !== 'bill' && screen !== 'debt') {
+      const step = navigation.current()
+      if (screen === 'home' && step.chain === homeMonthBack.chain && step.idx === homeMonthBack.idx) setMonth(homeMonthBack.month)
+      setHomeMonthBack(null)
+    }
   }
   const open = space.open
   // Another tab erased the space: nothing chosen in it stays (the screen falls back to Welcome by itself).
@@ -642,8 +649,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     navigation.go('history')
   }
   /** Home opens another screen: Back to this step of Home finds it where it was (see homeReturn). */
-  const fromHome = (spot: HomeSpot, show: () => void) => confirmLeave(ANY_FORM, () => {
+  const fromHome = (spot: HomeSpot, show: () => void, keepMonth?: YearMonth) => confirmLeave(ANY_FORM, () => {
     homeReturn.current = { ...navigation.current(), y: window.scrollY, spot }
+    // A bill of Coming up opens in its own month; Back to this step of Home shows Home's month again.
+    setHomeMonthBack(keepMonth ? { ...navigation.current(), month: keepMonth } : null)
     show()
   })
   /**
@@ -860,7 +869,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => navigation.go(next))}
                 onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
                 onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
-                onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} onOpenBill={(id, spot) => fromHome(spot, () => showBill(id))}
+                onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAdd={addFromHome}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)} />
             </AmountVisibilityProvider>

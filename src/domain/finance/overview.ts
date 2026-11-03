@@ -1,6 +1,7 @@
-import type { YearMonth } from '../calendar'
+import { addDays, addMonthsToYearMonth, yearMonthOf, type YearMonth } from '../calendar'
+import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
-import { billsForMonth, summarizeBills, type BillSummary } from './bills'
+import { billsForMonth, summarizeBills, type BillOccurrence, type BillSummary } from './bills'
 import { summarizeDebts } from './debts'
 import { householdIncomeFor, monthIncome, type MonthIncome } from './income'
 import type { FinanceData } from './types'
@@ -58,4 +59,42 @@ export function leftToPayStatus(summary: BillSummary): LeftToPayStatus {
   if (summary.unpaidUnknownCount > 0) return { status: 'amounts-missing', leftToPay: summary.leftToPay, unknownCount: summary.unpaidUnknownCount }
   if (summary.paidCount === summary.count) return { status: 'all-paid' }
   return { status: 'bills-left', leftToPay: summary.leftToPay, count: summary.count - summary.paidCount }
+}
+
+/** How far ahead Coming up looks, from today. */
+export const COMING_UP_DAYS = 7
+
+/**
+ * What is still to pay in a month, with an explicit reference:
+ * - the month of today: overdue (due before today) and due later, from today;
+ *   plus Coming up, the next month's unpaid bills due within the next seven
+ *   days, kept apart and never added to this month's total;
+ * - a past month: its bills not marked as paid, nothing counted from today;
+ * - a future month: its bills planned (not paid yet), no overdue, no Coming up.
+ * Unpaid bills of earlier months are never brought into the month shown.
+ */
+export interface ToPay {
+  period: 'current' | 'past' | 'future'
+  overdue: BillOccurrence[]
+  /** current: due today or later. past: not marked as paid. future: planned. */
+  open: BillOccurrence[]
+  comingUp: { month: YearMonth; from: CalendarDate; to: CalendarDate; bills: BillOccurrence[] } | null
+}
+
+export function toPay(data: Pick<FinanceData, 'bills' | 'billMonths'>, month: YearMonth, today: CalendarDate): ToPay {
+  const unpaid = billsForMonth(data, month).filter(occurrence => !occurrence.paid)
+  const current = yearMonthOf(today)
+  if (month < current) return { period: 'past', overdue: [], open: unpaid, comingUp: null }
+  if (month > current) return { period: 'future', overdue: [], open: unpaid, comingUp: null }
+  const until = addDays(today, COMING_UP_DAYS)
+  const next = addMonthsToYearMonth(month, 1)
+  const ahead = until.slice(0, 7) === next
+    ? billsForMonth(data, next).filter(occurrence => !occurrence.paid && occurrence.dueDate <= until)
+    : []
+  return {
+    period: 'current',
+    overdue: unpaid.filter(occurrence => occurrence.dueDate < today),
+    open: unpaid.filter(occurrence => occurrence.dueDate >= today),
+    comingUp: ahead.length > 0 ? { month: next, from: `${next}-01`, to: until, bills: ahead } : null,
+  }
 }

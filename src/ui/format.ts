@@ -14,6 +14,13 @@ export function formatDate(date: CalendarDate): string {
   return `${day} ${MONTH_NAMES[month - 1]} ${year}`
 }
 
+/** A short range of days, such as "1–7 Jan" (or "30 Dec – 5 Jan" across months). */
+export function formatDayRange(from: CalendarDate, to: CalendarDate): string {
+  const day = (date: CalendarDate) => Number(date.slice(8, 10))
+  const name = (date: CalendarDate) => MONTH_NAMES[Number(date.slice(5, 7)) - 1]
+  return from.slice(0, 7) === to.slice(0, 7) ? `${day(from)}–${day(to)} ${name(to)}` : `${day(from)} ${name(from)} – ${day(to)} ${name(to)}`
+}
+
 /**
  * The day an estimate is worked out from. In the own space it is really
  * today; the demo uses its own fixed date, so it never says "today" there.

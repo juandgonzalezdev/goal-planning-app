@@ -278,7 +278,17 @@ Both are parts of This Month.
 
 ### Left to Pay
 
-The unpaid bills of the chosen month, by due date. A bill whose due date has passed shows as overdue. Tap a bill to open it, or **Bills** to open the tab. **Mark as Paid** under a bill opens its short form right there (see [Bills and Subscriptions](#10-bills-and-subscriptions)).
+The unpaid bills of the chosen month, by due date. Tap a bill to open it, or **Bills** to open the tab. **Mark as Paid** under a bill opens its short form right there (see [Bills and Subscriptions](#10-bills-and-subscriptions)).
+
+The list always says what it counts from:
+
+| Month chosen | What Left to Pay shows |
+| --- | --- |
+| **This month** | "From today, [date]" (in the demo: "From the demo's date, 31 Dec 2026"). **Overdue**: bills due before today. **Due later in [month]**: due today or later. Then **Coming up · [days]**: the next month's unpaid bills due in the next seven days. Coming up only shows when there are some, and it is never added to the month's total. |
+| **A past month** | "These are [month]'s bills. Nothing here is counted from today." **Not marked as paid in [month]**: that month's bills not marked as paid. No Overdue and no Coming up. |
+| **A future month** | "These are [month]'s bills. Nothing here is due yet." **Planned for [month]**: that month's bills. No Overdue and no Coming up. |
+
+Unpaid bills of earlier months are never added to the month shown. A bill in Coming up opens on its own month (for example January). **Back** returns to Home on the month you were looking at, on that bill.
 
 Home shows the first five. When there are more than five, **Show All** (with the number of bills) shows the whole list on Home, and **Show Fewer** goes back to five. Show All stays while the app is open, also after you open a bill and come **Back**.
 

@@ -94,6 +94,10 @@ personal.
   e `interest` (solo préstamos, opcional, nunca mayor que el importe). Un
   importe desconocido exige escribirlo. Nunca inventa intereses ni cambia el
   Remaining Balance. Sin pagos parciales ni Undo.
+- **Left to Pay** usa una referencia explícita: en el mes actual separa Overdue
+  de Due later y muestra Coming up del mes siguiente (próximos 7 días) aparte,
+  sin sumarlo al total. En meses pasados muestra lo no marcado como pagado;
+  en futuros, lo planificado. No arrastra facturas de otros meses.
 - **Mark as Not Paid** pide confirmación y quita `paidOn`, `paidFrom` e
   `interest` de ese mes (`markBillNotPaid`); el importe del mes se conserva.
 - `paidOn` se valida con `isCalendarDate`: una fecha inexistente no se normaliza

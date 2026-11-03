@@ -58,6 +58,12 @@ export function daysBetween(from: CalendarDate, to: CalendarDate): number {
   return dayNumber(to) - dayNumber(from)
 }
 
+/** The date `count` days after `date` (before, when negative). Time zones play no part. */
+export function addDays(date: CalendarDate, count: number): CalendarDate {
+  const day = new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)) + count))
+  return `${day.getUTCFullYear()}-${pad(day.getUTCMonth() + 1, 2)}-${pad(day.getUTCDate(), 2)}`
+}
+
 /**
  * Weekly plan rule, the weekly twin of the monthly one: the number of
  * whole weeks between today and the deadline. The first contribution is
