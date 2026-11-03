@@ -42,11 +42,18 @@ type Props = {
   onOpenGoal: (id: Id) => void
   /** Opens Accounts & Savings in Money, on this account. */
   onOpenAccount: (id: Id) => void
+  /** + Add Spending on Home: Add Spending opens once. */
+  startAdding?: boolean
+  /** That form is open: the request is used up. */
+  onStartedAdding?: () => void
+  /** Cancel in that form: back to Home. */
+  onCancelAdding?: () => void
 }
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-type Editing = { kind: 'expense' | 'transfer' | 'income'; id: Id | null } | null
+/** `fromHome`: Add Spending opened by + Add on Home, so Cancel goes back there. */
+type Editing = { kind: 'expense' | 'transfer' | 'income'; id: Id | null; fromHome?: boolean } | null
 
 const periodValue = (period: HistoryFilter['period']) => (period.kind === 'all' ? 'all' : period.kind === 'year' ? `year:${period.year}` : `month:${period.month}`)
 function periodFrom(value: string): HistoryFilter['period'] {
@@ -63,11 +70,20 @@ function periodFrom(value: string): HistoryFilter['period'] {
  * income, transfers, savings movements and balances are never mixed up.
  * Editing a record changes that record only, and every screen follows.
  */
-export function HistoryScreen({ data, months, month, today, newId, focusId, view, onViewChange, onChange, onOpenBill, onOpenGoal, onOpenAccount }: Props) {
+export function HistoryScreen({ data, months, month, today, newId, focusId, view, onViewChange, onChange, onOpenBill, onOpenGoal, onOpenAccount, startAdding, onStartedAdding, onCancelAdding }: Props) {
   const amounts = useAllAmounts(data.space.currency)
   const focusExpense = focusId ? data.expenses.find(e => e.id === focusId) ?? null : null
   const filter = view.filter ?? firstFilter(month)
-  const [editing, setEditing] = useState<Editing>(() => (focusExpense ? { kind: 'expense', id: focusExpense.id } : null))
+  // + Add Spending on Home opens Add Spending once; a purchase chosen on Home opens its own form.
+  const [editing, setEditing] = useState<Editing>(() => (startAdding ? { kind: 'expense', id: null, fromHome: true }
+    : focusExpense ? { kind: 'expense', id: focusExpense.id } : null))
+  useEffect(() => { if (startAdding) onStartedAdding?.() }, [startAdding, onStartedAdding])
+  /** Cancel closes the form; Add Spending opened from + Add on Home also goes back there. */
+  const cancelEditing = () => {
+    const fromHome = editing?.fromHome
+    setEditing(null)
+    if (fromHome) onCancelAdding?.()
+  }
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
@@ -169,7 +185,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
         {data.moneyAccounts.length > 1 && <button type="button" className="button-small" onClick={() => openEditor({ kind: 'transfer', id: null })}><Icon name="plus" size={16} /> Add Transfer</button>}
       </div>
       {editing?.id === null && (editing.kind === 'expense'
-        ? <ExpenseForm data={data} today={today} record={null} newId={newId} onSave={save('Spending added.')} onCancel={() => setEditing(null)} />
+        ? <ExpenseForm data={data} today={today} record={null} newId={newId} onSave={save('Spending added.')} onCancel={cancelEditing} />
         : <TransferForm data={data} today={today} record={null} newId={newId} onSave={save('Transfer added.')} onCancel={() => setEditing(null)} />)}
       <p className="muted-note no-print" role="status">{message}</p>
 

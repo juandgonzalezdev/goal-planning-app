@@ -74,7 +74,7 @@ Your space holds all your information. You create it once.
    - **Privacy & Terms**: what this version does with your information.
 4. Choose **Create My Space**. Your space starts empty: the app never adds income, accounts, loans or goals for you.
 
-In a Duo space, Home says **Our Money** and **Our Goals** instead of My Money and My Goals.
+In a Duo space, Home's third area is called **Our Money & Goals** instead of Money & Goals.
 
 **Settings** (the gear at the top) has:
 
@@ -122,7 +122,7 @@ Add things in this order, and skip anything that doesn't apply to you. You can c
 | 2 | **Money › Accounts & Savings** | The account you spend from, any cash, savings and investments, each with today's balance. If you don't know a balance, leave it empty. | You enter money you already have only once. Goals use the savings you enter here. |
 | 3 | **Money › Cards & Loans › Add Card or Loan** | Each card or loan, with its Remaining Balance and monthly Payment. Keep **Add this payment to my monthly bills** checked. | The Payment is added to your bills for you, so you won't add it twice. |
 | 4 | **Bills › Add Bill** | Rent, phone, insurance, subscriptions and anything else you pay regularly. Check the list first: your card and loan payments are already there. | Each payment is entered only once. |
-| 5 | **Home › My Goals › Add Goal** (optional) | Something you want to save for, such as a trip. | A goal gives part of your savings a purpose. It doesn't add money. |
+| 5 | **Home › + Add › Add Goal** (optional) | Something you want to save for, such as a trip. | A goal gives part of your savings a purpose. It doesn't add money. |
 | 6 | Every day or week | Add spending, mark bills as paid and record income when it arrives. | Home stays up to date. |
 
 **Avoid counting money twice:**
@@ -143,6 +143,19 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - The logo at the top takes you to Home.
 - The gear opens Settings, where **Reports & Backup** is. Money has a link to it at the end (**Open Reports & Backup**).
 
+**+ Add on Home**
+
+Next to the month bar, **+ Add** opens a short list. Each choice opens a form that already exists elsewhere in the app:
+
+| Choice | Opens | Cancel or Back | After saving |
+| --- | --- | --- | --- |
+| **Add Income** | Money › Income, with a new income source form | **Cancel** closes the form and returns to Home. **Back** returns to Home. | You stay in Money. **Back** returns to Home. |
+| **Add Spending** | History, with a new spending form | **Cancel** closes the form and returns to Home. **Back** returns to Home. | You stay in History. **Back** returns to Home. |
+| **Add Bill** | a new bill | **Cancel** or **Back** returns to Home. | The new bill is shown. **Back** returns to Home. |
+| **Add Goal** | New Goal | **Cancel** or **Back** returns to Home. What you typed is kept while the app stays open. | The new goal is shown. **Back** returns to Home. |
+
+If you typed something and leave in another way (a tab, the browser's Back), the app asks first, as described under **Leaving a form you changed** below. Each choice opens its form once: coming back to Money or History later doesn't open a new form again.
+
 Earlier versions had **Cards** and **Data** tabs. Their contents are now in Money, Bills, Goals and Settings: nothing was removed. If you go Back to a screen saved by an earlier version, the app shows Money.
 
 **Choosing a month**
@@ -156,6 +169,8 @@ At the top of Home there is a month bar: the arrows go to the month before or af
 - where you were in Bills, History and Money when you open a bill, a card or loan, or a goal from them.
 
 **Back from a detail** goes to where you opened it. A card or loan opened from Money returns to Money, with the same block open, in the same place, on the card or loan you opened. Opened from Home or from a bill, it returns there.
+
+**Back to Home** returns to the same place on Home, with the keyboard on the line or link you used (for example the bill in Left to Pay, the goal in Goals, or **+ Add**). If that line is no longer there (for example the bill was paid or deleted), it goes to the heading of its part or area. If you had chosen **Show All** in Left to Pay, the full list is still shown.
 
 When you reload the page, these go back to the start.
 
@@ -179,7 +194,7 @@ It doesn't ask when:
 
 - nothing was typed, or a form was only opened,
 - you tap **Cancel** (that's your own choice to drop it),
-- what you typed stays on screen anyway (for example when you close and open a block, or use Expand All or Collapse All in Money),
+- what you typed stays on screen anyway (for example when you close and open a block, or use Expand All or Collapse All in Money or on Home),
 - the form is **New Goal** or **Welcome Setup**: these keep what you typed while the app stays open, so you can look elsewhere and come back,
 - nothing can be saved because of a problem (see [When Something Goes Wrong](#18-when-something-goes-wrong)): then a form that closes stays in the warning at the top, to copy.
 
@@ -193,14 +208,22 @@ An amount typed for one month is only ever saved for that month. If you choose a
 - **Back and Forward pressed several times very quickly**: if the browser's moves arrive in an order the app can't follow, it keeps your form and the question, but **Discard and Leave** stays off and, after a moment, it says "Navigation is taking longer than expected." Keep editing or copy what you typed; to leave, save or cancel the form first, then move.
 - When the app can't tell where a Back or Forward move came from (for example the first time after the app was updated), it keeps your form on that step. After **Keep Editing**, one press of Back may seem to do nothing.
 - In rare cases, a Back or Forward move that arrives late may change the screen after you left a form. It never closes a form you have changed.
-- **The back swipe on iPhone hasn't been checked on a real iPhone yet.** Safari may show the previous screen for a moment before the app comes back to your form.
-- When you come back to Home from another screen, Home starts at the top.
+- **The back swipe on iPhone** has been checked on a real iPhone for a form you changed: a swipe you start and then cancel, and a swipe you complete. Coming back from Money has been checked too. The new Home paths (Show All, **+ Add**, coming back to Home) haven't been checked on an iPhone yet, and not every way of moving around has been checked in Safari. Safari may show the previous screen for a moment before the app comes back to your form.
+- Home only remembers its place when you come back with **Back**. Opening Home from the tab or the logo starts at the top.
 - Tapping **Income** on Home opens the Income block in Money, not the income source of that month.
 - Goals doesn't remember where you were on the page when you come back from a goal.
 
 ## 7. Reading Home
 
-Home has seven blocks, in this order: This Month, Left to Pay, Spending by Category, Total Debt, My Money, My Goals and Year Summary. Each block opens and closes, and shows a short summary when it's closed. At first, only This Month and Left to Pay are open.
+Home has three areas, in this order: **This Month**, **Left to Pay** and **Money & Goals**. The areas are always shown. Inside This Month and Money & Goals there are parts that open and close, and show a short summary when they're closed. At first, every part is closed.
+
+| Area | What it shows | Parts inside |
+| --- | --- | --- |
+| **This Month** | The chosen month: Income, Planned Bills, Spent and Result. Its heading shows the month and year. | **Spending by Category**, **Year Summary** |
+| **Left to Pay** | The unpaid bills of the chosen month. | (none) |
+| **Money & Goals** | Your latest balances, what you owe and your goals. These are **not** this month's figures. | **Accounts & Savings**, **Cards & Loans**, **Goals** |
+
+On a computer, Home is still one column, in the same order as on a phone.
 
 ### This Month
 
@@ -221,25 +244,40 @@ Tap **Income** to open your income in Money, **Planned Bills** to open Bills, an
 
 A line called **Not explained by the records** appears when some records don't say which account they used. See [How Your Records Change the Numbers](#14-how-your-records-change-the-numbers).
 
-### The other blocks
+### Spending by Category and Year Summary
 
-- **Left to Pay**: the unpaid bills of the chosen month, with their due dates. A bill whose due date has passed shows as overdue. Tap a bill to open it, or **Bills** to open the tab.
+Both are parts of This Month.
+
 - **Spending by Category**:
   - Choose **Spent** or **Planned**, as a donut or as bars. Tap a category to see what's in it.
   - In Planned, **Change amount** changes a bill for that month only.
   - **Ideas to Review** lists spending you could look at, such as subscriptions. It's a list to review, not advice.
-- **Total Debt**: the last Remaining Balance you entered for each card and loan, added up. Monthly payments aren't added, because they pay the debt back.
-- **My Money**:
-  - The last balance of each kind of account, with its date. Debt is never taken away from it.
-  - **Savings** shows how your savings are split by purpose.
-  - **Edit Balances** opens Accounts & Savings in Money.
-- **My Goals**:
-  - Your goals and how much each one holds. **Add Goal** and **View All** are here.
-  - It may suggest starting an emergency fund. **Maybe Later** hides the suggestion.
-- **Year Summary**:
+- **Year Summary** is the year of the chosen month, which may not be the current year. Its heading always names that year, for example "2026 · 12 of 12 months so far", and when it's closed it says "Result for 2026: …".
   - Income, spending and result for the year, and the result of each month. Tap a month to open it on Home.
   - Savings and debt at the end of each month.
   - **Reference Notes**: general reference figures, with their source. They aren't limits or advice.
+
+### Left to Pay
+
+The unpaid bills of the chosen month, by due date. A bill whose due date has passed shows as overdue. Tap a bill to open it, or **Bills** to open the tab.
+
+Home shows the first five. When there are more than five, **Show All** (with the number of bills) shows the whole list on Home, and **Show Fewer** goes back to five. Show All stays while the app is open, also after you open a bill and come **Back**.
+
+> **Example (demo, January 2027):** Alex has 11 unpaid bills, so Home shows five and **Show All 11**.
+
+### Money & Goals
+
+The heading says **Latest balances by** a date. That date is the end of the chosen month, or today if the month hasn't ended yet. Each line uses the latest balance you entered up to that date, and shows its own date: it doesn't mean every account was updated that day. A balance you never entered shows as unknown, never as 0.
+
+- **Accounts & Savings**:
+  - The last balance of each kind of account, with its date. Debt is never taken away from it.
+  - **Savings** shows how your savings are split by purpose.
+  - **Edit Balances** opens Accounts & Savings in Money.
+- **Cards & Loans**: the last Remaining Balance you entered for each card and loan, added up. Monthly payments aren't added, because they pay the debt back. **Open Cards & Loans** opens it in Money.
+- **Goals**:
+  - Your goals and how much each one holds. They are part of your Savings, not extra money.
+  - It may suggest starting an emergency fund. **Maybe Later** hides the suggestion.
+- **Open Goals** (next to the area's name) opens the Goals tab. To add a goal, use **+ Add › Add Goal**.
 
 **Balances are snapshots.** A balance is true on the date you entered it. Home shows the latest balance up to the end of the month you are looking at (or up to today, for the current month). The app never works out past balances from today's balance.
 
@@ -270,7 +308,7 @@ In **Money › Accounts & Savings**, add each account with its kind: **Daily Spe
 
 > **Example (demo, December 2026):** Savings 2900,00 zł = Trip to Japan 1800,00 + New Bike 200,00 + Emergency Fund 900,00 + 0,00 with no purpose.
 
-**Savings by purpose**, under your accounts in Money, shows the same split as Home's My Money: each goal, the Emergency Fund and Unassigned. It doesn't add anything to your Savings.
+**Savings by purpose**, under your accounts in Money, shows the same split as **Accounts & Savings** on Home: each goal, the Emergency Fund and Unassigned. It doesn't add anything to your Savings.
 
 Money you don't spend doesn't become savings by itself. Update your balances from your bank to keep them right.
 
@@ -325,7 +363,7 @@ Keep **Add this payment to my monthly bills** checked. The Payment then shows in
 - **Estimate** shows about how many months it would take to pay off at the usual Payment, with the same interest. **What If I Pay Extra?** compares it with a higher payment. Both are calculations only, and your bank may calculate differently.
 - **Edit Details** and **Delete**. If a bill pays this card or loan, you choose whether to delete the bill too or keep it.
 
-> **Example (demo, 31 December 2026):** Total Debt 12 266,98 zł = 0,00 + 2644,35 + 9622,63.
+> **Example (demo, 31 December 2026):** Cards & Loans on Home: 12 266,98 zł Remaining Balance = 0,00 + 2644,35 + 9622,63.
 
 ## 12. Spending and Transfers
 
@@ -348,12 +386,13 @@ The **Goals** tab shows:
 
 Both your goals and the Emergency Fund are part of your Savings, not extra money.
 
-**Add Goal** (from the Goals tab or Home › My Goals):
+**Add Goal** (from the Goals tab, or **+ Add › Add Goal** on Home):
 
 - A **name** is required.
 - A **target amount** is optional. Without a target, the goal shows how much it holds, with no percentage.
 - A **date** is optional, and only possible with a target. A goal with a date is **With Date**. One without a date is **Flexible**.
 - **Review Goal**, then **Create Goal**. A new goal starts at 0. No monthly amount is needed.
+- **Back** (at the top) and **Cancel** return to the screen you came from, for example Home or Goals. What you typed stays while the app is open, so you can come back to it.
 
 **Add or Take Out** (in the goal), with **Add** or **Withdraw**. Choose where the money comes from or where it goes:
 
@@ -417,18 +456,24 @@ History lists everything you recorded, grouped by month and day, newest first.
 
 - **The eye** hides or shows every amount on Home. Its name is **Hide All Amounts** or **Show All Amounts**, and a short message says "Amounts hidden" or "Amounts visible". When everything is hidden, the eye is crossed out.
 - **Home options** (the ⋯ button) has:
-  - **Expand All** and **Collapse All**, to open or close every block.
-  - **Customize Home**: drag a block by its handle, or use **Move up** and **Move down**. **Reset Layout** goes back to the first order. **Done** finishes.
+  - **Expand All** and **Collapse All**, to open or close every part of every area.
+  - **Customize Home**: drag an area by its handle, or use **Move up** and **Move down**. **Reset Layout** goes back to This Month, Left to Pay, then Money & Goals, with every part closed. It doesn't show or hide any amount. **Done** finishes.
 
-Each Home block also has its own eye, to hide only that block's amounts.
+Each area also has its own eye (for example **Hide amounts in Left to Pay**), to hide the amounts of that area and of every part inside it, including the short summary a part shows when it's closed.
 
-**Bills** and **History** have a **Hide All Amounts** button. They hide their amounts only when every Home block is hidden. In Bills this also covers **All Bills**.
+**Bills** and **History** have a **Hide All Amounts** button. They hide their amounts only when all three Home areas are hidden. In Bills this also covers **All Bills**.
 
 These are screen preferences for this device. They don't change any amount, and they aren't in your backup.
 
-**Current limits of hiding amounts:**
+**If you used an earlier version** (with seven blocks):
 
-- Hiding isn't global. Amounts are **not** hidden in Money (Income, Accounts & Savings, Cards & Loans), Goals, a goal, a bill, a card or loan, or Settings, even when every Home block is hidden. This is the same as before, when they were in Data and Cards.
+- An area starts hidden if **any** of its old blocks was hidden. For example, if only Year Summary was hidden, the whole This Month area starts hidden. Nothing that was hidden becomes visible.
+- The areas keep the order of their first old block, and a part starts open if its old block was open.
+- The demo never reads or keeps these preferences.
+
+**Current limits of hiding amounts** (the same as before this change):
+
+- Hiding isn't global. Amounts are **not** hidden in Money (Income, Accounts & Savings, Cards & Loans), Goals, a goal, a bill, a card or loan, or Settings, even when every Home area is hidden. This is the same as before, when they were in Data and Cards.
 - Even with amounts hidden, Year Summary still shows which months had a negative result: the direction and colour of the bars, and a sentence naming those months. The year's result keeps its warning colour.
 - Spending by Category still lists categories from largest to smallest.
 - The PDF report has its own **Include amounts** choice. Hiding amounts on screen doesn't change it.
@@ -488,7 +533,9 @@ This is a suggested routine, not a reminder. The app doesn't send notifications.
 2. **As you pay:** mark bills as paid in Bills. Add spending in History, for example once a week.
 3. **Once a month:** update your account balances, and the Remaining Balance of each card and loan from your statements.
 4. **If you set money aside for a goal:** add it to the goal with **Add or Take Out**.
-5. **At the end of the month:** look at This Month and "How is this worked out?", then **Download Backup**.
+5. **At the end of the month:** look at This Month and "How is this worked out?", check that Left to Pay is empty, then **Download Backup**.
+
+**+ Add** on Home opens the Income, Spending, Bill and Goal forms without leaving your routine.
 
 ## 20. Not Available Yet
 
@@ -509,6 +556,9 @@ These don't exist in the app today:
 | Term | Meaning |
 | --- | --- |
 | **Money** | The tab with Income, Accounts & Savings and Cards & Loans. |
+| **Area** | One of Home's three groups: This Month, Left to Pay and Money & Goals. |
+| **Part** | A section inside a Home area that opens and closes, such as Year Summary or Goals. |
+| **Latest balances by** | The date Home uses for balances: the end of the chosen month, or today. Each balance keeps its own date. |
 | **Expected** | Income you usually receive that hasn't been recorded as received yet. |
 | **Received** | Income you recorded as arrived. |
 | **Planned Bills** | The bills of a month, paid or not. |

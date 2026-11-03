@@ -17,6 +17,8 @@ type Props = {
   /** Amounts hidden: the bar is not drawn either. */
   hidden: boolean
   onOpenGoal: (id: Id) => void
+  /** Its heading's level: 3 in Money, 4 inside a part of a Home area. */
+  level?: 3 | 4
 }
 
 /**
@@ -24,7 +26,8 @@ type Props = {
  * no purpose yet. The purposes are part of Savings, so they are never
  * added to it again. The same on Home and in Money.
  */
-export function SavingsByPurpose({ data, asOf, money, hidden, onOpenGoal }: Props) {
+export function SavingsByPurpose({ data, asOf, money, hidden, onOpenGoal, level = 3 }: Props) {
+  const Heading = level === 4 ? 'h4' : 'h3'
   const savings = savingsSummary(data, asOf)
   const parts = [
     ...savings.purposes.map((purpose, index) => ({
@@ -39,7 +42,7 @@ export function SavingsByPurpose({ data, asOf, money, hidden, onOpenGoal }: Prop
 
   return (
     <div className="savings-split" aria-label="Savings by purpose" role="group">
-      <h3 className="section-title">Savings</h3>
+      <Heading className="section-title">Savings</Heading>
       <p className="muted-note">Your savings are divided by purpose.</p>
       {parts.length > 0 && !hidden && (
         <div className="bar stacked" aria-hidden="true">

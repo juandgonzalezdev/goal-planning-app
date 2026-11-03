@@ -114,7 +114,8 @@ La app distingue seis cosas y cada una tiene su registro:
 - La cuota de un préstamo sin interés anotado no reduce el principal: la app
   no lo adivina, y la conciliación de ese mes dice que falta el dato.
 - Los saldos son **instantáneas con fecha**. Home muestra el último saldo hasta
-  el fin del mes elegido (o hoy). History nunca reconstruye saldos pasados a
+  el fin del mes elegido (o hoy); el área Money & Goals lo dice como «Latest
+  balances by [fecha]» y cada línea conserva su propia fecha. History nunca reconstruye saldos pasados a
   partir del actual.
 
 Ejemplo (Alex, agosto): resultado −3.037,86 = 1.500 de Savings + 1.160,57 de la
@@ -122,7 +123,7 @@ cuenta diaria + 377,29 de deuda nueva.
 
 ## 6. Deudas y cuotas
 
-- **Total Debt** = suma del último saldo conocido de cada tarjeta y préstamo
+- **Cards & Loans** en Home (antes Total Debt) = suma del último saldo conocido de cada tarjeta y préstamo
   (`summarizeDebts`). Las cuotas mensuales no se suman: pagan la deuda, no son
   más deuda.
 - **Una cuota vinculada se cuenta una vez.** Si una factura paga una deuda, la
@@ -154,7 +155,7 @@ Ejemplo (Alex, 31-12-2026): 0 + 2.644,35 + 9.622,63 = **12.266,98**.
 ## 7. Cuentas, Savings y metas
 
 - Las cuentas son de cuatro tipos: Daily Spending, Investments, Savings y Other.
-  **My Money** muestra el último saldo de cada tipo. La deuda nunca se resta.
+  **Accounts & Savings** en Home (antes My Money) muestra el último saldo de cada tipo. La deuda nunca se resta.
 - **Savings = lo que tienen las cuentas de ahorro.** Las metas y el Emergency
   Fund son **propósitos** dentro de Savings, no dinero extra:
 
@@ -167,7 +168,7 @@ Ejemplo (Alex, 31-12-2026): 0 + 2.644,35 + 9.622,63 = **12.266,98**.
   pantalla lo dice.
 
 - Ejemplo (Alex, diciembre): Savings 2.900 = Japón 1.800 + New Bike 200 +
-  Emergency 900 + 0 sin asignar. My Goals muestra 2.000 "part of your Savings".
+  Emergency 900 + 0 sin asignar. Goals en Home muestra 2.000 "part of your Savings".
 - **El dinero no gastado no se ahorra solo.** Savings cambia únicamente con
   una transferencia o un movimiento registrado; ni las simulaciones ni las
   ideas para revisar lo suben.
@@ -272,7 +273,7 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
 - **Reset Demo** (franja o Settings) devuelve el año completo: todos los
   registros, el mes elegido (diciembre de 2026), el diseño inicial de Home y
   las preferencias de pantalla de Alex.
-- El orden y los bloques abiertos de Home son preferencias de pantalla, no
+- El orden de las áreas y las partes abiertas de Home son preferencias de pantalla, no
   datos. En el espacio propio se recuerdan en este dispositivo
   (`goal-planning-app.home-layout`, ligado al id del espacio); en la demo duran
   mientras está abierta y nunca se guardan.
@@ -312,7 +313,7 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
   PDF no es una copia de seguridad, y **Download Both Copies** tampoco: es un
   archivo de recuperación que Restore Backup rechaza. Los dos JSON llevan los
   datos sin cifrar.
-- **Ocultar importes** (ojo en cada bloque de Home y Hide All Amounts) solo
+- **Ocultar importes** (ojo en cada área de Home y Hide All Amounts) solo
   cambia lo que se ve: máscara fija `••••`, también en etiquetas accesibles,
   porcentajes y gráficos. Se recuerda en este dispositivo. **No es cifrado ni
   protección de acceso.**

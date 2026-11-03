@@ -6,9 +6,8 @@ import { monthResult } from '../../domain/finance/spending'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { formatDate, formatYearMonth, monthName } from '../../ui/format'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
-import { HomeBlockFrame } from './HomeBlock'
+import { HomeAreaFrame } from './HomeBlock'
 
 /** The sentence about the chosen month: all paid, bills left, or amounts still unknown. */
 export function LeftToPayMessage({ bills, month }: { bills: BillSummary; month: YearMonth }) {
@@ -26,31 +25,43 @@ export function LeftToPayMessage({ bills, month }: { bills: BillSummary; month: 
   )
 }
 
-type Props = { data: FinanceData; month: YearMonth; today: CalendarDate; onOpenBills: () => void; onOpenBill: (id: Id) => void }
+type Props = {
+  data: FinanceData
+  month: YearMonth
+  today: CalendarDate
+  /** Every unpaid bill shown (Show all), kept while moving around the app. */
+  showAll: boolean
+  onShowAllChange: (showAll: boolean) => void
+  onOpenBills: () => void
+  onOpenBill: (id: Id) => void
+}
 
-/** What do I still have to pay? The amount, and each unpaid bill: due later or overdue (its date has passed). */
-export function LeftToPay({ data, month, today, onOpenBills, onOpenBill }: Props) {
+/** How many unpaid bills show before Show all. */
+export const FIRST_BILLS = 5
+
+/**
+ * What do I still have to pay? The amount, and each unpaid bill by its
+ * due date: due later or overdue (its date has passed). The first five
+ * show; Show all lists every one, here on Home. Each bill opens its own
+ * screen, where it is marked as paid as before.
+ */
+export function LeftToPay({ data, month, today, showAll, onShowAllChange, onOpenBills, onOpenBill }: Props) {
   const { money, spoken } = useBlockAmounts('left-to-pay', data.space.currency)
   const r = monthResult(data, month, today)
   const status = leftToPayStatus(r.planned)
-  const count = r.planned.count - r.planned.paidCount
-  const summary = status.status === 'no-bills' ? 'No bills planned'
-    : status.status === 'all-paid' ? 'All bills paid'
-      : `${money(r.planned.leftToPay)}${status.status === 'amounts-missing' ? ' + unknown' : ''} left · ${count} ${count === 1 ? 'bill' : 'bills'} not paid`
-  const actions = <>
-    <EyeToggle block="left-to-pay" />
-    <button type="button" className="button-small" onClick={onOpenBills}>Bills <Icon name="arrowRight" size={16} /></button>
-  </>
+  const more = r.pending.length > FIRST_BILLS
+  const shown = more && !showAll ? r.pending.slice(0, FIRST_BILLS) : r.pending
+  const actions = <button type="button" className="button-small" data-return-key="bills-link" onClick={onOpenBills}>Bills <Icon name="arrowRight" size={16} /></button>
   return (
-    <HomeBlockFrame block="left-to-pay" title="Left to Pay" period={formatYearMonth(month)} summary={summary} actions={actions}>
+    <HomeAreaFrame area="left-to-pay" period={formatYearMonth(month)} actions={actions}>
       <div className="left-to-pay">
         <b className="year-total">{money(r.planned.leftToPay)}{status.status === 'amounts-missing' && <small> + unknown</small>}</b>
         <LeftToPayMessage bills={r.planned} month={month} />
-        {r.pending.length > 0 && (
-          <ul className="line-list" aria-label="Bills not paid yet">
-            {r.pending.map(({ occurrence, state }) => (
+        {shown.length > 0 && (
+          <ul className="line-list pay-list" id="left-to-pay-list" aria-label="Bills not paid yet">
+            {shown.map(({ occurrence, state }) => (
               <li key={occurrence.bill.id}>
-                <button type="button" className="line line-button" onClick={() => onOpenBill(occurrence.bill.id)}
+                <button type="button" className="line line-button" data-return-key={`pay-${occurrence.bill.id}`} onClick={() => onOpenBill(occurrence.bill.id)}
                   aria-label={`${occurrence.bill.name}, ${occurrence.amount === null ? 'amount needed' : spoken(occurrence.amount)}, ${state === 'overdue' ? `overdue since ${formatDate(occurrence.dueDate)}` : `due ${formatDate(occurrence.dueDate)}`}`}>
                   <span>{occurrence.bill.name}<small className={state === 'overdue' ? 'overdue-tag' : 'pending-tag'}>{state === 'overdue' ? `Overdue since ${formatDate(occurrence.dueDate)}` : `Due ${formatDate(occurrence.dueDate)}`}</small></span>
                   <b>{occurrence.amount === null ? 'Amount needed' : money(occurrence.amount)}</b>
@@ -60,8 +71,13 @@ export function LeftToPay({ data, month, today, onOpenBills, onOpenBill }: Props
             ))}
           </ul>
         )}
+        {more && (
+          <button type="button" className="text-button align-start" aria-expanded={showAll} aria-controls="left-to-pay-list" onClick={() => onShowAllChange(!showAll)}>
+            {showAll ? 'Show Fewer' : `Show All ${r.pending.length}`}
+          </button>
+        )}
         {status.status === 'amounts-missing' && <p className="muted-note">Enter the missing amounts in Bills to know the full total.</p>}
       </div>
-    </HomeBlockFrame>
+    </HomeAreaFrame>
   )
 }

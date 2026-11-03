@@ -23,7 +23,7 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const region = (name: string) => text(regionOf(name))
-const stat = (label: string) => text(within(regionOf('This Month')).getByText(label).parentElement)
+const stat = (label: string) => text(within(regionOf('This Month').querySelector<HTMLElement>('.month-figures')!).getByText(label).parentElement)
 const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
 const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
 const amount = /\d,\d\d zł/
@@ -70,7 +70,7 @@ describe('Alex demo: Home', () => {
     expect(monthSelect().options).toHaveLength(13)
     expect(monthSelect().options[0].textContent).toBe('January 2026')
     const titles = [...document.querySelectorAll('[data-screen="home"] section .block-name')].map(h => h.textContent)
-    expect(titles).toEqual(['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'My Money', 'My Goals', 'Year Summary'])
+    expect(titles).toEqual(['This Month', 'Spending by Category', 'Year Summary', 'Left to Pay', 'Money & Goals', 'Accounts & Savings', 'Cards & Loans', 'Goals'])
   })
 
   it('shows December: income, planned bills, what was spent and the result', async () => {
@@ -95,12 +95,12 @@ describe('Alex demo: Home', () => {
 
   it('uses the balances of the month shown, never today’s balance worked back (6)', async () => {
     await openAlex()
-    expect(region('Total Debt')).toContain('12 266,98 zł')
+    expect(region('Cards & Loans')).toContain('12 266,98 zł')
     await pickMonth('2026-08')
-    expect(region('Total Debt')).toContain('16 029,46 zł')
-    expect(region('Total Debt')).toContain('Balances as of 31 Aug 2026')
+    expect(region('Cards & Loans')).toContain('16 029,46 zł')
+    expect(region('Cards & Loans')).toContain('Balances as of 31 Aug 2026')
     // Investments was last entered at the end of 2025: the dates are shown as they are, not as one day.
-    expect(region('My Money')).toContain('Latest balances, dated 31 Dec 2025 to 31 Aug 2026')
+    expect(region('Accounts & Savings')).toContain('Latest balances, dated 31 Dec 2025 to 31 Aug 2026')
   })
 
   it('says what is still to pay in December, and changes when it is paid (5)', async () => {
@@ -113,7 +113,7 @@ describe('Alex demo: Home', () => {
     expect(region('Left to Pay')).toContain('All your December bills are paid.')
     expect(stat('Spent')).toContain('5167,34 zł')
     // Paying a bill does not lower what is owed.
-    expect(region('Total Debt')).toContain('12 266,98 zł')
+    expect(region('Cards & Loans')).toContain('12 266,98 zł')
   })
 
   it('opens a category to show each cost, and a purchase opens in History to edit (7)', async () => {
@@ -195,7 +195,7 @@ describe('Alex demo: Home', () => {
 
   it('shows goals with and without a target, and the emergency fund cover', async () => {
     await openAlex()
-    const goals = region('My Goals')
+    const goals = region('Goals')
     expect(goals).toContain('Emergency Fund')
     expect(goals).toContain('Cover not worked out yet')
     expect(goals).toContain('Trip to Japan')
@@ -224,6 +224,7 @@ describe('Alex demo: hiding amounts (11)', () => {
   it('hides every amount on Home, also in opened details, labels and charts', async () => {
     await openAlex()
     await fire.click(button('Hide All Amounts'))
+    await chooseHomeOption('Expand All')
     await fire.click(button('How is this worked out?'))
     await fire.click(button('Ideas to Review'))
     await fire.click(screen.getByText('Reference Notes'))
@@ -234,32 +235,33 @@ describe('Alex demo: hiding amounts (11)', () => {
     expect(text(home)).not.toContain('18%')
     const labels = [...home.querySelectorAll('[aria-label]')].map(element => element.getAttribute('aria-label')!.replace(/\u00a0|\u202f/g, ' '))
     expect(labels.filter(label => amount.test(label))).toEqual([])
-    expect(labels).toContain('Show amounts in Year Summary')
+    expect(labels).toContain('Show amounts in This Month')
     // Charts get a neutral look: no slices, no proportional bars.
     expect(home.querySelector<HTMLElement>('.donut')!.style.background).toContain('var(--color-track)')
     expect(within(home).queryAllByRole('progressbar')).toEqual([])
     // Titles and navigation stay.
-    expect(regionOf('My Money')).toBeTruthy()
+    expect(regionOf('Accounts & Savings')).toBeTruthy()
     expect(tab('Bills')).toBeTruthy()
   })
 
-  it('can be used with the keyboard, block by block', async () => {
+  it('can be used with the keyboard, area by area', async () => {
     await openAlex()
-    const eye = button('Hide amounts in My Money')
+    const eye = button('Hide amounts in Money & Goals')
     expect(eye.tagName).toBe('BUTTON')
     act(() => eye.focus())
     expect(document.activeElement).toBe(eye)
     await fire.click(eye)
-    expect(region('My Money')).not.toMatch(amount)
-    expect(region('My Goals')).toMatch(amount)
-    expect(button('Show amounts in My Money')).toBeTruthy()
+    expect(region('Accounts & Savings')).not.toMatch(amount)
+    expect(region('Goals')).not.toMatch(amount)
+    expect(region('Left to Pay')).toMatch(amount)
+    expect(button('Show amounts in Money & Goals')).toBeTruthy()
   })
 })
 
 describe('Alex demo: goals, emergency fund and subscriptions', () => {
   async function openJapan() {
     await openAlex()
-    await fire.click(within(regionOf('My Goals')).getByRole('button', { name: /Trip to Japan/ }))
+    await fire.click(within(regionOf('Goals')).getByRole('button', { name: /Trip to Japan/ }))
     await waitFor(() => expect(heading('Trip to Japan')).toBeTruthy())
   }
 
@@ -291,7 +293,7 @@ describe('Alex demo: goals, emergency fund and subscriptions', () => {
 
   it('reviews the emergency fund from confirmed essential costs (9)', async () => {
     await openAlex()
-    await fire.click(within(regionOf('My Goals')).getByRole('button', { name: 'Review My Emergency Fund' }))
+    await fire.click(within(regionOf('Goals')).getByRole('button', { name: 'Review My Emergency Fund' }))
     expect(heading('Review My Emergency Fund')).toBeTruthy()
     const draft = () => text(document.querySelector('[data-screen="emergency"]'))
     expect(draft()).toContain('Essential costs per month4415,42 zł')
@@ -304,8 +306,8 @@ describe('Alex demo: goals, emergency fund and subscriptions', () => {
     await fire.click(button('Save Review'))
     await fire.click(button('Back'))
     await backHome()
-    expect(region('My Goals')).toContain('Covers about 0.2 months of essential costs')
-    expect(region('My Goals')).toContain('3515,42 zł to the target of 4415,42 zł')
+    expect(region('Goals')).toContain('Covers about 0.2 months of essential costs')
+    expect(region('Goals')).toContain('3515,42 zł to the target of 4415,42 zł')
   })
 
   it('simulates pausing a subscription; Cancel changes nothing, Confirm changes future months only (10)', async () => {
@@ -410,13 +412,13 @@ describe('Alex demo: keeping and resetting (15)', () => {
     expect(text(screen.getAllByRole('status').find(s => s.textContent)!)).toContain('Demo only: not saved.')
     await backHome()
     for (const name of ['History', 'Money', 'Goals', 'Bills', 'Home']) await fire.click(tab(name))
-    expect(region('Total Debt')).toContain('12 122,63 zł')
+    expect(region('Cards & Loans')).toContain('12 122,63 zł')
     await pickMonth('2026-03')
 
     await startDemoReset()
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
     expect(monthSelect().value).toBe('2026-12')
-    expect(region('Total Debt')).toContain('12 266,98 zł')
+    expect(region('Cards & Loans')).toContain('12 266,98 zł')
     expect(region('Year Summary')).toContain('Income in 202655 998,00 zł')
   })
 
@@ -480,7 +482,7 @@ describe('Alex demo: keyboard and labels', () => {
 
   it('uses real buttons, so Enter and Space work and focus moves through them', async () => {
     await openAlex()
-    const toggle = button(/^Total Debt/)
+    const toggle = button(/^Cards & Loans/)
     expect(toggle.tagName).toBe('BUTTON')
     expect(toggle.getAttribute('type')).toBe('button')
     act(() => toggle.focus())

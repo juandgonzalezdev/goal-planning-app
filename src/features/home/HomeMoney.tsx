@@ -4,23 +4,22 @@ import { summarizeMoney } from '../../domain/finance/moneyAccounts'
 import type { FinanceData, Id, MoneyAccountKind } from '../../domain/finance/types'
 import { MONEY_KINDS } from '../../ui/chartColors'
 import type { CalendarDate } from '../../domain/goalTime'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import { balanceDatesText } from './balanceDates'
 import { Donut } from './Donut'
 import { HomeBlockFrame } from './HomeBlock'
 import { SavingsByPurpose } from '../money/SavingsByPurpose'
 
-type Props = { data: FinanceData; title: string; asOf: CalendarDate; onOpenGoal: (id: Id) => void; onOpenMoney: () => void }
+type Props = { data: FinanceData; asOf: CalendarDate; onOpenGoal: (id: Id) => void; onOpenMoney: () => void }
 
 /**
- * What money do I have? The latest balances of Daily Spending,
+ * Accounts & Savings, in Money & Goals on Home: what money do I have? The latest balances of Daily Spending,
  * Investments and Savings. Savings is then divided by purpose: goals, the
  * emergency fund and what has no purpose yet. The purposes are part of
  * Savings, so they are never added to it again. Debt is never subtracted.
  * For a past month, the balances entered by the end of that month.
  */
-export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenMoney }: Props) {
+export function HomeMoney({ data, asOf, onOpenGoal, onOpenMoney }: Props) {
   // v5.9 opens with Investment chosen.
   const [chosen, setChosen] = useState<MoneyAccountKind>('investment')
   const summary = summarizeMoney(data, asOf)
@@ -33,13 +32,10 @@ export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenMoney }: Props)
   // One line per kind of account (Savings already holds the goals, so they are not added again).
   const summaryText = data.moneyAccounts.length === 0 ? 'No accounts yet'
     : kinds.map(item => `${MONEY_KINDS[item.kind].label} ${money(item.total)}${missing(item.kind) ? ' +?' : ''}`).join(' · ')
-  const actions = <>
-    <EyeToggle block="money" />
-    <button type="button" className="button-small" onClick={onOpenMoney}>Edit Balances <Icon name="arrowRight" size={16} /></button>
-  </>
+  const actions = <button type="button" className="button-small" data-return-key="accounts-link" onClick={onOpenMoney}>Edit Balances <Icon name="arrowRight" size={16} /></button>
 
   return (
-    <HomeBlockFrame block="money" title={title} period={balanceDatesText(summary.items.map(item => item.asOf), asOf)} summary={summaryText} actions={actions}>
+    <HomeBlockFrame block="money" title="Accounts & Savings" period={balanceDatesText(summary.items.map(item => item.asOf), asOf)} summary={summaryText} actions={actions}>
       {data.moneyAccounts.length === 0
         ? <p className="muted-note">No accounts yet. Add them in Money.</p>
         : <>
@@ -61,7 +57,7 @@ export function HomeMoney({ data, title, asOf, onOpenGoal, onOpenMoney }: Props)
           )}
         </>}
 
-      <SavingsByPurpose data={data} asOf={asOf} money={money} hidden={hidden} onOpenGoal={onOpenGoal} />
+      <SavingsByPurpose data={data} asOf={asOf} money={money} hidden={hidden} onOpenGoal={onOpenGoal} level={4} />
     </HomeBlockFrame>
   )
 }

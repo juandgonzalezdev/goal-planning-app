@@ -27,6 +27,12 @@ export type MoneyScreenProps = {
   onOpenGoal: (id: Id) => void
   /** Settings, on Reports & Backup. */
   onOpenReports: () => void
+  /** + Add Income on Home: Income opens with a new income form, once. */
+  startAdding?: boolean
+  /** The new income form is open: the request is used up. */
+  onStartedAdding?: () => void
+  /** Cancel in that form: back to Home. */
+  onCancelAdding?: () => void
 }
 
 /**

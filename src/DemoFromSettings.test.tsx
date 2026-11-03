@@ -8,7 +8,7 @@ import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabaseForEachTest, heldStore, settle, storedSpace } from './test/space'
-import { startDemoReset } from './test/homeControls'
+import { addFromHome, startDemoReset } from './test/homeControls'
 
 /*
  * Explore the Demo from Settings (patch 05b). The own space stays exactly
@@ -160,7 +160,7 @@ describe('Explore the Demo from Settings', () => {
   it('asks before dropping the New Goal draft, even with its screen closed; Keep Editing keeps it', async () => {
     await browserSpaceStore(memoryStorage()).create(robin())
     await openApp()
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     await fire.change(field('What are you saving for?'), { target: { value: 'Sailing trip' } })
     await fire.click(button('Go to Home'))
     await exploreFromSettings()
@@ -174,25 +174,25 @@ describe('Explore the Demo from Settings', () => {
     await fire.click(button('Keep Editing'))
     expect(screen.queryByText(DEMO)).toBeNull()
     await fire.click(button('Go to Home'))
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     expect(field('What are you saving for?').value).toBe('Sailing trip')
   })
 
   it('opens the demo only after Discard and Open Demo, and the draft never reaches the demo or comes back', async () => {
     await browserSpaceStore(memoryStorage()).create(robin())
     await openApp()
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     await fire.change(field('What are you saving for?'), { target: { value: 'Sailing trip' } })
     await fire.click(button('Go to Home'))
     await exploreFromSettings()
     await fire.click(button('Discard and Open Demo'))
     expect(screen.getByText(DEMO)).toBeTruthy()
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     expect(field('What are you saving for?').value).toBe('')
     await fire.click(button('Go to Home'))
     await exitDemo()
     expect(screen.getByText(OWN_HOME)).toBeTruthy()
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     expect(field('What are you saving for?').value).toBe('')
   })
 
@@ -244,7 +244,7 @@ describe('Explore the Demo from Settings', () => {
     await browserSpaceStore(memoryStorage()).create(robin())
     await openApp()
     await exploreFromSettings()
-    await fire.click(button(/Add Goal/))
+    await addFromHome('Add Goal')
     await fire.change(field('What are you saving for?'), { target: { value: 'Demo goal' } })
     await fire.click(button('Settings'))
     await fire.click(within(screen.getByRole('main')).getByRole('button', { name: 'Exit Demo' }))

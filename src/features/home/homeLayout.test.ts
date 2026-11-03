@@ -1,36 +1,70 @@
 import { describe, expect, it } from 'vitest'
-import { HOME_BLOCKS } from '../../ui/amountVisibility'
+import { AREA_OF, HOME_AREAS, HOME_BLOCKS, allAreasHidden, hiddenAreasFrom, savedHiddenNames } from '../../ui/amountVisibility'
 import { balanceDatesText } from './balanceDates'
-import { DEFAULT_LAYOUT, moveBlock, normalizeLayout, setAllOpen, setOpen } from './homeLayout'
+import { DEFAULT_LAYOUT, HOME_SECTIONS, layoutToSave, moveArea, normalizeLayout, setAllOpen, setOpen } from './homeLayout'
 
 describe('Home layout', () => {
-  it('starts in the approved order, with This Month and Left to Pay open', () => {
-    expect(DEFAULT_LAYOUT.order).toEqual(['month', 'left-to-pay', 'categories', 'debt', 'money', 'goals', 'year'])
-    expect(DEFAULT_LAYOUT.open).toEqual(['month', 'left-to-pay'])
+  it('starts with the three areas in order and every part closed', () => {
+    expect(DEFAULT_LAYOUT.order).toEqual(['month', 'left-to-pay', 'money-goals'])
+    expect(DEFAULT_LAYOUT.open).toEqual([])
     expect(normalizeLayout(null)).toEqual(DEFAULT_LAYOUT)
   })
 
-  it('reads old, incomplete or broken values without losing or repeating a block', () => {
-    const read = normalizeLayout({ order: ['year', 'year', 'unknown', 42, 'money'], open: ['debt', 'debt', 'nope'] })
-    expect(read.order).toEqual(['year', 'money', 'month', 'left-to-pay', 'categories', 'debt', 'goals'])
-    expect(read.open).toEqual(['debt'])
-    for (const broken of ['text', 7, [], { order: 'month' }, { open: null }]) {
+  it('reads this version’s layout without losing or repeating an area, and writes it back the same', () => {
+    const read = normalizeLayout({ version: 2, order: ['money-goals', 'money-goals', 'nope', 7], open: ['goals', 'goals', 'month', 'nope'] })
+    expect(read).toEqual({ order: ['money-goals', 'month', 'left-to-pay'], open: ['goals'] })
+    expect(normalizeLayout(layoutToSave(read))).toEqual(read)
+    expect(layoutToSave(read)).toEqual({ version: 2, order: ['money-goals', 'month', 'left-to-pay'], open: ['goals'] })
+    for (const broken of ['text', 7, [], { order: 'month' }, { open: null }, { version: 2, order: null, open: 'all' }]) {
       const layout = normalizeLayout(broken)
-      expect([...layout.order].sort()).toEqual([...HOME_BLOCKS].sort())
+      expect([...layout.order].sort()).toEqual([...HOME_AREAS].sort())
+      expect(layout.open).toEqual([])
     }
-    // No list of open blocks: the default ones; an empty list: all closed.
-    expect(normalizeLayout({ order: ['year'] }).open).toEqual(['month', 'left-to-pay'])
-    expect(normalizeLayout({ open: [] }).open).toEqual([])
   })
 
-  it('moves one block, opens and closes blocks one by one or all at once', () => {
-    expect(moveBlock(DEFAULT_LAYOUT, 'year', 0).order).toEqual(['year', 'month', 'left-to-pay', 'categories', 'debt', 'money', 'goals'])
-    expect(moveBlock(DEFAULT_LAYOUT, 'month', 99).order.at(-1)).toBe('month')
-    expect(moveBlock(DEFAULT_LAYOUT, 'debt', 2).order).toEqual(['month', 'left-to-pay', 'debt', 'categories', 'money', 'goals', 'year'])
-    expect(setOpen(DEFAULT_LAYOUT, 'goals', true).open).toEqual(['month', 'left-to-pay', 'goals'])
-    expect(setOpen(DEFAULT_LAYOUT, 'month', false).open).toEqual(['left-to-pay'])
-    expect(setAllOpen(DEFAULT_LAYOUT, true).open).toHaveLength(7)
+  it('reads an earlier version’s seven blocks: each area where its first block was, and the parts that were open', () => {
+    // The order of the earlier version, with Year Summary moved first and My Money above Total Debt.
+    const earlier = { order: ['year', 'left-to-pay', 'money', 'month', 'categories', 'debt', 'goals'], open: ['month', 'left-to-pay', 'money', 'year'] }
+    expect(normalizeLayout(earlier)).toEqual({ order: ['month', 'left-to-pay', 'money-goals'], open: ['money', 'year'] })
+    expect(normalizeLayout({ order: ['goals', 'month', 'year'], open: [] }).order).toEqual(['money-goals', 'month', 'left-to-pay'])
+    expect(normalizeLayout({ order: ['left-to-pay'] }).order).toEqual(['left-to-pay', 'month', 'money-goals'])
+    // The earlier first layout (This Month and Left to Pay open) opens no part: their figures always show now.
+    expect(normalizeLayout({ order: [...HOME_BLOCKS], open: ['month', 'left-to-pay'] })).toEqual(DEFAULT_LAYOUT)
+  })
+
+  it('moves one area, opens and closes parts one by one or all at once', () => {
+    expect(moveArea(DEFAULT_LAYOUT, 'money-goals', 0).order).toEqual(['money-goals', 'month', 'left-to-pay'])
+    expect(moveArea(DEFAULT_LAYOUT, 'month', 99).order).toEqual(['left-to-pay', 'money-goals', 'month'])
+    expect(setOpen(DEFAULT_LAYOUT, 'goals', true).open).toEqual(['goals'])
+    expect(setOpen(setOpen(DEFAULT_LAYOUT, 'goals', true), 'goals', false).open).toEqual([])
+    expect(setAllOpen(DEFAULT_LAYOUT, true).open).toEqual([...HOME_SECTIONS])
     expect(setAllOpen(DEFAULT_LAYOUT, false).open).toEqual([])
+  })
+})
+
+describe('Hidden amounts on Home', () => {
+  it('hides each area that held a hidden block of the earlier version: never fewer amounts', () => {
+    expect([...hiddenAreasFrom([])]).toEqual([])
+    expect([...hiddenAreasFrom(['year'])]).toEqual(['month'])
+    expect([...hiddenAreasFrom(['categories'])]).toEqual(['month'])
+    expect([...hiddenAreasFrom(['debt', 'unknown', 42 as unknown as string])]).toEqual(['money-goals'])
+    expect([...hiddenAreasFrom(['left-to-pay', 'goals'])].sort()).toEqual(['left-to-pay', 'money-goals'])
+    expect(allAreasHidden(hiddenAreasFrom([...HOME_BLOCKS]))).toBe(true)
+    // A part of each area hidden is every area hidden, so Bills and History hide their amounts too.
+    expect(allAreasHidden(hiddenAreasFrom(['year', 'left-to-pay', 'debt']))).toBe(true)
+    expect(allAreasHidden(hiddenAreasFrom(['year', 'debt']))).toBe(false)
+  })
+
+  it('saves the names of every block of a hidden area, so an earlier version hides the same amounts', () => {
+    expect(savedHiddenNames(new Set())).toEqual([])
+    expect(savedHiddenNames(new Set(['money-goals']))).toEqual(['money-goals', 'debt', 'money', 'goals'])
+    expect(savedHiddenNames(new Set(['month']))).toEqual(['month', 'categories', 'year'])
+    const all = savedHiddenNames(new Set(HOME_AREAS))
+    // What an earlier version reads: its seven block names, every one hidden.
+    expect(HOME_BLOCKS.every(block => all.includes(block))).toBe(true)
+    // Read again by this version: the same areas.
+    for (const area of HOME_AREAS) expect([...hiddenAreasFrom(savedHiddenNames(new Set([area])))]).toEqual([area])
+    for (const block of HOME_BLOCKS) expect(savedHiddenNames(new Set([AREA_OF[block]]))).toContain(block)
   })
 })
 

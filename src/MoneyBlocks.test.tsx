@@ -332,7 +332,7 @@ describe('Links into Money', () => {
   it('Edit Balances opens Money on Accounts & Savings, with the focus on its heading', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Edit Balances/ }))
     expect(screen.getByRole('heading', { name: 'Money' })).toBeTruthy()
     expect(isOpen('Accounts & Savings')).toBe(true)
     expect(isOpen('Income')).toBe(false)
@@ -350,7 +350,7 @@ describe('Links into Money', () => {
   it('the Money tab keeps the blocks as they were, with the focus on the title', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('My Money')).getByRole('button', { name: /Edit Balances/ }))
+    await fire.click(within(regionOf('Accounts & Savings')).getByRole('button', { name: /Edit Balances/ }))
     await fire.click(tab('Home'))
     await fire.click(tab('Money'))
     expect(isOpen('Accounts & Savings')).toBe(true)

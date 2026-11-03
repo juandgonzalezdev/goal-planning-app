@@ -174,7 +174,7 @@ describe('saving', () => {
     await start()
     await setUpTo()
     await fire.click(button('Create My Space'))
-    await fire.click(within(screen.getByRole('region', { name: 'My Goals' })).getByRole('button', { name: /View All/ }))
+    await fire.click(within(screen.getByRole('region', { name: 'Money & Goals' })).getByRole('button', { name: /^Open Goals/ }))
     await fire.click(button(/Add Goal/))
     await fire.change(field('What are you saving for?'), { target: { value: 'Laptop' } })
     await fire.change(field(/^Target Amount/), { target: { value: '4000' } })

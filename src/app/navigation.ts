@@ -175,6 +175,8 @@ export class Navigation {
   }
 
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
+  /** The step the app shows (its chain and place), to know later whether Back returned to this very step. */
+  current = (): { chain: string; idx: number } => ({ chain: this.anchor.chain, idx: this.anchor.idx })
   snapshot = () => this.state
 
   private emit(patch: Partial<NavigationState>) {

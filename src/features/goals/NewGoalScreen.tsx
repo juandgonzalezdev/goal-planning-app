@@ -69,7 +69,7 @@ export function NewGoalScreen({ data, today, owner, state, onStateChange, onCanc
 
   return (
     <div className="tab-screen">
-      <button type="button" className="back-link" onClick={onCancel}><Icon name="arrowLeft" size={18} /> All Goals</button>
+      <button type="button" className="back-link" onClick={onCancel}><Icon name="arrowLeft" size={18} /> Back</button>
       <h1 className="tab-title">Create a Goal</h1>
       <section className="block">
         <GoalFormFields idPrefix="new-goal" draft={state.draft} errors={errors} currency={data.space.currency}

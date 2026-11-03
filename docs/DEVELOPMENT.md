@@ -68,7 +68,7 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    invented…" con Reset Demo y Exit Demo. Menú: Home, Bills, Goals, Money,
    History.
 2. **Home (December 2026).** Income 7.200, Planned Bills 6.401,84, Spent
-   5.097,35, Result 2.102,65. Left to Pay 69,99 (Phone & Internet). Total Debt
+   5.097,35, Result 2.102,65. Left to Pay 69,99 (Phone & Internet). Cards & Loans
    12.266,98. Savings 2.900 = Japón 1.800 + New Bike 200 + Emergency Fund 900.
    Year Summary: 55.998 / 48.781,14 / 7.216,86, déficits en Feb, Jul y Aug.
 3. **Meses.** Elige August 2026 con las flechas o el selector: Result
@@ -78,10 +78,10 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    abre una y cámbiala en History. Home se actualiza. **Ideas to Review** →
    Gym Membership → What If I Pause It? → 387,00. Cancel no cambia nada.
 5. **Ocultar importes.** Hide All Amounts: todos los importes son `••••`, sin
-   barras ni porcentajes reveladores. El ojo de un bloque lo muestra solo a él.
+   barras ni porcentajes reveladores. El ojo de un área la muestra solo a ella.
    En la demo dura mientras está abierta; en el espacio propio se recuerda en
    este dispositivo.
-6. **Fondo de emergencia.** My Goals → Review My Emergency Fund: esenciales
+6. **Fondo de emergencia.** Home → Money & Goals → Goals → Review My Emergency Fund: esenciales
    4.415,42 al mes; 3 months → objetivo 13.246,26. Cancel no cambia nada; Save
    Review guarda el objetivo y la cobertura (~0,2 meses) aparece en Home.
 7. **Metas.** Trip to Japan → Try an Amount or Date: 500 al mes → 17 meses
@@ -101,13 +101,17 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
 11. **Exit Demo → Create Account → Continue Without an Account.** Crea un
     espacio propio, añade una factura y recarga la página: sigue ahí. Restore
     Backup lee el JSON descargado.
-12. **Home plegable.** Al abrir solo This Month y Left to Pay están abiertos;
-    los demás muestran periodo y resumen. Customize Home → Move up / Move down
-    o arrastrar por el asa → Done. Reset Layout vuelve al inicio. El mes se
+12. **Home en tres áreas.** This Month (con el año), Left to Pay y Money &
+    Goals («Latest balances by …»); todas las partes cerradas al abrir, con
+    periodo y resumen. January 2027: Left to Pay muestra 5 facturas y Show All
+    11; abre una y Back vuelve a la misma fila con Show All. + Add → Add
+    Income / Add Spending / Add Bill / Add Goal: Cancel y Back vuelven a Home.
+    Customize Home → Move up / Move down o arrastrar un área por el asa →
+    Done. Reset Layout vuelve al inicio sin tocar los importes ocultos. El mes se
     queda arriba al desplazarse. Bills → January 2027 → Home muestra enero.
 13. **Money plegable.** Al entrar los tres bloques (Income, Accounts &
     Savings, Cards & Loans) están cerrados con un resumen. Income → Salary muestra sus cobros de 2026 (esperado y recibido
-    por separado); Ended muestra Part-time Job y Scholarship. Home → My Money →
+    por separado); Ended muestra Part-time Job y Scholarship. Home → Accounts & Savings →
     Edit Balances abre Accounts & Savings con el foco en su encabezado. Bills
     → All Bills lista todas las facturas. Goals muestra el Emergency Fund
     aparte. Reset Demo (franja o Settings) pregunta «Reset demo?»; Cancel no

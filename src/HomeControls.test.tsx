@@ -15,7 +15,7 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const regionOf = (name: string) => screen.getByRole('region', { name })
-const toggleOf = (name: string) => within(regionOf(name)).getByRole('button', { name: new RegExp(`^${name}`) })
+const toggleOf = (name: string) => regionOf(name).querySelector<HTMLButtonElement>('.block-toggle')!
 const homeText = () => text(document.querySelector('[data-screen="home"]'))
 const homeLabels = () => [...document.querySelectorAll('[data-screen="home"] [aria-label]')].map(element => element.getAttribute('aria-label')).join(' | ')
 const options = () => button('Home options')
@@ -24,7 +24,8 @@ const items = () => within(menu()!).getAllByRole('menuitem')
 const demoOptions = () => within(screen.getByRole('note')).getByRole('button', { name: 'Demo options' })
 const about = () => screen.queryByRole('group', { name: 'About the demo' })
 const amount = /\d,\d\d zł/
-const BLOCKS = ['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'My Money', 'My Goals', 'Year Summary']
+const AREAS = ['This Month', 'Left to Pay', 'Money & Goals']
+const PARTS = ['Spending by Category', 'Year Summary', 'Accounts & Savings', 'Cards & Loans', 'Goals']
 
 async function openAlex(storage: Storage = memoryStorage()) {
   const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
@@ -93,7 +94,7 @@ describe('Home options menu', () => {
     await fire.keyDown(document.activeElement!, { key: 'Tab' })
     expect(menu()).toBeNull()
     await fire.click(options())
-    toggleOf('This Month').focus()
+    toggleOf('Year Summary').focus()
     await waitFor(() => expect(menu()).toBeNull())
   })
 
@@ -102,11 +103,11 @@ describe('Home options menu', () => {
     await chooseHomeOption('Expand All')
     expect(menu()).toBeNull()
     expect(document.activeElement).toBe(options())
-    expect(BLOCKS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'true')).toBe(true)
-    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All blocks open.')
+    expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'true')).toBe(true)
+    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All parts open.')
     await chooseHomeOption('Collapse All')
-    expect(BLOCKS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'false')).toBe(true)
-    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All blocks closed.')
+    expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'false')).toBe(true)
+    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All parts closed.')
   })
 
   it('Customize Home puts the keyboard on its instructions, and Done puts it back on Home options', async () => {
@@ -132,11 +133,11 @@ describe('The Home eye', () => {
     await fire.click(button('Hide All Amounts'))
     expect(homeText()).not.toMatch(amount)
     expect(homeLabels()).not.toMatch(amount)
-    for (const name of BLOCKS) expect(button(`Show amounts in ${name}`)).toBeTruthy()
+    for (const name of AREAS) expect(button(`Show amounts in ${name}`)).toBeTruthy()
     expect(button('Show All Amounts').classList.contains('is-hidden')).toBe(true)
     await fire.click(button('Show All Amounts'))
     expect(homeText()).toMatch(amount)
-    for (const name of BLOCKS) expect(button(`Hide amounts in ${name}`)).toBeTruthy()
+    for (const name of AREAS) expect(button(`Hide amounts in ${name}`)).toBeTruthy()
   })
 
   it('says Amounts hidden or Amounts visible for a moment, over the page', async () => {
@@ -153,16 +154,19 @@ describe('The Home eye', () => {
     expect(status().classList.contains('is-shown')).toBe(false)
   })
 
-  it('keeps each block’s own eye; all hidden only when every block is', async () => {
+  it('keeps each area’s own eye; all hidden only when every area is', async () => {
     await openAlex()
-    await fire.click(button('Hide amounts in Total Debt'))
-    expect(text(toggleOf('Total Debt'))).toContain('•••• still owed')
-    expect(text(toggleOf('My Money'))).toMatch(amount)
-    expect(button('Show amounts in Total Debt').classList.contains('is-hidden')).toBe(true)
-    // One block hidden is not all of them: the Home eye still hides all.
-    await fire.click(button('Hide All Amounts'))
-    await fire.click(button('Show amounts in My Money'))
-    expect(text(toggleOf('My Money'))).toMatch(amount)
+    await fire.click(button('Hide amounts in Money & Goals'))
+    expect(text(toggleOf('Cards & Loans'))).toContain('•••• Remaining Balance')
+    expect(text(regionOf('This Month'))).toMatch(amount)
+    expect(button('Show amounts in Money & Goals').classList.contains('is-hidden')).toBe(true)
+    // One area hidden is not all of them: the Home eye still hides all.
+    expect(button('Hide All Amounts')).toBeTruthy()
+    await fire.click(button('Hide amounts in This Month'))
+    await fire.click(button('Hide amounts in Left to Pay'))
+    expect(button('Show All Amounts')).toBeTruthy()
+    await fire.click(button('Show amounts in Money & Goals'))
+    expect(text(toggleOf('Accounts & Savings'))).toMatch(amount)
     expect(button('Hide All Amounts')).toBeTruthy()
   })
 
@@ -183,15 +187,20 @@ describe('The Home eye', () => {
 })
 
 describe('What was typed survives the controls', () => {
-  it('keeps a half-typed amount through the eye, Expand All, Collapse All and Customize Home', async () => {
+  it('keeps a half-typed amount through the eyes, Expand All, Collapse All, Customize Home and moving its area', async () => {
     await openAlex()
     await typeRent('1234')
     await fire.click(button('Hide All Amounts'))
     await fire.click(button('Show All Amounts'))
+    await fire.click(button('Hide amounts in This Month'))
+    await fire.click(button('Show amounts in This Month'))
     await chooseHomeOption('Collapse All')
     await chooseHomeOption('Expand All')
     await chooseHomeOption('Customize Home')
+    await fire.click(button('Move down: This Month'))
+    await fire.click(button('Move down: This Month'))
     await fire.click(button('Done'))
+    expect([...document.querySelectorAll<HTMLElement>('[data-home-area]')].map(element => element.dataset.homeArea)).toEqual(['left-to-pay', 'money-goals', 'month'])
     expect(rentField().value).toBe('1234')
   })
 })
@@ -232,19 +241,19 @@ describe('Demo strip', () => {
 
   it('Reset Demo still asks first; Cancel changes nothing, Reset Demo restores Alex, and the keyboard comes back to the menu', async () => {
     const { storage } = await openAlex()
-    await fire.click(button('Hide amounts in Total Debt'))
+    await fire.click(button('Hide amounts in Money & Goals'))
     await fire.click(demoOptions())
     await fire.click(within(about()!).getByRole('button', { name: 'Reset Demo' }))
     const question = screen.getByRole('group', { name: 'Reset demo?' })
     expect(document.activeElement).toBe(within(question).getByRole('button', { name: 'Cancel' }))
     expect(within(screen.getByRole('note')).queryByRole('button', { name: 'Exit Demo' })).toBeNull()
     await fire.click(within(question).getByRole('button', { name: 'Cancel' }))
-    expect(button('Show amounts in Total Debt')).toBeTruthy()
+    expect(button('Show amounts in Money & Goals')).toBeTruthy()
     expect(document.activeElement).toBe(demoOptions())
     await fire.click(demoOptions())
     await fire.click(within(about()!).getByRole('button', { name: 'Reset Demo' }))
     await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
-    expect(button('Hide amounts in Total Debt')).toBeTruthy()
+    expect(button('Hide amounts in Money & Goals')).toBeTruthy()
     expect(document.activeElement).toBe(demoOptions())
     // The demo never writes to this device.
     expect(storage.length).toBe(0)

@@ -515,8 +515,46 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .block-body-inner { display: grid; gap: 12px; min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
 .fold-block:not(.is-open) > .block-body { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows var(--motion-quick) var(--motion-ease), visibility 0s var(--motion-quick); }
 .fold-block:not(.is-open) { gap: 0; }
-.home-blocks.is-customizing .block-body { display: none; }
-.home-blocks.is-customizing .home-block { gap: 6px; }
+/*
+ * Home's three areas: the heading, the eye and the main figures always
+ * show; the parts inside open and close. Money & Goals has another
+ * background, because it shows balances by a date, not the month's figures.
+ */
+.home-area { gap: 12px; }
+.home-area.is-balances { background: var(--color-surface-muted); }
+.area-head { align-items: flex-start; }
+/* When the actions wrap under the name (narrow phones), they stay at the right, and the eye's tip may take two lines so it stays on screen. */
+.area-head .block-actions { margin-left: auto; }
+.area-head .icon-tip { white-space: normal; width: max-content; max-width: 9rem; }
+.area-title { display: grid; gap: 2px; flex: 1 1 14rem; min-width: 0; margin: 0; font-size: 1.05rem; }
+.area-title:focus { outline: none; }
+.area-title:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.area-body { display: grid; gap: 12px; min-width: 0; }
+.home-parts { display: grid; gap: 10px; }
+.home-part { padding: 10px 12px; }
+.home-area.is-balances .home-part { background: var(--color-surface); }
+.home-add { display: flex; justify-content: flex-end; }
+.home-add .popover { min-width: 13rem; }
+/* + Add and its options: at least 44 px tall, for touch. Only here; other small buttons keep 40 px. */
+.home-add > .menu-root > .button-small { min-height: 44px; padding-inline: 16px; }
+.home-add .menu-item { min-height: 44px; }
+/* While customizing, each area shows only its heading; its content stays in the page (with anything typed). */
+.home-blocks.is-customizing .area-body { display: none; }
+.home-blocks.is-customizing .home-area { gap: 6px; }
+/*
+ * Wide screens: still one column, in the same reading and keyboard order
+ * as on a phone, but wider, with the figures side by side. Unpaid bills go
+ * left to right, then down, in date order. A part that opens takes the
+ * whole width.
+ */
+@media (min-width: 1024px) {
+  .tab-screen.home-screen { max-width: 880px; }
+  .home-screen .home-bar-row { max-width: 880px; }
+  .home-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pay-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+  .home-parts { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); align-items: start; }
+  .home-parts > .home-part.is-open { grid-column: 1 / -1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .block-body, .fold-block:not(.is-open) > .block-body, .block-chevron { transition: none; }
 }
@@ -530,9 +568,9 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .home-blocks.is-dragging, .home-blocks.is-dragging * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 .block-position { flex: 1; font-size: 12px; color: var(--color-text-muted); }
 .block-arrange .button-small:disabled { opacity: .45; cursor: not-allowed; }
-.home-block.is-dragging { opacity: .6; outline: 2px dashed var(--color-selected-border); }
-.home-block.drop-before { box-shadow: 0 -4px 0 0 var(--color-focus); }
-.home-block.drop-after { box-shadow: 0 4px 0 0 var(--color-focus); }
+.home-area.is-dragging { opacity: .6; outline: 2px dashed var(--color-selected-border); }
+.home-area.drop-before { box-shadow: 0 -4px 0 0 var(--color-focus); }
+.home-area.drop-after { box-shadow: 0 4px 0 0 var(--color-focus); }
 
 /* Data: six blocks that open and close, in a fixed order (they share the Home block style above). */
 .data-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }

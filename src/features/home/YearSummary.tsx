@@ -6,7 +6,6 @@ import { EUROSTAT_OVERBURDEN_PERCENT, housingShare } from '../../domain/finance/
 import type { FinanceData } from '../../domain/finance/types'
 import { barPercent } from '../../ui/chart'
 import { formatYearMonth } from '../../ui/format'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import { HomeBlockFrame } from './HomeBlock'
 
@@ -15,7 +14,8 @@ const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 type Props = { data: FinanceData; year: number; today: CalendarDate; month: YearMonth; onSelectMonth: (month: YearMonth) => void }
 
 /**
- * Year Summary, last on Home: income received, money spent and the
+ * Year Summary, inside This Month on Home, for the year of the month
+ * shown (named open and closed): income received, money spent and the
  * result of each month of the year, from the records. Savings and debt at
  * the end of each month come from the balances entered by then. Months
  * after today show nothing: they have not happened. A month opens on Home.
@@ -31,7 +31,7 @@ export function YearSummary({ data, year, today, month, onSelectMonth }: Props) 
 
   const summaryText = started === 0 ? `Nothing has happened in ${year} yet` : `Result for ${year}: ${money(summary.result)}`
   return (
-    <HomeBlockFrame block="year" title="Year Summary" period={`${year} · ${started} of 12 months so far`} summary={summaryText} actions={<EyeToggle block="year" />}>
+    <HomeBlockFrame block="year" title="Year Summary" period={`${year} · ${started} of 12 months so far`} summary={summaryText}>
       <dl className="year-stats">
         <div><dt>Income in {year}</dt><dd>{money(summary.income)}</dd></div>
         <div><dt>Spent in {year}</dt><dd>{money(summary.spending)}</dd></div>
@@ -95,7 +95,7 @@ function ReferenceNotes({ data, months, today, money, percent }: {
   return (
     <details className="explain">
       <summary>Reference Notes</summary>
-      <h3 className="section-title">Housing costs and income</h3>
+      <h4 className="section-title">Housing costs and income</h4>
       {share.status === 'ok' && <p>Housing and utilities were {percent(`${share.percent.toLocaleString('en-GB')}%`)} of the net income you received ({money(share.housing)} of {money(share.income)}, {period}).</p>}
       {share.status === 'no-income' && <p>No percentage: no income was received in {period}, so a share would mean nothing.</p>}
       {share.status === 'incomplete' && <p>No percentage: a housing or utilities bill has no amount yet in {period}.</p>}
@@ -105,7 +105,7 @@ function ReferenceNotes({ data, months, today, money, percent }: {
         statistics). That is a measure of difficulty, not a spending limit, and there is no universal right share. Net income here is not exactly
         disposable income: housing allowances are not recorded separately.
       </p>
-      <h3 className="section-title">50/30/20</h3>
+      <h4 className="section-title">50/30/20</h4>
       <p className="field-help">
         Some budgets split net income into about 50% needs, 30% wants and 20% savings (from the book All Your Worth, 2005). It is a rough guideline,
         not a rule, and the app does not grade you against it.

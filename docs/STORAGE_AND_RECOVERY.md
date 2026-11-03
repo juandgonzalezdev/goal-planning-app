@@ -22,10 +22,33 @@ errores.
 | La copia antigua (versiones anteriores de la app) | `localStorage`, clave `goal-planning-app.my-space` | Solo se lee y nunca se cambia, salvo con Erase |
 | La marca de borrado | `localStorage`, clave `goal-planning-app.erased` | Mientras existe, la copia antigua no se vuelve a abrir |
 | Preferencias de pantalla del espacio propio | `localStorage`: `goal-planning-app.hidden-amounts`, `.bills-chart`, `.emergency-later` y `.home-layout` (este último ligado al id del espacio) | Son de este dispositivo, no del espacio, y no van en la copia de seguridad |
-| La demo | Solo en memoria | Nunca se guarda (sección 7) |
+| La demo | Solo en memoria | Nunca se guarda (sección 8) |
 
 Los espacios nuevos reciben un id aleatorio (`newId`). Los creados antes
 conservan `my-space`.
+
+**Home en tres áreas (preferencias de pantalla).**
+
+- `hidden-amounts` sigue siendo una lista de nombres. Se lee con
+  `hiddenAreasFrom`: un área queda oculta si en la lista está su nombre
+  (`month`, `left-to-pay`, `money-goals`) o el de **cualquiera** de sus bloques
+  antiguos (`month`, `categories`, `year` → This Month; `left-to-pay` → Left
+  to Pay; `money`, `debt`, `goals` → Money & Goals).
+  Nada que estuviera oculto pasa a verse.
+- Al guardar se escriben los nombres de las áreas ocultas **y** los de todos
+  sus bloques antiguos (`savedHiddenNames`), para que una versión anterior de
+  la app, si se vuelve a ella, siga ocultando lo mismo.
+- `home-layout` se guarda como `{ spaceId, layout: { version: 2, order, open } }`:
+  `order` son las tres áreas y `open` las partes abiertas (`categories`,
+  `year`, `money`, `debt`, `goals`). Un diseño de siete bloques se lee así: cada
+  área ocupa el lugar de su primer bloque y una parte está abierta si su bloque
+  lo estaba. Cualquier otra cosa ilegible vuelve al diseño inicial sin error.
+  Si se vuelve a una versión anterior, esta lee del formato 2 lo que reconoce:
+  This Month y Left to Pay primero, el resto de bloques en su orden inicial, y
+  abiertos los bloques cuyo nombre coincide con una parte abierta; This Month y
+  Left to Pay aparecen cerrados. Es solo la vista: ningún dato se pierde.
+- Reset Layout solo cambia `home-layout`; nunca toca `hidden-amounts`.
+- La demo no lee ni escribe ninguna de las dos claves.
 
 ## 2. Migración desde la copia antigua
 
@@ -165,13 +188,17 @@ La distancia entre dos pasos solo se calcula dentro de una misma cadena.
   mientras hay algo escrito, también un borrador conservado.
 - **Límites:** una llegada tardía sin nada que perder puede cambiar la pantalla;
   tras Keep Editing en un paso reescrito, un Atrás puede parecer que no hace
-  nada; el gesto de Safari en iPhone está pendiente de verificación real.
+  nada. En Safari/iPhone se comprobaron los gestos cancelado y completado
+  de 1B, el regreso desde Money y los recorridos principales de la nueva
+  Home: Show All y regreso desde una factura, protección de Add Spending,
+  conservación del borrador de Add Goal y ocultación de importes.
+  No se han validado todas las formas de navegación en Safari.
 
 ## 6. Problemas al abrir y recuperación
 
 | Situación | Qué ve el usuario |
 | --- | --- |
-| Lo guardado no se puede abrir: dañado (`broken`), falta el espacio (`missing`), copias distintas (`copies-differ`) | Pantalla **Your Saved Information**. Nunca ofrece crear un espacio. Ofrece Download Both Copies, Use Older Copy (si la copia antigua se puede leer) y Erase Saved Information, cada uno con confirmación, más Try Again |
+| Lo guardado no se puede abrir: dañado (`broken`), falta el espacio (`missing`), copias distintas (`copies-differ`) | Pantalla **Your Saved Information**. Nunca ofrece crear un espacio. Ofrece Download Both Copies, Use Older Copy (si la copia antigua se puede leer) y Erase Saved Information, cada uno tras confirmación, más Try Again |
 | Guardado por una versión más nueva de la app (`newer-version`) | La misma pantalla, solo con Download Both Copies y Try Again. Nunca se sustituye ni se borra |
 | El navegador no puede guardar con seguridad (sin IndexedDB, o falló a mitad) | **Solo lectura**: se puede mirar todo, Download Backup, Download Both Copies y Try Again. Si se muestra la copia antigua, se dice que puede estar desactualizada. Ningún control llega a guardar. Sin copia que mostrar, Welcome lo dice y no deja empezar un espacio |
 | Erase no pudo quitar la copia antigua | Welcome dice «Erase is not finished…». Esa copia no se vuelve a abrir |

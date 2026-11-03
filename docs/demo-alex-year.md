@@ -114,7 +114,7 @@ resultado **7.216,86**. Meses con déficit: febrero, julio y agosto.
 
 Metas al final de diciembre: Emergency Fund 900, Trip to Japan 1.800, New Bike
 200 → 2.900 = todo Savings (0 sin asignar). Diciembre: Planned Bills 6.401,84,
-Left to Pay 69,99, Total Debt 12.266,98.
+Left to Pay 69,99, Cards & Loans 12.266,98.
 
 ## 6. Cómo se financian los meses con déficit
 

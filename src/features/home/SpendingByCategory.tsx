@@ -10,7 +10,6 @@ import type { BillsChartView } from '../../data/uiPrefs'
 import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatYearMonth, monthName } from '../../ui/format'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import type { ChangeSpace } from '../../ui/saveOutcome'
 import { billsByCategory } from '../../domain/finance/home'
@@ -54,7 +53,7 @@ export function SpendingByCategory(props: Props) {
 
   return (
     <HomeBlockFrame block="categories" title="Spending by Category" period={formatYearMonth(month)}
-      summary={<CategoriesSummary data={data} month={month} mode={mode} spent={spending} money={money} />} actions={<EyeToggle block="categories" />}>
+      summary={<CategoriesSummary data={data} month={month} mode={mode} spent={spending} money={money} />}>
       <div className="segment-row">
         <div className="segmented" role="group" aria-label="Show">
           {(['spent', 'planned'] as const).map(option => (

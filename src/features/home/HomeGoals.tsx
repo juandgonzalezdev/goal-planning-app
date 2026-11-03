@@ -1,4 +1,3 @@
-import { Icon } from '../../components/Icon'
 import { ProgressBar } from '../../components/ProgressBar'
 import type { CalendarDate } from '../../domain/goalTime'
 import { emergencyCover } from '../../domain/finance/emergency'
@@ -8,35 +7,32 @@ import { savingsSummary } from '../../domain/finance/savings'
 import { ownerColor } from '../../domain/finance/space'
 import type { FinanceData, Id } from '../../domain/finance/types'
 import { formatDate } from '../../ui/format'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
 import { HomeBlockFrame } from './HomeBlock'
 
 type Props = {
   data: FinanceData
-  title: string
   /** The end of the month shown (or today): goals and what they hold by then. */
   asOf: CalendarDate
   /** The user chose Maybe Later on the emergency fund suggestion. */
   emergencyLater: boolean
   onEmergencyLater: () => void
   onReviewEmergency: () => void
-  onViewAll: () => void
-  onAddGoal: () => void
   onOpenGoal: (id: Id) => void
 }
 
 /**
- * What am I saving for? One row per active goal with what it holds and,
+ * Goals, in Money & Goals on Home: what am I saving for? One row per active goal with what it holds and,
  * when it has a target, what is still to go. What the goals hold is part
- * of Savings (see My Money), not extra money.
+ * of Savings (see Accounts & Savings), not extra money. Add Goal is in
+ * + Add, and Goals opens from the area's heading.
  *
  * Without an emergency fund, the first suggestion is to start one. It is
  * optional: Review My Emergency Fund only opens a draft, and nothing is
  * created or assigned until the user confirms it there.
  */
 export function HomeGoals(props: Props) {
-  const { data, title, asOf, onOpenGoal } = props
+  const { data, asOf, onOpenGoal } = props
   // The goals as they were by `asOf`: nothing added later is shown for a past month.
   const past = { goals: data.goals.filter(goal => goal.createdOn <= asOf), goalMovements: data.goalMovements.filter(m => m.date <= asOf) }
   const rows = activeGoalRows(past, asOf)
@@ -47,32 +43,27 @@ export function HomeGoals(props: Props) {
   const { money, percent, hidden } = useBlockAmounts('goals', data.space.currency)
   const showFund = cover.fund !== null && cover.fund.createdOn <= asOf
   const summaryText = [
-    rows.length === 0 ? 'No goals yet' : `${money(summary.saved)} for ${summary.activeCount} ${summary.activeCount === 1 ? 'goal' : 'goals'}`,
+    rows.length === 0 ? 'No goals yet' : `${money(summary.saved)} for ${summary.activeCount} ${summary.activeCount === 1 ? 'goal' : 'goals'}, part of Savings`,
     showFund ? `${cover.fund!.name} ${money(cover.saved)}` : null,
   ].filter(Boolean).join(' · ')
-  const actions = <>
-    <EyeToggle block="goals" />
-    <button type="button" className="button-small button-small-primary" onClick={props.onAddGoal}><Icon name="plus" size={16} /> Add Goal</button>
-    <button type="button" className="button-small" onClick={props.onViewAll}>View All <Icon name="arrowRight" size={16} /></button>
-  </>
 
   return (
-    <HomeBlockFrame block="goals" title={title} period={`Saved by ${formatDate(asOf)} · Target dates on each goal`} summary={summaryText} actions={actions}>
+    <HomeBlockFrame block="goals" title="Goals" period={`Saved by ${formatDate(asOf)} · Target dates on each goal`} summary={summaryText}>
 
       {!hasFund && !props.emergencyLater && (
         <div className="suggestion-card" role="group" aria-labelledby="emergency-suggestion">
-          <h3 id="emergency-suggestion" className="section-title">Start with an emergency fund</h3>
+          <h4 id="emergency-suggestion" className="section-title">Start with an emergency fund</h4>
           <p>Money kept for an unexpected cost or a month with less income. It means you need to borrow less, and the savings for your other goals stay where they are.</p>
           <p className="field-help">Optional. Nothing is created until you confirm it.</p>
           <div className="inline-actions">
-            <button type="button" className="button-small button-small-primary" onClick={props.onReviewEmergency}>Review My Emergency Fund</button>
+            <button type="button" className="button-small button-small-primary" data-return-key="emergency-review" onClick={props.onReviewEmergency}>Review My Emergency Fund</button>
             <button type="button" className="button-small" onClick={props.onEmergencyLater}>Maybe Later</button>
           </div>
         </div>
       )}
 
       {showFund && cover.fund && (
-        <button type="button" className="goal-row" onClick={() => onOpenGoal(cover.fund!.id)}>
+        <button type="button" className="goal-row" data-return-key={`goal-${cover.fund.id}`} onClick={() => onOpenGoal(cover.fund!.id)}>
           <span>{cover.fund.name}<small className="goal-kind">
             {cover.months === null ? 'Cover not worked out yet' : `Covers about ${cover.months.toLocaleString('en-GB')} ${cover.months === 1 ? 'month' : 'months'} of essential costs`}
           </small></span>
@@ -83,7 +74,7 @@ export function HomeGoals(props: Props) {
         </button>
       )}
       {hasFund && (
-        <button type="button" className="text-button align-start" onClick={props.onReviewEmergency}>Review My Emergency Fund</button>
+        <button type="button" className="text-button align-start" data-return-key="emergency-review" onClick={props.onReviewEmergency}>Review My Emergency Fund</button>
       )}
 
       {rows.length === 0
@@ -96,7 +87,7 @@ export function HomeGoals(props: Props) {
           <ul className="goal-rows">
             {rows.map(({ goal, progress }) => (
               <li key={goal.id}>
-                <button type="button" className="goal-row" onClick={() => onOpenGoal(goal.id)}>
+                <button type="button" className="goal-row" data-return-key={`goal-${goal.id}`} onClick={() => onOpenGoal(goal.id)}>
                   <span>{goal.name}<small className="goal-kind">{goal.deadline ? `With Date · ${formatDate(goal.deadline)}` : progress.hasTarget ? 'Flexible' : 'No target'}</small></span>
                   <span>{progress.hasTarget ? percent(`${Math.round(progress.percent)}%`) : money(progress.saved)}</span>
                   {progress.hasTarget && (hidden

@@ -243,7 +243,7 @@ describe('Back from a detail goes to where it was opened', () => {
   it('from Home: Back is Home, not Money', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('Total Debt')).getByRole('button', { name: /^Small Loan/ }))
+    await fire.click(within(regionOf('Cards & Loans')).getByRole('button', { name: /^Small Loan/ }))
     await fire.click(button('Back'))
     expect(tab('Home').getAttribute('aria-current')).toBe('page')
     expect(shownScreen()).toBe('home')
@@ -266,7 +266,7 @@ describe('Back from a detail goes to where it was opened', () => {
   it('a goal says Back, not All Goals, and goes back to where it was opened (Home, Goals)', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('My Goals')).getByRole('button', { name: /^Trip to Japan/ }))
+    await fire.click(within(regionOf('Goals')).getByRole('button', { name: /^Trip to Japan/ }))
     expect(screen.queryByRole('button', { name: 'All Goals' })).toBeNull()
     await fire.click(button('Back'))
     expect(shownScreen()).toBe('home')
@@ -291,7 +291,7 @@ describe('Links into Money and Goals', () => {
   it('Open Cards & Loans on Home opens Money on that block, with the focus on its heading', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('Total Debt')).getByRole('button', { name: /Open Cards & Loans/ }))
+    await fire.click(within(regionOf('Cards & Loans')).getByRole('button', { name: /Open Cards & Loans/ }))
     expect(heading('Money')).toBeTruthy()
     expect(isOpen('Cards & Loans')).toBe(true)
     expect(isOpen('Income')).toBe(false)
@@ -301,7 +301,7 @@ describe('Links into Money and Goals', () => {
   it('View All on Home opens the Goals tab', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
-    await fire.click(within(regionOf('My Goals')).getByRole('button', { name: /View All/ }))
+    await fire.click(within(regionOf('Money & Goals')).getByRole('button', { name: /^Open Goals/ }))
     expect(tab('Goals').getAttribute('aria-current')).toBe('page')
   })
 })

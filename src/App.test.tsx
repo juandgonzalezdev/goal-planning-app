@@ -166,7 +166,7 @@ describe('Welcome Setup', () => {
     const data: Record<string, unknown> = { ...(await saved()) }
     for (const list of ['income', 'bills', 'billMonths', 'debts', 'moneyAccounts', 'balances', 'goals', 'goalMovements']) expect(data[list]).toEqual([])
     expect(stat('Income')).toContain('—')
-    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('0,00 zł')
+    expect(text(screen.getByRole('region', { name: 'Cards & Loans' }))).toContain('0,00 zł')
   })
 
   it('keeps what was typed when going back to Welcome and returning', async () => {
@@ -234,7 +234,7 @@ describe('Demo', () => {
     expect(stat('Planned Bills')).toContain('5571,43 zł')
     expect(text(screen.getByRole('region', { name: 'Left to Pay' }))).toContain('0,00 zł')
     expect(text(screen.getByRole('region', { name: 'Left to Pay' }))).toContain('All your October bills are paid.')
-    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('46 600,40 zł')
+    expect(text(screen.getByRole('region', { name: 'Cards & Loans' }))).toContain('46 600,40 zł')
   })
 
   it('never saves, and starts fresh after Exit Demo', async () => {
@@ -269,11 +269,13 @@ describe('Home', () => {
   const donutText = (name: string) => text(region(name).querySelector('.donut-core'))
   const planned = async () => await fire.click(within(region('Spending by Category')).getByRole('button', { name: 'Planned' }))
 
-  it('answers its questions in order, with the Year Summary last', async () => {
+  it('answers its questions in three areas, each with its parts in order', async () => {
     await openDemo()
     const main = document.querySelector('main')!
-    const order = [...main.querySelectorAll('[data-screen="home"] section')].map(s => s.getAttribute('aria-label') ?? s.querySelector('.block-name')?.textContent)
-    expect(order).toEqual(['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'Our Money', 'Our Goals', 'Year Summary'])
+    const areas = [...main.querySelectorAll('[data-screen="home"] [data-home-area]')].map(s => s.querySelector('.area-title .block-name')?.textContent)
+    expect(areas).toEqual(['This Month', 'Left to Pay', 'Our Money & Goals'])
+    const parts = [...main.querySelectorAll('[data-screen="home"] [data-home-block]')].map(s => s.querySelector('.block-name')?.textContent)
+    expect(parts).toEqual(['Spending by Category', 'Year Summary', 'Accounts & Savings', 'Cards & Loans', 'Goals'])
     expect(screen.queryByRole('region', { name: 'Plan Another Goal' })).toBeNull()
   })
 
@@ -290,9 +292,9 @@ describe('Home', () => {
     expect((button('Next month') as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('lists what is still owed on each card and loan inside Total Debt', async () => {
+  it('lists what is still owed on each card and loan inside Cards & Loans', async () => {
     await openDemo()
-    const debt = text(region('Total Debt'))
+    const debt = text(region('Cards & Loans'))
     expect(debt).toContain('Credit CardAs of 23 Oct 20263250,40 zł')
     expect(debt).toContain('Car LoanAs of 23 Oct 202642 000,00 zł')
     expect(debt).toContain('Furniture LoanAs of 23 Oct 20261350,00 zł')
@@ -333,25 +335,25 @@ describe('Home', () => {
     expect(within(categories).getByText('One bill has no amount for this month yet, so it is not in the chart.')).toBeTruthy()
   })
 
-  it('shows Our Money by kind, with Investments chosen first as in v5.9', async () => {
+  it('shows Accounts & Savings by kind, with Investments chosen first as in v5.9', async () => {
     await openDemo()
-    const money = region('Our Money')
+    const money = region('Accounts & Savings')
     expect(pressed(within(money).getByRole('button', { name: /Investments/ }))).toBe('true')
-    expect(donutText('Our Money')).toBe('Investments980,65 zł')
+    expect(donutText('Accounts & Savings')).toBe('Investments980,65 zł')
     await fire.click(within(money).getByRole('button', { name: /Daily Spending/ }))
-    expect(donutText('Our Money')).toBe('Daily Spending1200,35 zł')
+    expect(donutText('Accounts & Savings')).toBe('Daily Spending1200,35 zł')
     // The old emergency cash account is now saved money, inside Savings.
     expect(text(within(money).getByRole('button', { name: /^Savings/ }))).toContain('300,00 zł')
   })
 
   it('shows the two example goals empty, and suggests an emergency fund without creating one', async () => {
     const { storage } = await openDemo()
-    const goals = region('Our Goals')
+    const goals = region('Goals')
     expect(text(goals)).toContain('Saved for 2 goals')
     expect(within(goals).getByRole('progressbar', { name: 'Trip to Japan progress' }).getAttribute('aria-valuenow')).toBe('0')
     expect(within(goals).getByRole('heading', { name: 'Start with an emergency fund' })).toBeTruthy()
     await fire.click(within(goals).getByRole('button', { name: 'Maybe Later' }))
-    expect(within(region('Our Goals')).queryByRole('heading', { name: 'Start with an emergency fund' })).toBeNull()
+    expect(within(region('Goals')).queryByRole('heading', { name: 'Start with an emergency fund' })).toBeNull()
     // A demo preference: kept in memory only, never on the device.
     expect(storage.getItem('goal-planning-app.emergency-later')).toBeNull()
   })
@@ -397,11 +399,11 @@ describe('Home', () => {
   it('starts empty in your own space, with no invented numbers', async () => {
     await createIndividualSpace()
     await expandAll()
-    expect(text(region('Total Debt'))).toContain('No cards or loans yet')
+    expect(text(region('Cards & Loans'))).toContain('No cards or loans yet')
     expect(text(region('Spending by Category'))).toContain('Nothing spent is recorded for October 2026.')
-    expect(text(region('My Money'))).toContain('No accounts yet.')
-    expect(text(region('My Goals'))).toContain('No goals yet.')
-    expect(text(region('My Goals'))).toContain('Start with an emergency fund')
+    expect(text(region('Accounts & Savings'))).toContain('No accounts yet.')
+    expect(text(region('Goals'))).toContain('No goals yet.')
+    expect(text(region('Goals'))).toContain('Start with an emergency fund')
     const year = region('Year Summary')
     expect(text(year)).toContain('0,00 zł')
     expect(text(year)).toContain('10 of 12 months so far')
@@ -412,7 +414,7 @@ describe('Home', () => {
 describe('Goals & Savings Pots', () => {
   const region = (name: string) => screen.getByRole('region', { name })
   const goalNames = () => [...document.querySelectorAll('[data-screen="goals"] .goal-card .line b')].map(b => b.textContent)
-  const openGoals = async () => { await fire.click(within(region('Our Goals')).getByRole('button', { name: /View All/ })) }
+  const openGoals = async () => { await fire.click(within(region('Our Money & Goals')).getByRole('button', { name: /^Open Goals/ })) }
   const openDemoGoal = async (name: string) => { await openDemo(); await openGoals(); await fire.click(button(new RegExp(`^${name}`))) }
   const saveMovement = async (kind: 'Add' | 'Withdraw', amount: string, note = '', effect?: RegExp) => {
     await fire.click(within(screen.getByRole('group', { name: 'Type of change' })).getByRole('button', { name: kind }))
@@ -451,7 +453,7 @@ describe('Goals & Savings Pots', () => {
 
   it('opens a goal straight from its row on Home', async () => {
     await openDemo()
-    await fire.click(within(region('Our Goals')).getByRole('button', { name: /^Christmas Gift/ }))
+    await fire.click(within(region('Goals')).getByRole('button', { name: /^Christmas Gift/ }))
     expect(heading('Christmas Gift')).toBeTruthy()
   })
 
@@ -514,7 +516,7 @@ describe('Goals & Savings Pots', () => {
     await openGoals()
     await fire.click(button(/Add Goal/))
     await type('What are you saving for?', 'Half done')
-    await fire.click(button(/All Goals/))
+    await fire.click(button('Back'))
     await waitFor(() => expect(goalNames()).toEqual(['Trip to Japan', 'Christmas Gift']))
     await fire.click(button(/Add Goal/))
     expect(field('What are you saving for?').value).toBe('Half done')
@@ -537,7 +539,7 @@ describe('Goals & Savings Pots', () => {
 
   it('gives a purpose to savings already there, without changing the money totals', async () => {
     await openDemo()
-    const moneyBefore = text(region('Our Money').querySelector('.tiles'))
+    const moneyBefore = text(region('Accounts & Savings').querySelector('.tiles'))
     await openGoals()
     await fire.click(button(/^Trip to Japan/))
     await saveMovement('Add', '100', 'First savings', /Savings I already have/)
@@ -549,8 +551,8 @@ describe('Goals & Savings Pots', () => {
     await fire.click(button('Back'))
     await waitFor(() => expect(stat('Saved in Goals')).toContain('100,00 zł'))
     await fire.click(button(/^(?!Go to)\s*Home/))
-    await waitFor(() => expect(text(region('Our Money').querySelector('.tiles'))).toBe(moneyBefore))
-    expect(text(region('Our Goals'))).toContain('100,00 zł')
+    await waitFor(() => expect(text(region('Accounts & Savings').querySelector('.tiles'))).toBe(moneyBefore))
+    expect(text(region('Goals'))).toContain('100,00 zł')
   })
 
   it('never withdraws more than is saved, and lists the newest change first', async () => {
@@ -621,14 +623,14 @@ describe('Goals & Savings Pots', () => {
     expect(goalNames()).toEqual(['Trip to Japan'])
     expect(stat('Saved in Goals')).toContain('0,00 zł')
     await fire.click(button(/^(?!Go to)\s*Home/))
-    await waitFor(() => expect(text(region('Our Goals'))).toContain('Saved for 1 goal'))
+    await waitFor(() => expect(text(region('Goals'))).toContain('Saved for 1 goal'))
   })
 
   it('starts empty in your own space, and keeps a new goal after reopening the app', async () => {
     const storage = memoryStorage()
     await createIndividualSpace(storage)
-    expect(text(region('My Goals'))).toContain('No goals yet.')
-    await fire.click(within(region('My Goals')).getByRole('button', { name: /View All/ }))
+    expect(text(region('Goals'))).toContain('No goals yet.')
+    await fire.click(within(region('Money & Goals')).getByRole('button', { name: /^Open Goals/ }))
     expect(screen.getByText('No goals yet.')).toBeTruthy()
     await fire.click(button(/Add Goal/))
     await type('What are you saving for?', 'Laptop')
@@ -642,8 +644,8 @@ describe('Goals & Savings Pots', () => {
 
     cleanup()
     await start(storage)
-    expect(text(region('My Goals'))).toContain('250,00 zł')
-    expect(text(region('My Goals'))).toContain('Saved for 1 goal')
+    expect(text(region('Goals'))).toContain('250,00 zł')
+    expect(text(region('Goals'))).toContain('Saved for 1 goal')
   })
 
   // Regression (Safari on iPhone via http://<computer address>): that page is not
@@ -667,8 +669,8 @@ describe('Goals & Savings Pots', () => {
       await fire.click(button('Back'))
       await waitFor(() => expect(stat('Saved in Goals')).toContain('60,00 zł'))
       await fire.click(button(/^(?!Go to)\s*Home/))
-      await waitFor(() => expect(text(region('Our Goals'))).toContain('60,00 zł'))
-      expect(within(region('Our Goals')).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('12')
+      await waitFor(() => expect(text(region('Goals'))).toContain('60,00 zł'))
+      expect(within(region('Goals')).getByRole('progressbar', { name: 'Christmas Gift progress' }).getAttribute('aria-valuenow')).toBe('12')
     })
 
     it('creates a goal', async () => {
@@ -808,7 +810,7 @@ describe('Bills', () => {
     await fire.click(tab('Home'))
     await pickMonth('2026-11')
     expect(stat('Planned Bills')).toContain('5581,53 zł')
-    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('46 600,40 zł')
+    expect(text(screen.getByRole('region', { name: 'Cards & Loans' }))).toContain('46 600,40 zł')
   })
 
   it('shows an empty state in a new space', async () => {
@@ -839,7 +841,7 @@ describe('Keeping information between screens', () => {
     await fire.click(tab('Bills'))
     expect(text(within(screen.getByRole('region', { name: 'Whole month' })).getByText('Planned').parentElement)).toContain('1000,00 zł')
     await fire.click(tab('Home'))
-    expect(text(screen.getByRole('region', { name: 'Total Debt' }))).toContain('12 000,00 zł')
+    expect(text(screen.getByRole('region', { name: 'Cards & Loans' }))).toContain('12 000,00 zł')
     expect((await saved()).debts).toMatchObject([{ name: 'Test loan', yearlyInterestBasisPoints: 1200, dueDay: 10 }])
     expect((await saved()).bills).toMatchObject([{ name: 'Test loan', amount: 100_000, debtId: (await saved()).debts[0].id }])
   })
@@ -923,16 +925,19 @@ describe('Hiding amounts on Home', () => {
   const home = () => text(document.querySelector('[data-screen="home"]'))
   const amount = /\d,\d\d zł/
 
-  it('hides one block at a time, keeping its title and the other blocks', async () => {
+  it('hides one area at a time, with its parts, keeping its title and the other areas', async () => {
     await openDemo()
-    expect(text(region('Total Debt'))).toContain('46 600,40 zł')
-    await fire.click(button('Hide amounts in Total Debt'))
-    expect(text(region('Total Debt'))).not.toMatch(amount)
-    expect(text(region('Total Debt'))).toContain('••••')
-    expect(text(region('Total Debt'))).toContain('Total Debt')
-    expect(text(region('Our Money'))).toMatch(amount)
-    await fire.click(button('Show amounts in Total Debt'))
-    expect(text(region('Total Debt'))).toContain('46 600,40 zł')
+    expect(text(region('Cards & Loans'))).toContain('46 600,40 zł')
+    await fire.click(button('Hide amounts in Our Money & Goals'))
+    for (const part of ['Cards & Loans', 'Accounts & Savings', 'Goals']) {
+      expect(text(region(part))).not.toMatch(amount)
+      expect(text(region(part))).toContain(part)
+    }
+    expect(text(region('Cards & Loans'))).toContain('••••')
+    expect(text(region('This Month'))).toMatch(amount)
+    expect(text(region('Left to Pay'))).toMatch(amount)
+    await fire.click(button('Show amounts in Our Money & Goals'))
+    expect(text(region('Cards & Loans'))).toContain('46 600,40 zł')
   })
 
   it('hides every amount with one button, with a mask that never shows the number of digits', async () => {
@@ -945,12 +950,14 @@ describe('Hiding amounts on Home', () => {
     const masks = pieces.flatMap(piece => piece.match(/•+/g) ?? [])
     expect(masks.length).toBeGreaterThan(0)
     expect(masks.every(mask => mask === '••••')).toBe(true)
-    for (const name of ['This Month', 'Left to Pay', 'Spending by Category', 'Total Debt', 'My Money', 'My Goals', 'Year Summary']) {
+    for (const name of ['This Month', 'Left to Pay', 'Money & Goals']) {
       expect(button(`Show amounts in ${name}`)).toBeTruthy()
       expect(screen.getByRole('region', { name })).toBeTruthy()
     }
-    // Only the screen changes: the saved data is the same, and the choice is kept on this device.
-    expect(JSON.parse(storage.getItem('goal-planning-app.hidden-amounts')!)).toHaveLength(7)
+    for (const name of ['Spending by Category', 'Cards & Loans', 'Accounts & Savings', 'Goals', 'Year Summary']) expect(screen.getByRole('region', { name })).toBeTruthy()
+    // Only the screen changes: the saved data is the same, and the choice is kept on this device
+    // (the three areas, and the seven blocks of the earlier version).
+    expect(JSON.parse(storage.getItem('goal-planning-app.hidden-amounts')!).sort()).toEqual(['categories', 'debt', 'goals', 'left-to-pay', 'money', 'money-goals', 'month', 'year'])
     cleanup()
     await start(storage)
     expect(home()).not.toMatch(amount)
@@ -971,7 +978,7 @@ describe('Hiding amounts on Home', () => {
     await createIndividualSpace()
     const before = (await saved())
     await fire.click(button('Hide All Amounts'))
-    await fire.click(button('Show amounts in My Money'))
+    await fire.click(button('Show amounts in Money & Goals'))
     expect((await saved())).toEqual(before)
   })
 })
@@ -1008,7 +1015,7 @@ describe('Logo (Go to Home)', () => {
   it('goes to Home from a detail screen, keeping the month, the data and hidden amounts', async () => {
     await openDemo()
     await pickMonth('2026-09')
-    await fire.click(button('Hide amounts in Total Debt'))
+    await fire.click(button('Hide amounts in Our Money & Goals'))
     await openCardsAndLoans()
     await fire.click(document.querySelector<HTMLButtonElement>('[data-screen="money"] .goal-card')!)
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
@@ -1017,7 +1024,7 @@ describe('Logo (Go to Home)', () => {
     expect(tab('Home').getAttribute('aria-current')).toBe('page')
     expect(window.history.length).toBe(steps + 1)
     expect(monthSelect().value).toBe('2026-09')
-    expect(button('Show amounts in Total Debt')).toBeTruthy()
+    expect(button('Show amounts in Our Money & Goals')).toBeTruthy()
     expect(button('Demo options')).toBeTruthy()
   })
 

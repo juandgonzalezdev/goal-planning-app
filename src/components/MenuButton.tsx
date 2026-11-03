@@ -11,6 +11,8 @@ type Props = {
   /** Choosing one closes the menu and puts the keyboard back on the button, unless the option moves it on (Customize Home). */
   options: MenuOption[]
   className?: string
+  /** A text button with a plus (+ Add) instead of the three dots; `label` is then its visible name. */
+  text?: boolean
 }
 
 /**
@@ -20,7 +22,7 @@ type Props = {
  * Space chooses one. It closes when an option is chosen, on Escape, or
  * on a tap outside.
  */
-export function MenuButton({ label, options, className = '' }: Props) {
+export function MenuButton({ label, options, className = '', text = false }: Props) {
   const { open, setOpen, close, rootRef, buttonRef } = usePopover()
   const menuRef = useRef<HTMLUListElement>(null)
   const firstFocus = useRef<'first' | 'last'>('first')
@@ -61,11 +63,16 @@ export function MenuButton({ label, options, className = '' }: Props) {
 
   return (
     <div className={`menu-root ${className}`} ref={rootRef}>
-      <button ref={buttonRef} type="button" className="icon-button tool-button has-tip" aria-label={label} aria-haspopup="menu" aria-expanded={open}
-        aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
-        <Icon name="more" size={20} />
-        {!open && <IconTip label={label} />}
-      </button>
+      {text
+        ? <button ref={buttonRef} type="button" className="button-small button-small-primary" aria-haspopup="menu" aria-expanded={open}
+          aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
+          <Icon name="plus" size={16} /> {label}
+        </button>
+        : <button ref={buttonRef} type="button" className="icon-button tool-button has-tip" aria-label={label} aria-haspopup="menu" aria-expanded={open}
+          aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
+          <Icon name="more" size={20} />
+          {!open && <IconTip label={label} />}
+        </button>}
       {open && (
         <ul ref={menuRef} id={`${id}-menu`} className="popover menu-list" role="menu" aria-label={label} onKeyDown={onMenuKeyDown}>
           {options.map(option => (

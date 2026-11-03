@@ -18,6 +18,8 @@ type Props = {
   className?: string
   /** `data-…` attributes that name the block, so a link can find it. */
   dataset?: Record<`data-${string}`, string>
+  /** The heading level: 2 (default), or 3 for a part inside a Home area. */
+  level?: 2 | 3
   children: ReactNode
 }
 
@@ -27,7 +29,8 @@ type Props = {
  * with anything typed in a form, but takes no room, cannot be reached by
  * keyboard (inert) and is not read by a screen reader until it opens again.
  */
-export function FoldBlock({ title, period, summary, expanded, onToggle, actions, before, className = '', dataset, children }: Props) {
+export function FoldBlock({ title, period, summary, expanded, onToggle, actions, before, className = '', dataset, level = 2, children }: Props) {
+  const Heading = level === 3 ? 'h3' : 'h2'
   const id = useId()
   const titleId = `${id}-title`
   const bodyId = `${id}-body`
@@ -41,14 +44,14 @@ export function FoldBlock({ title, period, summary, expanded, onToggle, actions,
     <section className={`block fold-block${expanded ? ' is-open' : ''}${className ? ` ${className}` : ''}`} aria-labelledby={titleId} {...dataset}>
       {before}
       <div className="section-head block-head">
-        <h2 className="section-title block-title">
+        <Heading className="section-title block-title">
           {onToggle
             ? <button type="button" className="block-toggle" aria-expanded={expanded} aria-controls={bodyId} onClick={onToggle}>
               <span className="block-chevron"><Icon name="chevronDown" size={18} /></span>
               <span className="block-toggle-text">{text}</span>
             </button>
             : <span className="block-toggle"><span className="block-toggle-text">{text}</span></span>}
-        </h2>
+        </Heading>
         {actions && <div className="inline-actions block-actions">{actions}</div>}
       </div>
       <div id={bodyId} className="block-body" inert={!expanded} aria-hidden={!expanded || undefined}>

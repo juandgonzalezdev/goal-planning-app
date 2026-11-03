@@ -16,7 +16,8 @@ import { ValidityFilterBar, ValidityTag } from '../../components/ValidityFilterB
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
-type SourceForm = { id: Id | null; name: string; amount: string; payDay: string; startMonth: string; endMonth: string; error?: string }
+/** `fromHome`: opened by + Add on Home, so Cancel goes back there. */
+type SourceForm = { id: Id | null; name: string; amount: string; payDay: string; startMonth: string; endMonth: string; error?: string; fromHome?: boolean }
 type ReceivedForm = { sourceId: Id; month: YearMonth; amount: string; date: string; error?: string }
 
 /**
@@ -24,10 +25,12 @@ type ReceivedForm = { sourceId: Id; month: YearMonth; amount: string; date: stri
  * pay day, months and status); opening one shows its months, with what
  * was expected and what really arrived, and its actions.
  */
-export function IncomeSection({ data, months, today, isDemo, owner, newId, onChange, say }: SectionProps) {
+export function IncomeSection({ data, months, today, isDemo, owner, newId, onChange, say, startAdding, onStartedAdding, onCancelAdding }: SectionProps) {
   const { view, onViewChange } = useContext(MoneyBlocksContext)
   const money = (minor: number) => formatAmount(minor, data.space.currency)
-  const [editing, setEditing] = useState<SourceForm | null>(null)
+  // + Add Income on Home: a new income form, open from the start (the request is used once, below).
+  const [editing, setEditing] = useState<SourceForm | null>(() => (startAdding
+    ? { id: null, name: '', amount: '', payDay: '', startMonth: yearMonthOf(today), endMonth: '', fromHome: true } : null))
   const [receiving, setReceiving] = useState<ReceivedForm | null>(null)
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
@@ -77,6 +80,14 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
     focusField.current = null
   })
 
+  useEffect(() => { if (startAdding) onStartedAdding?.() }, [startAdding, onStartedAdding])
+  /** Cancel closes the form; opened from + Add on Home, it also goes back there. */
+  const cancelSource = () => {
+    const fromHome = editing?.fromHome
+    setEditing(null)
+    if (fromHome) onCancelAdding?.()
+  }
+
   const startNew = () => {
     onViewChange(setBlockOpen(view, 'income', true))
     openSource({ id: null, name: '', amount: '', payDay: '', startMonth: reference, endMonth: '' })
@@ -121,7 +132,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
       {editing.error && <p className="field-error" role="alert">{editing.error}</p>}
       <div className="inline-actions">
         <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveSource()}>{sending === 'source' ? 'Saving…' : 'Save Income'}</button>
-        <button type="button" className="button-small" onClick={() => setEditing(null)}>Cancel</button>
+        <button type="button" className="button-small" onClick={cancelSource}>Cancel</button>
       </div>
     </div>
   )

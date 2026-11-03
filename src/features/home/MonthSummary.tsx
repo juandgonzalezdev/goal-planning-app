@@ -6,14 +6,12 @@ import { monthIncome } from '../../domain/finance/income'
 import { monthResult } from '../../domain/finance/spending'
 import type { FinanceData } from '../../domain/finance/types'
 import { formatYearMonth, monthName } from '../../ui/format'
-import { EyeToggle } from '../../ui/privacy'
 import { useBlockAmounts } from '../../ui/amountVisibility'
-import { HomeBlockFrame } from './HomeBlock'
 
 type Props = { data: FinanceData; month: YearMonth; today: CalendarDate; onOpenIncome: () => void; onOpenBills: () => void; onOpenHistory: () => void }
 
 /**
- * How is my month? Four numbers, each with one clear meaning:
+ * How is my month? The figures of This Month, always shown. Four numbers, each with one clear meaning:
  * - Income: what was received (and, for a month still going, what is expected).
  * - Planned Bills: the month's obligations, paid or not.
  * - Spent: real spending (paid bills, expenses, loan interest; never a
@@ -34,19 +32,18 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
 
   const resultNote = future ? 'Nothing has happened yet'
     : r.result < 0 ? 'Spent more than received' : 'Income minus spent'
-  const summary = future ? 'Nothing has happened yet' : `Result ${money(r.result)} · ${resultNote}`
   return (
-    <HomeBlockFrame block="month" title="This Month" period={formatYearMonth(month)} summary={summary} actions={<EyeToggle block="month" />}>
-      <div className="stat-grid">
-        <button type="button" className="stat" onClick={onOpenIncome}>
+    <div className="month-figures">
+      <div className="stat-grid home-stats">
+        <button type="button" className="stat" data-return-key="stat-income" onClick={onOpenIncome}>
           <small>Income</small><b>{r.income.entries.length === 0 && expected.expected === 0 ? '—' : money(r.income.total)}</b>
           <small>{expected.expected > 0 ? `Received · ${money(expected.expected)} still expected` : r.income.entries.length === 0 ? 'Nothing received' : 'Received'}</small>
         </button>
-        <button type="button" className="stat" onClick={onOpenBills}>
+        <button type="button" className="stat" data-return-key="stat-planned" onClick={onOpenBills}>
           <small>Planned Bills</small><b>{money(r.planned.knownTotal)}</b>
           <small>{r.planned.unknownCount > 0 ? `+ ${r.planned.unknownCount} unknown ${r.planned.unknownCount === 1 ? 'amount' : 'amounts'}` : `${r.planned.count} ${r.planned.count === 1 ? 'bill' : 'bills'}, paid or not`}</small>
         </button>
-        <button type="button" className="stat" onClick={onOpenHistory}>
+        <button type="button" className="stat" data-return-key="stat-spent" onClick={onOpenHistory}>
           <small>Spent</small><b>{money(r.spending.total)}</b>
           <small>Paid bills and spending</small>
         </button>
@@ -76,7 +73,7 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
           <p className="field-help">From the records of {formatYearMonth(month)}. Nothing is estimated.</p>
         </div>
       )}
-    </HomeBlockFrame>
+    </div>
   )
 }
 

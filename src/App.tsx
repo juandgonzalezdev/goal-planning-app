@@ -33,12 +33,12 @@ import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
 import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/history/historyView'
 import { NO_FILTER } from './domain/finance/history'
-import { HomeScreen } from './features/home/HomeScreen'
-import { DEFAULT_LAYOUT, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
+import { HomeScreen, type HomeAdd, type HomeSpot } from './features/home/HomeScreen'
+import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
 import { AmountVisibilityProvider } from './ui/privacy'
-import { HOME_BLOCKS, type HomeBlock } from './ui/amountVisibility'
+import { HOME_AREAS, hiddenAreasFrom, savedHiddenNames, type HomeArea } from './ui/amountVisibility'
 import { AuthPreview } from './features/welcome/AuthPreview'
 import { Welcome } from './features/welcome/Welcome'
 import { EMPTY_SETUP, setupFromDraft, typedSetup, type SetupDraft } from './features/welcome/setupDraft'
@@ -63,7 +63,7 @@ const ANY_FORM = () => true
 type AppLeave = { lost: (form: UnsavedForm) => boolean; run: (discarded: boolean) => void; history: boolean; waiting: boolean }
 
 /** Alex's screen preferences, where every demo starts. */
-const DEMO_PREFS: { hidden: ReadonlySet<HomeBlock>; chartView: BillsChartView; emergencyLater: boolean } = { hidden: new Set(), chartView: 'donut', emergencyLater: false }
+const DEMO_PREFS: { hidden: ReadonlySet<HomeArea>; chartView: BillsChartView; emergencyLater: boolean } = { hidden: new Set(), chartView: 'donut', emergencyLater: false }
 
 type Props = {
   getToday?: () => CalendarDate
@@ -143,8 +143,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [chartView, setChartView] = useState<BillsChartView>(() => readChartView(storage))
   const [confirmReset, setConfirmReset] = useState(false)
   // Hidden amounts on Home and "Maybe Later" on the emergency fund: screen preferences of this device, never data.
-  const [hiddenBlocks, setHiddenBlocks] = useState<ReadonlySet<HomeBlock>>(
-    () => new Set(readHiddenBlocks(storage).filter((block): block is HomeBlock => (HOME_BLOCKS as readonly string[]).includes(block))))
+  // What an earlier version saved (seven blocks) hides each area that held a hidden block: never fewer amounts.
+  const [hiddenAreas, setHiddenAreas] = useState<ReadonlySet<HomeArea>>(() => hiddenAreasFrom(readHiddenBlocks(storage)))
   const [emergencyLater, setEmergencyLater] = useState(() => readEmergencyLater(storage))
   // The demo's own screen preferences: Alex's (nothing hidden, the donut, the emergency suggestion shown), in memory only.
   // They never read or change this device's, and Reset Demo and Exit Demo put them back.
@@ -163,6 +163,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
   const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
   const [ownLayout, setOwnLayout] = useState<{ spaceId: string; layout: HomeLayout } | null>(null)
+  // Show all in Left to Pay: for this session only, separately for the demo and the own space, so Back from a bill finds its row.
+  const [demoShowAllBills, setDemoShowAllBills] = useState(false)
+  const [ownShowAllBills, setOwnShowAllBills] = useState<{ spaceId: string; value: boolean } | null>(null)
   // How Money looks (open blocks, filters, the source or account shown) and the Goals filter:
   // for this session only, separately for the demo and the own space.
   const [demoMoneyView, setDemoMoneyView] = useState<MoneyView>(INITIAL_MONEY_VIEW)
@@ -187,6 +190,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // Where Money was scrolled when a card, a loan or a goal was opened from it, the block, and which
   // button (its data-return-key) gets the focus back: Back returns there.
   const moneyReturn = useRef<{ y: number; block: MoneyBlock; key: string } | null>(null)
+  // Where Home was when a link on it was used: its history step, the scroll and the place (see HomeSpot).
+  // Back (or Forward) to that same step finds Home there again, as a browser keeps a page's place, until another
+  // link on Home is used. Home reached as a new step (a tab, the logo) starts at the top.
+  const homeReturn = useRef<{ chain: string; idx: number; y: number; spot: HomeSpot } | null>(null)
+  // + Add Income or Add Spending: the form to open when Money or History opens, once.
+  const [addRequest, setAddRequest] = useState<'income' | 'spending' | null>(null)
+  // The field that gets the focus when that form opens.
+  const addFocus = useRef<string | null>(null)
   // Reports & Backup asked for from Money: Settings opens with the focus on that section.
   const settingsTarget = useRef(false)
   const mainRef = useRef<HTMLElement>(null)
@@ -272,6 +283,32 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   useEffect(() => {
     // The first screen (and the one shown when the space has opened) is not a move: the focus stays where the browser put it.
     if (firstScreen.current) { if (!space.opening) firstScreen.current = false; return }
+    // + Add Income or Add Spending: the focus goes to the form's first field.
+    const field = addFocus.current
+    addFocus.current = null
+    if (field) {
+      const input = document.getElementById(field)
+      if (input) { input.focus({ preventScroll: true }); input.scrollIntoView?.({ block: 'center' }); return }
+    }
+    // Back to Home, on the step a link was used from: the same place, with the focus on that link (or, when it is gone
+    // or inside a closed part, on the part's heading, else the area's heading, else + Add).
+    const homeBack = screen === 'home' ? homeReturn.current : null
+    const step = navigation.current()
+    if (homeBack && homeBack.chain === step.chain && homeBack.idx === step.idx) {
+      const home = mainRef.current?.querySelector<HTMLElement>('[data-screen="home"]')
+      const { area, section, key } = homeBack.spot
+      const root = section ? home?.querySelector<HTMLElement>(`[data-home-block="${section}"]`) : area ? home?.querySelector<HTMLElement>(`[data-home-area="${area}"]`) : home
+      const usable = (element: HTMLElement | null | undefined) => (element && !element.closest('[inert]') ? element : null)
+      const keyed = key ? root?.querySelector<HTMLElement>(`[data-return-key="${key}"]`) : null
+      const target = usable(keyed?.matches('button') ? keyed : keyed?.querySelector<HTMLElement>('button'))
+        ?? usable(section ? root?.querySelector<HTMLElement>('.block-toggle') : null)
+        ?? usable(area ? home?.querySelector<HTMLElement>(`#home-area-${area}`) : null)
+        ?? home?.querySelector<HTMLElement>('.home-add button')
+      target?.focus({ preventScroll: true })
+      window.scrollTo?.(0, homeBack.y)
+      target?.scrollIntoView?.({ block: 'nearest' })
+      return
+    }
     // Back to Bills from a bill opened there: the same place, with the focus on the button that opened it
     // (or the "Bill added" notice), else the chosen day, else the title.
     const billsBack = screen === 'bills' ? billsReturn.current : null
@@ -332,7 +369,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading) return
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
-  }, [screen, requested, space.opening])
+  }, [screen, requested, space.opening, navigation])
 
   // After the space is read again (changes from another tab), the screens start again from the new records.
   // The screen, the month and the views stay; the focus and the scroll position are put back where they were, when that place is still there.
@@ -377,7 +414,15 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!open) return
     if (open.kind === 'demo') { setDemoLayout(layout); return }
     setOwnLayout({ spaceId: open.data.space.id, layout })
-    writeHomeLayout(storage, open.data.space.id, layout)
+    writeHomeLayout(storage, open.data.space.id, layoutToSave(layout))
+  }
+  const showAllBills = !open ? false
+    : open.kind === 'demo' ? demoShowAllBills
+      : ownShowAllBills?.spaceId === open.data.space.id ? ownShowAllBills.value : false
+  const changeShowAllBills = (value: boolean) => {
+    if (!open) return
+    if (open.kind === 'demo') setDemoShowAllBills(value)
+    else setOwnShowAllBills({ spaceId: open.data.space.id, value })
   }
 
   const moneyView = !open ? INITIAL_MONEY_VIEW
@@ -410,12 +455,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (open.kind === 'demo') setDemoHistoryView(view)
     else setOwnHistoryView({ spaceId: open.data.space.id, view })
   }
-  /** Opens Money on one block: the block opens, and the view and the focus go to its heading. */
-  const openMoneyBlock = (block: MoneyBlock) => confirmLeave(ANY_FORM, () => {
+  /** Money on one block: the block opens, and the view and the focus go to its heading. */
+  const showMoneyBlock = (block: MoneyBlock) => {
     changeMoneyView(setBlockOpen(moneyView, block, true))
     moneyTarget.current = block
     navigation.go('money')
-  })
+  }
   /** Money's link to Reports & Backup: Settings, on that section. */
   const openReports = () => confirmLeave(ANY_FORM, () => { settingsTarget.current = true; navigation.go('settings') })
 
@@ -455,7 +500,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
-  const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); historyScroll.current = null; billsReturn.current = null; setBillDay(null) }
+  const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); historyScroll.current = null; billsReturn.current = null; homeReturn.current = null; setBillDay(null) }
   /** Open Latest Version and Try Again read the space again: what was typed here and not saved is dropped only after a yes. */
   const requestReload = () => {
     if (unsaved.hasUnsaved()) { setConfirming('reload'); return }
@@ -466,7 +511,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   /** After another tab erased the space: the user discarded what was typed here, and the space closes. */
   const closeErased = () => {
     discardTyped()
-    resetGoals(); setOwnLayout(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null)
+    resetGoals(); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null)
     space.discardErased()
     replace('welcome')
   }
@@ -480,7 +525,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     }
   }
   /** Everything the demo shows on top of its records goes back to the start: layout, views, screen preferences, choices. */
-  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoMoneyView(INITIAL_MONEY_VIEW); setDemoGoalsFilter('all'); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
+  const clearDemoViews = () => { setDemoLayout(DEFAULT_LAYOUT); setDemoShowAllBills(false); setDemoMoneyView(INITIAL_MONEY_VIEW); setDemoGoalsFilter('all'); setDemoHistoryView(INITIAL_HISTORY_VIEW); setDemoPrefs(DEMO_PREFS); setConfirmReset(false) }
   // What the own space shows and is not kept per space (the Bills view and the month): set aside while the demo is open.
   const ownReturn = useRef<{ billsView: BillsView; chosenMonth: typeof chosenMonth } | null>(null)
   /**
@@ -528,13 +573,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    */
   const erase = async (): Promise<EraseOutcome> => {
     const outcome = await space.eraseOwnSpace()
-    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
+    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
     return outcome
   }
   // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
   const showGoal = (id: Id) => { setGoalId(id); navigation.go('goal') }
   const openGoal = (id: Id) => confirmLeave(ANY_FORM, () => showGoal(id))
-  const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => { setDebtId(id); navigation.go('debt') })
+  const showDebt = (id: Id | null) => { setDebtId(id); navigation.go('debt') }
+  const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => showDebt(id))
   /** Opens a bill; with `forMonth` (a payment chosen in a card or loan, or in History), on that month, which becomes the shared month. */
   const showBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillDay(null); if (forMonth) setMonth(forMonth); navigation.go('bill') }
   const openBill = (id: Id | null, forMonth?: YearMonth) => confirmLeave(ANY_FORM, () => showBill(id, forMonth))
@@ -565,12 +611,37 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     writeChartView(storage, view)
   }
   /** A purchase chosen on Home opens in History, on its month with no search or filter, ready to change. */
-  const openExpense = (id: Id) => confirmLeave(ANY_FORM, () => {
+  const showExpense = (id: Id) => {
     const expense = open?.data.expenses.find(e => e.id === id)
     if (expense) changeHistoryView({ ...historyView, filter: { ...NO_FILTER, period: { kind: 'month', month: expense.date.slice(0, 7) } }, openMonths: null, shown: {} })
     setHistoryFocus(id)
     navigation.go('history')
+  }
+  /** Home opens another screen: Back to this step of Home finds it where it was (see homeReturn). */
+  const fromHome = (spot: HomeSpot, show: () => void) => confirmLeave(ANY_FORM, () => {
+    homeReturn.current = { ...navigation.current(), y: window.scrollY, spot }
+    show()
   })
+  /**
+   * + Add on Home: the form that already exists, on its own screen, one step after Home. Income and Spending open
+   * their form once (Back and Forward do not open it again); Cancel there closes it and goes back to Home; saving
+   * keeps that screen, with the new record, and Back goes to Home. A bill or a goal works as from Bills and Goals.
+   */
+  const addFromHome = (what: HomeAdd, spot: HomeSpot) => fromHome(spot, () => {
+    if (what === 'income') {
+      changeMoneyView({ ...setBlockOpen(moneyView, 'income', true), incomeSource: null })
+      setAddRequest('income'); addFocus.current = 'income-name'
+      navigation.go('money')
+    } else if (what === 'spending') {
+      setHistoryFocus(null)
+      if (historyView.filter === null) changeHistoryView({ ...historyView, filter: firstFilter(month) })
+      setAddRequest('spending'); addFocus.current = 'expense-new-date'
+      navigation.go('history')
+    } else if (what === 'bill') showBill(null)
+    else navigation.go('new-goal')
+  })
+  /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
+  const cancelAdd = () => navigation.backAllowed()
   /** History opens a bill or a goal: Back finds History scrolled where it was. */
   const fromHistory = (show: () => void) => confirmLeave(ANY_FORM, () => { historyScroll.current = window.scrollY; show() })
   /** A balance in History opens Accounts & Savings in Money, on its account. */
@@ -581,21 +652,22 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   })
   /** Money opens a card, a loan or a goal: Back finds Money where it was, with the focus on the button used. */
   const fromMoney = (block: MoneyBlock, key: string, show: () => void) => confirmLeave(ANY_FORM, () => { moneyReturn.current = { y: window.scrollY, block, key }; show() })
-  const shownHidden = inDemo ? demoPrefs.hidden : hiddenBlocks
-  const saveHidden = (next: ReadonlySet<HomeBlock>) => {
+  const shownHidden = inDemo ? demoPrefs.hidden : hiddenAreas
+  // Saved with the names of every block of each hidden area, so an earlier version of the app hides the same amounts.
+  const saveHidden = (next: ReadonlySet<HomeArea>) => {
     if (inDemo) { setDemoPrefs(prefs => ({ ...prefs, hidden: next })); return }
-    setHiddenBlocks(next)
-    writeHiddenBlocks(storage, [...next])
+    setHiddenAreas(next)
+    writeHiddenBlocks(storage, savedHiddenNames(next))
   }
   const visibility = {
     hidden: shownHidden,
-    toggle: (block: HomeBlock) => {
+    toggle: (area: HomeArea) => {
       const next = new Set(shownHidden)
-      if (next.has(block)) next.delete(block)
-      else next.add(block)
+      if (next.has(area)) next.delete(area)
+      else next.add(area)
       saveHidden(next)
     },
-    setAll: (hide: boolean) => saveHidden(new Set(hide ? HOME_BLOCKS : [])),
+    setAll: (hide: boolean) => saveHidden(new Set(hide ? HOME_AREAS : [])),
   }
   const shownEmergencyLater = inDemo ? demoPrefs.emergencyLater : emergencyLater
   const emergencyLaterChange = (later: boolean) => {
@@ -735,9 +807,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <HomeScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
-                onChange={space.update} onOpen={go} onOpenMoneyBlock={openMoneyBlock} onOpenGoal={openGoal} onAddGoal={() => go('new-goal')} onOpenDebt={openDebt} onOpenBill={openBill}
-                onOpenExpense={openExpense} emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
-                onReviewEmergency={() => go('emergency')} />
+                showAllBills={showAllBills} onShowAllBillsChange={changeShowAllBills}
+                onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => navigation.go(next))}
+                onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
+                onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} onOpenBill={(id, spot) => fromHome(spot, () => showBill(id))}
+                onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAdd={addFromHome}
+                emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)} />
             </AmountVisibilityProvider>
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
@@ -797,6 +872,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <HistoryScreen key={historyFocus ?? 'all'} data={open.data} months={months} month={month} today={space.today} newId={newId} focusId={historyFocus}
                 view={historyView} onViewChange={changeHistoryView}
+                startAdding={addRequest === 'spending'} onStartedAdding={() => setAddRequest(null)} onCancelAdding={cancelAdd}
                 onChange={space.update} onOpenBill={(id, forMonth) => fromHistory(() => showBill(id, forMonth))} onOpenGoal={id => fromHistory(() => showGoal(id))}
                 onOpenAccount={openAccount} />
             </AmountVisibilityProvider>
@@ -805,6 +881,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           {shows('money') && <div className="screen" data-screen="money">
             <MoneyScreen key={`${open.kind}:${requested}`} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} onMonthChange={changeMonth} today={space.today} owner={newGoalOwner} newId={newId}
               view={moneyView} onViewChange={changeMoneyView} onChange={space.update}
+              startAdding={addRequest === 'income'} onStartedAdding={() => setAddRequest(null)} onCancelAdding={cancelAdd}
               onOpenDebt={id => fromMoney('debts', id ? `debt-${id}` : 'add-debt', () => { setDebtId(id); navigation.go('debt') })}
               onOpenGoal={id => fromMoney('accounts', `goal-${id}`, () => showGoal(id))} onOpenReports={openReports} />
           </div>}
