@@ -146,7 +146,7 @@ export function buildReport(data: FinanceData, options: ReportOptions): PdfDocum
   pdf.text(MARGIN + WIDTH, out.y + 20, title, { size: 14, bold: true, color: ACCENT, align: 'right' })
   out.y += 32
   out.paragraph(`${data.space.name} · Currency: ${currency} · Records up to ${dateLabel(asOf)}${isDemo ? ' (demo date)' : ''} · Generated on ${dateLabel(options.generatedOn)}`)
-  out.paragraph(includeAmounts ? 'Amounts: included.' : `Amounts: not included. Every amount is shown as ${HIDDEN}; the rest of the report is the same.`, { color: INK, bold: true })
+  out.paragraph(includeAmounts ? 'Amounts: included.' : `Amounts: not included. Every amount is shown as ${HIDDEN}. Charts, shares and what is worked out from amounts (which months had a deficit, how it was covered, the emergency fund's cover) are left out, and categories are listed by name.`, { color: INK, bold: true })
   out.gap(4)
 
   const notices = [
@@ -193,7 +193,7 @@ export function buildReport(data: FinanceData, options: ReportOptions): PdfDocum
     ], { boldLast: true })
     if (includeAmounts) resultChart(out, summary.months.filter(row => row.started).map(row => ({ label: SHORT[Number(row.month.slice(5, 7)) - 1], value: row.result })))
     const deficits = summary.deficitMonths.map(month => ({ month, funding: monthFunding(data, month, today) }))
-    if (deficits.length > 0) {
+    if (includeAmounts && deficits.length > 0) {
       out.heading('How Deficits Were Covered', 50)
       for (const { month, funding } of deficits) {
         const parts = [
@@ -211,7 +211,7 @@ export function buildReport(data: FinanceData, options: ReportOptions): PdfDocum
   const categories = new Map<string, CategorySpending['items']>()
   for (const month of months) for (const group of monthSpending(data, month).byCategory) categories.set(group.category, [...(categories.get(group.category) ?? []), ...group.items])
   const groups = [...categories.entries()].map(([category, items]) => ({ category, total: sumMinor(items.map(item => item.amount)), count: items.length }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => (includeAmounts ? b.total - a.total : 0) || a.category.localeCompare(b.category))
   out.heading('Spending by Category', 80)
   if (groups.length === 0) out.paragraph('No spending is recorded for this period.')
   else {
@@ -254,7 +254,7 @@ export function buildReport(data: FinanceData, options: ReportOptions): PdfDocum
       }))
   }
   const cover = emergencyCover({ ...data, ...pastGoals }, asOf)
-  if (cover.fund && cover.months !== null) out.paragraph(`The emergency fund covers about ${cover.months} months of the essential costs confirmed on ${dateLabel(cover.fund.emergencyBasis!.reviewedOn)}. Only what the fund holds is counted.`)
+  if (includeAmounts && cover.fund && cover.months !== null) out.paragraph(`The emergency fund covers about ${cover.months} months of the essential costs confirmed on ${dateLabel(cover.fund.emergencyBasis!.reviewedOn)}. Only what the fund holds is counted.`)
 
   // What is missing and what was assumed.
   const missing = [

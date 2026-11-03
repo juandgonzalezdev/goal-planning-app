@@ -82,17 +82,20 @@ export interface BlockAmounts {
   spoken: (minor: MoneyAmount) => string
   /** A percentage, or the mask (a share can reveal an amount). */
   percent: (value: string) => string
+  /** Shows these amounts again (the area's eye on Home; every amount in Bills and History). */
+  show: () => void
 }
 
 /** Money formatting for one part of Home, following its area's eye. Outside Home (no block), amounts always show. */
 export function useBlockAmounts(block: HomeBlock | null, currency: CurrencyCode): BlockAmounts {
-  const { hidden } = useAmountVisibility()
+  const { hidden, toggle } = useAmountVisibility()
   const isHidden = block !== null && hidden.has(AREA_OF[block])
   return {
     hidden: isHidden,
     money: minor => (isHidden ? MASK : formatAmount(minor, currency)),
     spoken: minor => (isHidden ? HIDDEN_SPOKEN : formatAmount(minor, currency)),
     percent: value => (isHidden ? MASK : value),
+    show: () => { if (isHidden && block !== null) toggle(AREA_OF[block]) },
   }
 }
 
@@ -101,13 +104,14 @@ export function useBlockAmounts(block: HomeBlock | null, currency: CurrencyCode)
  * (Bills, History): amounts are hidden only while every Home area is hidden.
  */
 export function useAllAmounts(currency: CurrencyCode): BlockAmounts {
-  const { hidden } = useAmountVisibility()
+  const { hidden, setAll } = useAmountVisibility()
   const isHidden = allAreasHidden(hidden)
   return {
     hidden: isHidden,
     money: minor => (isHidden ? MASK : formatAmount(minor, currency)),
     spoken: minor => (isHidden ? HIDDEN_SPOKEN : formatAmount(minor, currency)),
     percent: value => (isHidden ? MASK : value),
+    show: () => { if (isHidden) setAll(false) },
   }
 }
 

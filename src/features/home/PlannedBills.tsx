@@ -8,8 +8,9 @@ import type { BillCategory, FinanceData, Id } from '../../domain/finance/types'
 import type { BillsChartView } from '../../data/uiPrefs'
 import { barPercent } from '../../ui/chart'
 import { CATEGORY_COLORS } from '../../ui/chartColors'
-import { formatAmount, formatYearMonth, monthName } from '../../ui/format'
+import { formatYearMonth, monthName } from '../../ui/format'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HiddenChart } from '../../ui/privacy'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
@@ -38,7 +39,8 @@ export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props)
   const [chosen, setChosen] = useState<BillCategory | null>(null)
   const [message, setMessage] = useState('')
   const guard = useLeaveGuard()
-  const { money, hidden } = useBlockAmounts('categories', data.space.currency)
+  const amounts = useBlockAmounts('categories', data.space.currency)
+  const { money, hidden } = amounts
   const breakdown = billsByCategory(data, month)
   // A category missing from this month is simply not chosen.
   const focus = breakdown.categories.find(item => item.category === chosen) ?? null
@@ -49,13 +51,13 @@ export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props)
   if (breakdown.categories.length === 0 && breakdown.unknownCount === 0) return <p className="muted-note">No bills for {formatYearMonth(month)}.</p>
   return <>
     <p className="muted-note">Planned for {formatYearMonth(month)} · {paid} of {count} paid</p>
-    {view === 'donut' && (
-      <Donut
-        segments={hidden ? [] : breakdown.categories.map(item => ({ value: item.total, color: CATEGORY_COLORS[item.category] }))}
+    {view === 'donut' && (hidden
+      ? <HiddenChart amounts={amounts} kind="donut" />
+      : <Donut
+        segments={breakdown.categories.map(item => ({ value: item.total, color: CATEGORY_COLORS[item.category] }))}
         caption={focus ? focus.category : 'TOTAL PLANNED'}
         value={money(focus ? focus.total : breakdown.total)}
-      />
-    )}
+      />)}
     <div className={view === 'bars' ? 'category-bars' : 'tiles'}>
       {breakdown.categories.map(item => (
         <button key={item.category} type="button" aria-pressed={focus === item} className={focus === item ? 'is-active' : ''}
@@ -67,8 +69,8 @@ export function PlannedBills({ data, month, view, onChange, onOpenBill }: Props)
           }}>
           <span><i className="owner-dot" style={{ background: CATEGORY_COLORS[item.category] }} aria-hidden="true" />{item.category}</span>
           <b>{money(item.total)}</b>
-          {view === 'bars' && (
-            <span className="bar thin" aria-hidden="true"><span style={{ width: `${hidden ? 100 : barPercent(item.total, longest)}%`, background: hidden ? 'var(--color-track-strong)' : CATEGORY_COLORS[item.category] }} /></span>
+          {view === 'bars' && !hidden && (
+            <span className="bar thin" aria-hidden="true"><span style={{ width: `${barPercent(item.total, longest)}%`, background: CATEGORY_COLORS[item.category] }} /></span>
           )}
         </button>
       ))}
@@ -97,7 +99,7 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
   const { bill, month, amount, paid } = occurrence
   const [text, setText] = useState<string | null>(null)
   const [error, setError] = useState(false)
-  const { money } = useBlockAmounts('categories', data.space.currency)
+  const { money, hidden } = useBlockAmounts('categories', data.space.currency)
   const inputId = `quick-${bill.id}`
   const { revision } = useWriteStatus()
   const saver = useSaver()
@@ -112,7 +114,7 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
     // Not kept: the editor stays open as typed, with the reason.
     if (!isKept(outcome)) return
     setText(null)
-    onSaved(outcomeText(`${bill.name} for ${monthName(month)} is now ${formatAmount(value, data.space.currency)}.`, outcome))
+    onSaved(outcomeText(`${bill.name} for ${monthName(month)} is now ${money(value)}.`, outcome))
   }
 
   return (
@@ -126,7 +128,7 @@ function QuickAmount({ data, occurrence, onChange, onOpenBill, onSaved }: {
       </div>
       {text === null
         ? <button type="button" className="text-button" aria-label={`Change ${bill.name} amount for ${formatYearMonth(month)}`}
-          onClick={() => { setBase(revision); saver.clearRefusal(); setText(amountText(amount)); setError(false); onSaved('') }}>Change amount</button>
+          onClick={() => { setBase(revision); saver.clearRefusal(); setText(hidden ? '' : amountText(amount)); setError(false); onSaved('') }}>Change amount</button>
         : <div className="amount-editor">
           <label className="form-field" htmlFor={inputId}>{bill.name} for {formatYearMonth(month)} ({data.space.currency})</label>
           <input id={inputId} className="quick-input" inputMode="decimal" value={text} aria-invalid={error} aria-describedby={`${inputId}-help`}

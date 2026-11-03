@@ -5,6 +5,7 @@ import type { FinanceData, Id, MoneyAccountKind } from '../../domain/finance/typ
 import { MONEY_KINDS } from '../../ui/chartColors'
 import type { CalendarDate } from '../../domain/goalTime'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HiddenChart } from '../../ui/privacy'
 import { balanceDatesText } from './balanceDates'
 import { Donut } from './Donut'
 import { HomeBlockFrame } from './HomeBlock'
@@ -23,7 +24,8 @@ export function HomeMoney({ data, asOf, onOpenGoal, onOpenMoney }: Props) {
   // v5.9 opens with Investment chosen.
   const [chosen, setChosen] = useState<MoneyAccountKind>('investment')
   const summary = summarizeMoney(data, asOf)
-  const { money, hidden } = useBlockAmounts('money', data.space.currency)
+  const amounts = useBlockAmounts('money', data.space.currency)
+  const { money, hidden } = amounts
   const hasOther = data.moneyAccounts.some(account => account.kind === 'other')
   const kinds = summary.byKind.filter(item => item.kind !== 'other' || hasOther)
   const focus = kinds.find(item => item.kind === chosen) ?? kinds[0]
@@ -39,11 +41,13 @@ export function HomeMoney({ data, asOf, onOpenGoal, onOpenMoney }: Props) {
       {data.moneyAccounts.length === 0
         ? <p className="muted-note">No accounts yet. Add them in Money.</p>
         : <>
-          <Donut
-            segments={hidden ? [] : kinds.map(item => ({ value: item.total, color: MONEY_KINDS[item.kind].color }))}
-            caption={MONEY_KINDS[focus.kind].label}
-            value={money(focus.total)}
-          />
+          {hidden
+            ? <HiddenChart amounts={amounts} kind="donut" />
+            : <Donut
+              segments={kinds.map(item => ({ value: item.total, color: MONEY_KINDS[item.kind].color }))}
+              caption={MONEY_KINDS[focus.kind].label}
+              value={money(focus.total)}
+            />}
           <div className={`tiles${kinds.length === 3 ? ' three' : ''}`}>
             {kinds.map(item => (
               <button key={item.kind} type="button" aria-pressed={item === focus} className={item === focus ? 'is-active' : ''} onClick={() => setChosen(item.kind)}>

@@ -236,9 +236,12 @@ describe('Alex demo: hiding amounts (11)', () => {
     const labels = [...home.querySelectorAll('[aria-label]')].map(element => element.getAttribute('aria-label')!.replace(/\u00a0|\u202f/g, ' '))
     expect(labels.filter(label => amount.test(label))).toEqual([])
     expect(labels).toContain('Show amounts in This Month')
-    // Charts get a neutral look: no slices, no proportional bars.
-    expect(home.querySelector<HTMLElement>('.donut')!.style.background).toContain('var(--color-track)')
+    // Charts are replaced: no slices, bars, signs or warning colours, and no sentence about deficits.
+    expect(home.querySelector('.donut')).toBeNull()
+    expect(home.querySelectorAll('.bar, .is-negative, .is-positive, .stat-warning, .amount-out')).toHaveLength(0)
+    expect(within(home).getAllByText('Chart hidden with the amounts').length).toBeGreaterThan(0)
     expect(within(home).queryAllByRole('progressbar')).toEqual([])
+    expect(text(home)).not.toMatch(/Spending was higher|Spent more than received|deficit|Goal reached|Target reached|Covers about/)
     // Titles and navigation stay.
     expect(regionOf('Accounts & Savings')).toBeTruthy()
     expect(tab('Bills')).toBeTruthy()

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Icon } from '../components/Icon'
 import { IconTip } from '../components/IconTip'
-import { allAreasHidden, AREA_NAMES, useAmountVisibility, VisibilityContext, type AmountVisibility, type HomeArea } from './amountVisibility'
+import { allAreasHidden, AREA_NAMES, useAmountVisibility, VisibilityContext, type AmountVisibility, type BlockAmounts, type HomeArea } from './amountVisibility'
 
 /** The hidden areas for everything inside (Home). The state itself is kept by the app, on this device. */
 export function AmountVisibilityProvider({ value, children }: { value: AmountVisibility; children: ReactNode }) {
@@ -63,5 +63,20 @@ export function AllAmountsToggle() {
     <button type="button" className="button-small align-start" onClick={() => setAll(!allHidden)}>
       <Icon name={allHidden ? 'eye' : 'eyeOff'} size={16} /> {allHidden ? 'Show All Amounts' : 'Hide All Amounts'}
     </button>
+  )
+}
+
+/**
+ * What takes a chart's place while its amounts are hidden: no shape, no
+ * scale, no colours, no legend values and no marks, only this note and a
+ * way to show the amounts again. The same height as the chart it replaces
+ * (`kind`), so nothing jumps.
+ */
+export function HiddenChart({ amounts, kind = 'bars' }: { amounts: BlockAmounts; kind?: 'donut' | 'bars' }) {
+  return (
+    <div className={`chart-hidden is-${kind}`}>
+      <p>Chart hidden with the amounts</p>
+      <button type="button" className="button-small" onClick={amounts.show}><Icon name="eye" size={16} /> Show Amounts</button>
+    </div>
   )
 }

@@ -11,6 +11,7 @@ import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatYearMonth, monthName } from '../../ui/format'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HiddenChart } from '../../ui/privacy'
 import type { ChangeSpace } from '../../ui/saveOutcome'
 import { billsByCategory } from '../../domain/finance/home'
 import { Donut } from './Donut'
@@ -44,12 +45,15 @@ export function SpendingByCategory(props: Props) {
   // Spent closes the planned list, with any amount being changed in it: the app asks first.
   const guard = useLeaveGuard()
   const ideasId = useId()
-  const { money, hidden } = useBlockAmounts('categories', data.space.currency)
+  const amounts = useBlockAmounts('categories', data.space.currency)
+  const { money, hidden } = amounts
   const spending = monthSpending(data, month)
   const focus = spending.byCategory.find(group => group.category === chosen) ?? null
   const longest = Math.max(0, ...spending.byCategory.map(group => group.total))
-  const ideas = ideasOpen ? opportunities(data, today) : []
-  const worst = ideasOpen ? largestDeficit(data, Number(today.slice(0, 4)), today) : null
+  // With the amounts hidden, the ideas are listed by name: their usual order (biggest yearly effect first) would show which costs most.
+  const found = ideasOpen ? opportunities(data, today) : []
+  const ideas = hidden ? [...found].sort((a, b) => a.label.localeCompare(b.label)) : found
+  const worst = ideasOpen && !hidden ? largestDeficit(data, Number(today.slice(0, 4)), today) : null
 
   return (
     <HomeBlockFrame block="categories" title="Spending by Category" period={formatYearMonth(month)}
@@ -77,18 +81,18 @@ export function SpendingByCategory(props: Props) {
           ? <p className="muted-note">Nothing spent is recorded for {formatYearMonth(month)}.</p>
           : <>
             <p className="muted-note">Spent in {formatYearMonth(month)}: paid bills, purchases and loan interest</p>
-            {view === 'donut' && (
-              <Donut segments={hidden ? [] : spending.byCategory.map(group => ({ value: group.total, color: SPENDING_COLORS[group.category] }))}
-                caption={focus ? focus.category : 'TOTAL SPENT'} value={money(focus ? focus.total : spending.total)} />
-            )}
+            {view === 'donut' && (hidden
+              ? <HiddenChart amounts={amounts} kind="donut" />
+              : <Donut segments={spending.byCategory.map(group => ({ value: group.total, color: SPENDING_COLORS[group.category] }))}
+                caption={focus ? focus.category : 'TOTAL SPENT'} value={money(focus ? focus.total : spending.total)} />)}
             <div className={view === 'bars' ? 'category-bars' : 'tiles'}>
               {spending.byCategory.map(group => (
                 <button key={group.category} type="button" aria-pressed={focus === group} className={focus === group ? 'is-active' : ''}
                   onClick={() => setChosen(focus === group ? null : group.category)}>
                   <span><i className="owner-dot" style={{ background: SPENDING_COLORS[group.category] }} aria-hidden="true" />{group.category}</span>
                   <b>{money(group.total)}</b>
-                  {view === 'bars' && (
-                    <span className="bar thin" aria-hidden="true"><span style={{ width: `${hidden ? 100 : barPercent(group.total, longest)}%`, background: hidden ? 'var(--color-track-strong)' : SPENDING_COLORS[group.category] }} /></span>
+                  {view === 'bars' && !hidden && (
+                    <span className="bar thin" aria-hidden="true"><span style={{ width: `${barPercent(group.total, longest)}%`, background: SPENDING_COLORS[group.category] }} /></span>
                   )}
                 </button>
               ))}
@@ -106,7 +110,7 @@ export function SpendingByCategory(props: Props) {
       </button>
       {ideasOpen && (
         <div id={ideasId} className="explain">
-          <p>Spending you could look at, biggest yearly effect and easiest change first. It is a list to review, not advice: only you know what is worth it.</p>
+          <p>Spending you could look at, {hidden ? 'by name while the amounts are hidden' : 'biggest yearly effect and easiest change first'}. It is a list to review, not advice: only you know what is worth it.</p>
           {ideas.length === 0 ? <p className="muted-note">Nothing to list yet.</p> : (
             <ul className="line-list" aria-label="Ideas to review">
               {ideas.slice(0, 5).map(idea => (

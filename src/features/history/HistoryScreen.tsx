@@ -14,7 +14,7 @@ import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
-import { AllAmountsToggle } from '../../ui/privacy'
+import { AllAmountsToggle, HiddenChart } from '../../ui/privacy'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useWriteBlocked } from '../../app/writeStatus'
 import { useLeaveGuard } from '../../app/unsavedChanges'
@@ -336,14 +336,15 @@ function YearOverview({ data, filter, today, amounts, expanded, onToggle, onChan
   const largest = Math.max(0, ...chart.flatMap(row => [row.income, row.spending]))
   const chosenMonth = filter.period.kind === 'month' ? filter.period.month : null
   const categories = chosenMonth ? monthSpending(data, chosenMonth).byCategory : []
-  const width = (value: number) => (amounts.hidden ? 0 : barPercent(value, largest))
+  const width = (value: number) => barPercent(value, largest)
   return (
     <FoldBlock title="Year Overview" period={`${year} · all records`} summary="Income and spending by month" expanded={expanded} onToggle={onToggle}
       className="history-overview">
       <p className="field-help">The chart shows everything recorded in {year}. Search and More Filters change the list only.</p>
       {chart.length === 0 ? <p className="muted-note">Nothing has happened in {year} yet.</p> : <>
-        <p className="chart-legend" aria-hidden="true"><span><i className="owner-dot legend-income" />Income received</span><span><i className="owner-dot legend-spending" />Spent</span></p>
-        {amounts.hidden && <p className="muted-note">Bars are hidden with the amounts.</p>}
+        {amounts.hidden
+          ? <HiddenChart amounts={amounts} />
+          : <p className="chart-legend" aria-hidden="true"><span><i className="owner-dot legend-income" />Income received</span><span><i className="owner-dot legend-spending" />Spent</span></p>}
         <ul className="month-bars history-bars" aria-label={`Income and spending by month in ${year}`}>
           {chart.map(row => (
             <li key={row.month}>
@@ -351,10 +352,12 @@ function YearOverview({ data, filter, today, amounts, expanded, onToggle, onChan
                 aria-label={`${formatYearMonth(row.month)}: income ${amounts.spoken(row.income)}, spent ${amounts.spoken(row.spending)}. Show this month`}
                 onClick={() => onChange({ period: chosenMonth === row.month ? { kind: 'year', year } : { kind: 'month', month: row.month }, category: 'all' })}>
                 <span>{SHORT_MONTHS[Number(row.month.slice(5, 7)) - 1]}</span>
-                <span className="pair-bars" aria-hidden="true">
-                  <span className="bar thin"><span className="legend-income" style={{ width: `${width(row.income)}%` }} /></span>
-                  <span className="bar thin"><span className="legend-spending" style={{ width: `${width(row.spending)}%` }} /></span>
-                </span>
+                {!amounts.hidden && (
+                  <span className="pair-bars" aria-hidden="true">
+                    <span className="bar thin"><span className="legend-income" style={{ width: `${width(row.income)}%` }} /></span>
+                    <span className="bar thin"><span className="legend-spending" style={{ width: `${width(row.spending)}%` }} /></span>
+                  </span>
+                )}
                 <small className={!amounts.hidden && row.income - row.spending < 0 ? 'amount-out' : ''}>{amounts.money(row.income - row.spending)}</small>
               </button>
             </li>
@@ -370,7 +373,7 @@ function YearOverview({ data, filter, today, amounts, expanded, onToggle, onChan
               onClick={() => onChange({ category: filter.category === group.category ? 'all' : group.category })}>
               <span><i className="owner-dot" style={{ background: SPENDING_COLORS[group.category] }} aria-hidden="true" />{group.category}</span>
               <b>{amounts.money(group.total)}</b>
-              <span className="bar thin" aria-hidden="true"><span style={{ width: `${amounts.hidden ? 0 : barPercent(group.total, categories[0].total)}%`, background: SPENDING_COLORS[group.category] }} /></span>
+              {!amounts.hidden && <span className="bar thin" aria-hidden="true"><span style={{ width: `${barPercent(group.total, Math.max(...categories.map(item => item.total)))}%`, background: SPENDING_COLORS[group.category] }} /></span>}
             </button>
           ))}
         </div>

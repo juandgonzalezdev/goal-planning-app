@@ -314,9 +314,12 @@ objetivo = gastos esenciales mensuales confirmados × meses de cobertura
   archivo de recuperación que Restore Backup rechaza. Los dos JSON llevan los
   datos sin cifrar.
 - **Ocultar importes** (ojo en cada área de Home y Hide All Amounts) solo
-  cambia lo que se ve: máscara fija `••••`, también en etiquetas accesibles,
-  porcentajes y gráficos. Se recuerda en este dispositivo. **No es cifrado ni
-  protección de acceso.**
+  cambia lo que se ve: máscara fija `••••`, también en etiquetas accesibles y
+  porcentajes. Los gráficos se sustituyen por «Chart hidden with the amounts»
+  (decisión H1): sin forma, signo, color de aviso, frases de déficit ni detalles
+  calculados a partir de importes, y con un orden que no depende del importe.
+  El PDF sin importes sigue el mismo criterio. Se recuerda en este dispositivo.
+  **No es cifrado ni protección de acceso.**
 
 ## Dónde están las pruebas de estas reglas
 

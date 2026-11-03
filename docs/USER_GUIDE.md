@@ -471,11 +471,18 @@ These are screen preferences for this device. They don't change any amount, and 
 - The areas keep the order of their first old block, and a part starts open if its old block was open.
 - The demo never reads or keeps these preferences.
 
-**Current limits of hiding amounts** (the same as before this change):
+**Charts and details with hidden amounts.** A chart can show amounts even without numbers, so while amounts are hidden:
 
-- Hiding isn't global. Amounts are **not** hidden in Money (Income, Accounts & Savings, Cards & Loans), Goals, a goal, a bill, a card or loan, or Settings, even when every Home area is hidden. This is the same as before, when they were in Data and Cards.
-- Even with amounts hidden, Year Summary still shows which months had a negative result: the direction and colour of the bars, and a sentence naming those months. The year's result keeps its warning colour.
-- Spending by Category still lists categories from largest to smallest.
+- Each chart (the donuts, the bars in Spending by Category and in History, Year Summary's months) is replaced by a box that says **Chart hidden with the amounts**, with **Show Amounts**. On Home, Show Amounts shows that area again; in Bills and History, it shows every amount.
+- Nothing that comes from the amounts shows: no bar lengths, no red or green, no warning colour on a result, no percentages, no progress bars, no "Spent more than received", no sentence naming the months with a deficit, no "Goal reached" or "Target reached", no emergency fund cover, and no "Where the result went".
+- Year Summary still lists the months, to open them on Home, all in the same way.
+- Lists keep an order that doesn't depend on the amounts: categories in their usual order, Ideas to Review by name. **Unassigned** savings are always listed, so you can't tell whether they are 0.
+- When you change a month's amount in Spending by Category › Planned, the field starts empty instead of showing the hidden amount.
+
+**Current limits of hiding amounts:**
+
+- Hiding isn't global. Amounts are **not** hidden in Money (Income, Accounts & Savings, Cards & Loans), Goals, a goal, a bill, a card or loan, or Settings, even when every Home area is hidden.
+- Some facts that aren't amounts still show: which bills are paid or overdue, how many bills there are, whether a balance or a bill amount is missing, and the warning when your goals hold more than your savings.
 - The PDF report has its own **Include amounts** choice. Hiding amounts on screen doesn't change it.
 
 ## 17. Reports and Backups
@@ -489,7 +496,7 @@ These are in **Settings › Reports & Backup**. In Money, **Open Reports & Backu
 | Where | Settings › Reports & Backup | Settings › Reports & Backup (also in the demo) | The Your Saved Information screen, and Settings › Reports & Backup when the app can only show your space |
 | Does it change anything? | No | No | No |
 
-- **Export Report:** choose **One Month** or **Whole Year**. With **Include amounts** unchecked, every amount becomes •••• and the report says so on its first page.
+- **Export Report:** choose **One Month** or **Whole Year**. With **Include amounts** unchecked, every amount becomes •••• and the report says so on its first page. It also leaves out the charts, the shares, how each deficit was covered and the emergency fund's cover, and lists categories by name.
 - **Restore Backup:**
   - Choose a backup file. The app checks it first, and nothing changes until you confirm.
   - **Replace** puts the file's space in place of yours. This can't be undone, so download a backup first if you want one.

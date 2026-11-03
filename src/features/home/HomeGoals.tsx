@@ -65,10 +65,10 @@ export function HomeGoals(props: Props) {
       {showFund && cover.fund && (
         <button type="button" className="goal-row" data-return-key={`goal-${cover.fund.id}`} onClick={() => onOpenGoal(cover.fund!.id)}>
           <span>{cover.fund.name}<small className="goal-kind">
-            {cover.months === null ? 'Cover not worked out yet' : `Covers about ${cover.months.toLocaleString('en-GB')} ${cover.months === 1 ? 'month' : 'months'} of essential costs`}
+            {hidden ? 'Cover hidden with the amounts' : cover.months === null ? 'Cover not worked out yet' : `Covers about ${cover.months.toLocaleString('en-GB')} ${cover.months === 1 ? 'month' : 'months'} of essential costs`}
           </small></span>
           <span>{money(cover.saved)}</span>
-          {cover.fund.target !== null && (
+          {cover.fund.target !== null && !hidden && (
             <small className="goal-row-amounts">{cover.saved >= cover.fund.target ? 'Target reached' : `${money(cover.fund.target - cover.saved)} to the target of ${money(cover.fund.target)}`}</small>
           )}
         </button>
@@ -90,11 +90,9 @@ export function HomeGoals(props: Props) {
                 <button type="button" className="goal-row" data-return-key={`goal-${goal.id}`} onClick={() => onOpenGoal(goal.id)}>
                   <span>{goal.name}<small className="goal-kind">{goal.deadline ? `With Date · ${formatDate(goal.deadline)}` : progress.hasTarget ? 'Flexible' : 'No target'}</small></span>
                   <span>{progress.hasTarget ? percent(`${Math.round(progress.percent)}%`) : money(progress.saved)}</span>
-                  {progress.hasTarget && (hidden
-                    ? <div className="bar thin" aria-hidden="true"><div style={{ width: '100%', background: 'var(--color-track-strong)' }} /></div>
-                    : <ProgressBar percent={progress.percent} color={ownerColor(data.space, goal.owner)} label={`${goal.name} progress`} />)}
+                  {progress.hasTarget && !hidden && <ProgressBar percent={progress.percent} color={ownerColor(data.space, goal.owner)} label={`${goal.name} progress`} />}
                   <small className="goal-row-amounts">{progress.hasTarget
-                    ? `${money(progress.saved)} of ${money(goal.target ?? 0)} · ${progress.remaining > 0 ? `${money(progress.remaining)} to go` : 'Goal reached'}`
+                    ? `${money(progress.saved)} of ${money(goal.target ?? 0)}${hidden ? '' : ` · ${progress.remaining > 0 ? `${money(progress.remaining)} to go` : 'Goal reached'}`}`
                     : 'Saved so far, with no target set'}</small>
                 </button>
               </li>

@@ -30,8 +30,9 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
   const name = monthName(month)
   const funding = open ? monthFunding(data, month, today) : null
 
+  // Hidden amounts: the note never says whether the month was negative.
   const resultNote = future ? 'Nothing has happened yet'
-    : r.result < 0 ? 'Spent more than received' : 'Income minus spent'
+    : r.result < 0 && !amounts.hidden ? 'Spent more than received' : 'Income minus spent'
   return (
     <div className="month-figures">
       <div className="stat-grid home-stats">
@@ -69,7 +70,9 @@ export function MonthSummary({ data, month, today, onOpenIncome, onOpenBills, on
           <p><b>Result</b> = income received − spent. It is not money saved: savings and debt payments are shown below.</p>
           <p><b>Spent</b> counts each cost once: a paid bill, a purchase (with the card when bought, not again when the card is paid) and the interest of a loan payment. Transfers between your accounts, savings and the part of a payment that pays debt back are not spending.</p>
           <p><b>Money in and out of your accounts</b>: {money(r.cashFlow.moneyIn)} in, {money(r.cashFlow.moneyOut)} out (bills, card and loan payments, spending from an account). Card purchases leave your account when you pay the card.</p>
-          {!future && <FundingLines funding={funding} money={money} name={name} />}
+          {!future && (amounts.hidden
+            ? <p className="muted-note">Where the result went is hidden with the amounts.</p>
+            : <FundingLines funding={funding} money={money} name={name} />)}
           <p className="field-help">From the records of {formatYearMonth(month)}. Nothing is estimated.</p>
         </div>
       )}

@@ -381,8 +381,9 @@ describe('History privacy', () => {
     const labels = [...document.querySelectorAll('[data-screen="history"] [aria-label]')].map(element => element.getAttribute('aria-label')!)
     expect(labels.some(label => /\d,\d\d/.test(label))).toBe(false)
     expect(labels.find(label => label.startsWith('December 2026:'))).toBe('December 2026: income amount hidden, spent amount hidden. Show this month')
-    const widths = [...document.querySelectorAll<HTMLElement>('.history-bars .pair-bars span span')].map(bar => bar.style.width)
-    expect(new Set(widths)).toEqual(new Set(['0%']))
+    // The chart is replaced: no bars, colours or signs, in the months or in the categories.
+    expect(document.querySelectorAll('[data-screen="history"] .pair-bars, [data-screen="history"] .bar, [data-screen="history"] .amount-out')).toHaveLength(0)
+    expect(screen.getByText('Chart hidden with the amounts')).toBeTruthy()
     // Shared with Home and Bills.
     await fire.click(tab('Bills'))
     expect(button('Show All Amounts')).toBeTruthy()

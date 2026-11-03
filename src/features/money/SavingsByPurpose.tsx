@@ -34,7 +34,8 @@ export function SavingsByPurpose({ data, asOf, money, hidden, onOpenGoal, level 
       key: purpose.goal.id, name: purpose.goal.name, amount: purpose.saved, goalId: purpose.goal.id,
       color: purpose.goal.kind === 'emergency' ? EMERGENCY_COLOR : PURPOSE_COLORS[index % PURPOSE_COLORS.length],
     })),
-    ...(savings.unassigned !== null && savings.unassigned > 0
+    // Hidden amounts: Unassigned is always listed, so whether it is 0 does not show.
+    ...(savings.unassigned !== null && (savings.unassigned > 0 || hidden)
       ? [{ key: 'unassigned', name: 'Unassigned', amount: savings.unassigned, goalId: null, color: UNASSIGNED_COLOR }] : []),
   ]
   const shares = sharePercents(parts.map(part => part.amount))

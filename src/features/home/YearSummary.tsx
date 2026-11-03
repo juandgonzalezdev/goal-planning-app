@@ -7,6 +7,7 @@ import type { FinanceData } from '../../domain/finance/types'
 import { barPercent } from '../../ui/chart'
 import { formatYearMonth } from '../../ui/format'
 import { useBlockAmounts } from '../../ui/amountVisibility'
+import { HiddenChart } from '../../ui/privacy'
 import { HomeBlockFrame } from './HomeBlock'
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -23,7 +24,8 @@ type Props = { data: FinanceData; year: number; today: CalendarDate; month: Year
  */
 export function YearSummary({ data, year, today, month, onSelectMonth }: Props) {
   const summary = yearSummary(data, year, today)
-  const { money, hidden, percent } = useBlockAmounts('year', data.space.currency)
+  const amounts = useBlockAmounts('year', data.space.currency)
+  const { money, hidden, percent } = amounts
   const members = data.space.members
   const income = members.length > 1 ? yearlyIncome(data, year) : null
   const largest = Math.max(0, ...summary.months.map(row => Math.abs(row.result)))
@@ -35,23 +37,37 @@ export function YearSummary({ data, year, today, month, onSelectMonth }: Props) 
       <dl className="year-stats">
         <div><dt>Income in {year}</dt><dd>{money(summary.income)}</dd></div>
         <div><dt>Spent in {year}</dt><dd>{money(summary.spending)}</dd></div>
-        <div className={summary.result < 0 ? 'stat-warning' : ''}><dt>Result for {year}</dt><dd>{money(summary.result)}</dd></div>
+        <div className={summary.result < 0 && !hidden ? 'stat-warning' : ''}><dt>Result for {year}</dt><dd>{money(summary.result)}</dd></div>
       </dl>
       {summary.extraordinaryIncome > 0 && <p className="muted-note">Includes {money(summary.extraordinaryIncome)} of one-off income.</p>}
-      {summary.deficitMonths.length > 0 && (
+      {summary.deficitMonths.length > 0 && !hidden && (
         <p className="muted-note">Spending was higher than income in {summary.deficitMonths.map(m => SHORT_MONTHS[Number(m.slice(5, 7)) - 1]).join(', ')}. Open a month to see how it was covered.</p>
       )}
       <div className="year-details">
+        {hidden ? <>
+          <HiddenChart amounts={amounts} />
+          {/* The months still open on Home; nothing about their result shows (no bar, sign, colour or value). */}
+          <ul className="month-chips" aria-label={`Months of ${year}`}>
+            {summary.months.map((row, index) => (
+              <li key={row.month}>
+                <button type="button" className={`month-chip${row.month === month ? ' is-active' : ''}`} disabled={!row.started}
+                  aria-label={`${formatYearMonth(row.month)}${row.started ? '' : ': not started yet'}. Open on Home`} onClick={() => onSelectMonth(row.month)}>
+                  {SHORT_MONTHS[index]}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </> : <>
         <ul className="month-bars" aria-label={`Result by month in ${year}`}>
           {summary.months.map((row, index) => (
             <li key={row.month}>
               <button type="button" className={`monthly-row result-row${row.month === month ? ' is-active' : ''}`} disabled={!row.started}
-                aria-label={`${formatYearMonth(row.month)}: ${row.started ? `result ${hidden ? 'amount hidden' : money(row.result)}` : 'not started yet'}. Open on Home`}
+                aria-label={`${formatYearMonth(row.month)}: ${row.started ? `result ${money(row.result)}` : 'not started yet'}. Open on Home`}
                 onClick={() => onSelectMonth(row.month)}>
                 <span>{SHORT_MONTHS[index]}</span>
                 <span className="bar result-bar" aria-hidden="true">
                   {row.started && <span className={row.result < 0 ? 'is-negative' : 'is-positive'}
-                    style={{ width: `${hidden ? 50 : barPercent(Math.abs(row.result), largest) / 2}%` }} />}
+                    style={{ width: `${barPercent(Math.abs(row.result), largest) / 2}%` }} />}
                 </span>
                 <small>{row.started ? money(row.result) : '—'}</small>
               </button>
@@ -59,6 +75,7 @@ export function YearSummary({ data, year, today, month, onSelectMonth }: Props) 
           ))}
         </ul>
         <p className="field-help">Result = income received − money spent. Bars to the right are months with money left over; to the left, months that needed savings or credit.</p>
+        </>}
         <table className="year-table">
           <caption className="visually-hidden">Savings and debt at the end of each month</caption>
           <thead><tr><th scope="col">Month</th><th scope="col">Savings</th><th scope="col">Debt</th></tr></thead>
@@ -72,7 +89,7 @@ export function YearSummary({ data, year, today, month, onSelectMonth }: Props) 
             ))}
           </tbody>
         </table>
-        <ReferenceNotes data={data} months={summary.months.filter(row => row.started).map(row => row.month)} today={today} money={money} percent={percent} />
+        <ReferenceNotes data={data} months={summary.months.filter(row => row.started).map(row => row.month)} today={today} money={money} percent={percent} hidden={hidden} />
         {income && (
           <ul className="line-list" aria-label="Income by person">
             {members.map(member => (
@@ -86,8 +103,8 @@ export function YearSummary({ data, year, today, month, onSelectMonth }: Props) 
 }
 
 /** Optional notes with their source, formula and period. None of them is a limit or advice. */
-function ReferenceNotes({ data, months, today, money, percent }: {
-  data: FinanceData; months: YearMonth[]; today: CalendarDate; money: (minor: number) => string; percent: (value: string) => string
+function ReferenceNotes({ data, months, today, money, percent, hidden }: {
+  data: FinanceData; months: YearMonth[]; today: CalendarDate; money: (minor: number) => string; percent: (value: string) => string; hidden: boolean
 }) {
   if (months.length === 0) return null
   const share = housingShare(data, months, today)
@@ -96,9 +113,10 @@ function ReferenceNotes({ data, months, today, money, percent }: {
     <details className="explain">
       <summary>Reference Notes</summary>
       <h4 className="section-title">Housing costs and income</h4>
-      {share.status === 'ok' && <p>Housing and utilities were {percent(`${share.percent.toLocaleString('en-GB')}%`)} of the net income you received ({money(share.housing)} of {money(share.income)}, {period}).</p>}
-      {share.status === 'no-income' && <p>No percentage: no income was received in {period}, so a share would mean nothing.</p>}
-      {share.status === 'incomplete' && <p>No percentage: a housing or utilities bill has no amount yet in {period}.</p>}
+      {hidden && <p>The share of housing costs is hidden with the amounts.</p>}
+      {!hidden && share.status === 'ok' && <p>Housing and utilities were {percent(`${share.percent.toLocaleString('en-GB')}%`)} of the net income you received ({money(share.housing)} of {money(share.income)}, {period}).</p>}
+      {!hidden && share.status === 'no-income' && <p>No percentage: no income was received in {period}, so a share would mean nothing.</p>}
+      {!hidden && share.status === 'incomplete' && <p>No percentage: a housing or utilities bill has no amount yet in {period}.</p>}
       <p className="field-help">
         Formula: rent and housing bills plus utilities paid, divided by net income received, over the same months. Eurostat counts people whose housing
         costs take more than {EUROSTAT_OVERBURDEN_PERCENT}% of their household’s disposable income as living with a housing cost overburden (EU-SILC

@@ -858,3 +858,22 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
   .history-print tbody { break-inside: auto; }
 }
 .filter-chip:focus-visible, #history-search:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* Charts with the amounts hidden: a plain box of the chart's height, with no shape, scale, colour or value. */
+.chart-hidden {
+  display: grid; place-items: center; align-content: center; gap: 10px; padding: 16px; text-align: center;
+  border: 1px dashed var(--color-track-strong); border-radius: var(--radius-control); background: var(--color-surface-muted);
+  color: var(--color-text-muted); font-size: 14px;
+}
+.chart-hidden p { margin: 0; }
+.chart-hidden.is-donut { min-height: 206px; margin: 4px 0; }
+.chart-hidden.is-bars { min-height: 120px; }
+.chart-hidden .button-small { display: inline-flex; align-items: center; gap: 6px; }
+/* Year Summary's months while the amounts are hidden: only their names, to open them on Home. */
+.month-chips { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.month-chip {
+  min-width: 44px; min-height: 44px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: var(--radius-control);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-weight: 600; cursor: pointer;
+}
+.month-chip.is-active { border-color: var(--color-primary); color: var(--color-primary); }
+.month-chip:disabled { color: var(--color-text-muted); cursor: default; }
