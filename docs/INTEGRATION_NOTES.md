@@ -26,3 +26,12 @@ recepción como adjunto por Juan; no se presupone acceso a esta carpeta.
 - Comprobación propia: 63 pruebas en 6 archivos (GlobalAdd, HomeAreas,
   LinksReturn, NextDays, MarkPaid y accountDeletion), lint, build y diff --check
   correctos. No se repitió la suite completa en este paso localizado.
+
+## Rumbo 06
+
+- Aplicación por contextos exactos en App y adaptación de la fila de Layout
+  en PROJECT_MAP; se conservó la documentación de pruebas añadida en 03–05.
+- Barra lateral desde 1024 px, Home en dos columnas desde 1200 px, como en
+  el resumen original. No se modifican los flujos de guardado ni navegación.
+- Comprobación propia: 10 pruebas (Layout y GlobalAdd), build y diff --check
+  correctos. La disposición CSS real queda para la comprobación de navegador.

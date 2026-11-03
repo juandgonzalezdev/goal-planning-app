@@ -897,3 +897,43 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .pay-group { display: grid; gap: 4px; }
 .pay-group-title { margin: 6px 0 0; font-size: 13px; font-weight: 650; color: var(--color-text-muted); }
 .coming-up { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--color-border-strong); }
+
+/*
+ * Wide screens (1024 px and more), on the five tabs: the tabs become a sidebar on the left, with
+ * the logo on top and Settings at the end; the header keeps only + Add. A detail screen (a bill, a
+ * goal) and Settings keep the header with the logo and the gear, as on a phone. Nothing shows twice.
+ */
+:root { --sidebar-width: 232px; }
+.nav-settings { display: none; }
+@media (min-width: 1024px) {
+  .shell.has-sidebar { padding-left: var(--sidebar-width); }
+  .shell.has-sidebar .bottom-nav {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 20; width: var(--sidebar-width); height: auto;
+    flex-direction: column; align-items: stretch; gap: 4px; overflow-y: auto;
+    padding: max(16px, env(safe-area-inset-top)) 12px 16px max(12px, env(safe-area-inset-left));
+    border: 0; border-right: 1px solid var(--color-border);
+  }
+  .shell.has-sidebar .bottom-nav .shell-brand { flex: 0 0 auto; min-height: 0; margin: 0 0 14px; padding: 4px; color: var(--color-text); font-size: inherit; }
+  .shell.has-sidebar .bottom-nav .shell-brand:hover { background: transparent; }
+  .shell.has-sidebar .bottom-nav > button:not(.shell-brand) { flex: 0 0 auto; min-height: 44px; padding: 10px 14px; text-align: left; font-size: 15px; }
+  .shell.has-sidebar .nav-settings {
+    display: flex; align-items: center; gap: 8px; margin-top: auto; border: 0; border-radius: var(--radius-control);
+    background: transparent; color: var(--color-text-muted); font-weight: 600; cursor: pointer;
+  }
+  .shell.has-sidebar .nav-settings:hover { background: var(--color-surface-hover); }
+  .shell.has-sidebar .nav-settings:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+  .shell.has-sidebar .shell-header { justify-content: flex-end; padding-inline: var(--space-gutter); }
+  .shell.has-sidebar .shell-header .shell-add { margin-left: 0; }
+}
+/*
+ * Home in two columns (1200 px and more, with the sidebar): the areas go left to right, then down,
+ * in the order chosen in Customize Home, so what you see, what is read and the keyboard follow the
+ * same order. An odd last area takes the whole width. While customizing, one column, as on a phone.
+ */
+@media (min-width: 1200px) {
+  .shell.has-sidebar .tab-screen.home-screen, .shell.has-sidebar .home-screen .home-bar-row { max-width: 1040px; }
+  .shell.has-sidebar .home-blocks:not(.is-customizing) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .shell.has-sidebar .home-blocks:not(.is-customizing) > .home-block-slot:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .shell.has-sidebar .home-blocks:not(.is-customizing) > .home-block-slot:not(:last-child:nth-child(odd)) .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shell.has-sidebar .home-blocks:not(.is-customizing) > .home-block-slot:not(:last-child:nth-child(odd)) .pay-list { grid-template-columns: minmax(0, 1fr); }
+}

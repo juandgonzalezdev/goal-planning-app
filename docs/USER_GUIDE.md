@@ -133,7 +133,19 @@ Add things in this order, and skip anything that doesn't apply to you. You can c
 
 ## 6. Moving Around
 
-The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Each tab shows its name. On a phone they are at the bottom of the screen. On a wider screen they are at the top. You can also reach them with the keyboard (Tab, then Enter or Space).
+The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Each tab shows its name. You can also reach them with the keyboard (Tab, then Enter or Space).
+
+| Screen width | Where things are |
+| --- | --- |
+| Phone (narrower than 740 px) | The tabs are at the bottom of the screen. The header has the logo, **+ Add** and the gear. Home is one column. |
+| Tablet (740 to 1023 px) | The tabs are at the top. The header is the same as on a phone. Home is one column. |
+| Computer (1024 px or wider) | The tabs are in a **sidebar** on the left: the logo at the top, the five tabs, and **Settings** at the end. The header keeps only **+ Add**. Home is one column up to 1199 px. |
+| Wide computer (1200 px or wider) | As above, and Home shows its areas in **two columns**. |
+
+- In two columns, Home's areas follow the order you chose in **Customize Home**: left to right, then the next row. The keyboard and a screen reader follow the same order. If the number of areas is odd, the last one takes the whole row.
+- While **Customize Home** is open, Home goes back to one column, so the list you reorder is the order you read.
+- A bill, goal, card or loan opened on its own screen, and Settings, have no sidebar: they keep the header with the logo, **Back** and the gear, whatever the width.
+- Each control is shown once. When the window changes width, the logo and Settings move between the header and the sidebar; they are never in both.
 
 - **Home**: your month at a glance.
 - **Bills**: the bills of the month (Calendar or List), and **All Bills** at the end, with every bill whatever the month.

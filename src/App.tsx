@@ -38,6 +38,7 @@ import { matchesValidity } from './domain/finance/validity'
 import { HomeScreen, type HomeSpot } from './features/home/HomeScreen'
 import { ADD_LABELS, addChoices, type AddChoice } from './app/addMenu'
 import { MenuButton, type MenuOption } from './components/MenuButton'
+import { SIDEBAR_QUERY, useMediaQuery } from './ui/useMediaQuery'
 import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
@@ -829,18 +830,24 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
   const showNav = !!open && isTab(screen)
+  // Wide screens: the tabs become a sidebar, with the logo on top and Settings at the end (not in the header too).
+  const sidebar = useMediaQuery(SIDEBAR_QUERY) && showNav
+  const brand = (
+    <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} onClick={goToStart}>
+      <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
+      <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
+    </button>
+  )
+  const settingsButton = sidebar
+    ? <button type="button" className="nav-settings" onClick={() => go('settings')}><Icon name="settings" size={18} /> Settings</button>
+    : <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
 
   return (
-    <div className={`shell${showNav ? ' has-nav' : ''}`} data-direction={direction} ref={shellRef}>
+    <div className={`shell${showNav ? ' has-nav' : ''}${sidebar ? ' has-sidebar' : ''}`} data-direction={direction} ref={shellRef}>
       <header className="shell-header">
-        <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} onClick={goToStart}>
-          <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
-          <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
-        </button>
+        {!sidebar && brand}
         {open && showNav && <div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div>}
-        {open && screen !== 'settings' && (
-          <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
-        )}
+        {open && screen !== 'settings' && !sidebar && settingsButton}
       </header>
       {open?.kind === 'demo' && (
         <DemoBanner asking={confirmReset} onAskingChange={setConfirmReset} onReset={resetDemo} onExit={() => exitDemo()}
@@ -887,7 +894,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         </div>
       )}
       {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
-      {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} />}
+      {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} top={sidebar ? brand : undefined} bottom={sidebar ? settingsButton : undefined} />}
       {leaveQuestion}
       <WriteStatusContext.Provider value={writeStatus}>
       <UnsavedChangesContext.Provider value={unsaved.registry}>
