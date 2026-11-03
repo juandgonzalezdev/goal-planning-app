@@ -138,7 +138,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
           const detailId = `account-${account.id}`
           return (
             <li key={account.id} className={`compact-item${open ? ' is-open' : ''}`}>
-              <button type="button" className="line line-button" aria-expanded={open} aria-controls={open ? detailId : undefined}
+              <button type="button" className="line line-button" data-return-key={`account-${account.id}`} aria-expanded={open} aria-controls={open ? detailId : undefined}
                 onClick={() => onViewChange({ ...view, account: open ? null : account.id })}>
                 <span>
                   <span className="item-name">{account.name}</span>

@@ -38,10 +38,11 @@ type Props = {
   onViewChange: (view: HistoryView) => void
   onChange: ChangeSpace
   /** Opens a bill on the month of the payment chosen. */
-  onOpenBill: (id: Id, month: YearMonth) => void
-  onOpenGoal: (id: Id) => void
-  /** Opens Accounts & Savings in Money, on this account. */
-  onOpenAccount: (id: Id) => void
+  /** The last argument is the record's return key: Back puts the focus on it. */
+  onOpenBill: (id: Id, month: YearMonth, key: string) => void
+  onOpenGoal: (id: Id, key: string) => void
+  /** Opens this account in Money, or the card or loan's own details. */
+  onOpenAccount: (id: Id, key: string) => void
   /** + Add Spending on Home: Add Spending opens once. */
   startAdding?: boolean
   /** That form is open: the request is used up. */
@@ -152,9 +153,9 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
   }
   const openEntry = (entry: ActivityEntry) => {
     const ref = entry.ref
-    if (ref.kind === 'bill') onOpenBill(ref.billId, ref.month)
-    else if (ref.kind === 'movement' || ref.kind === 'opening') onOpenGoal(ref.goalId)
-    else if (ref.kind === 'balance') { const snapshot = data.balances.find(b => b.id === ref.id); if (snapshot) onOpenAccount(snapshot.accountId) }
+    if (ref.kind === 'bill') onOpenBill(ref.billId, ref.month, entry.key)
+    else if (ref.kind === 'movement' || ref.kind === 'opening') onOpenGoal(ref.goalId, entry.key)
+    else if (ref.kind === 'balance') { const snapshot = data.balances.find(b => b.id === ref.id); if (snapshot) onOpenAccount(snapshot.accountId, entry.key) }
     else openEditor(editing?.kind === ref.kind && editing.id === ref.id ? null : { kind: ref.kind, id: ref.id }, () => setConfirmDelete(null))
   }
 
@@ -298,7 +299,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
               <MonthGroup key={group.month} group={group} open={open.includes(group.month)} shown={shownFor(group)}
                 onToggle={() => changeView(toggleMonth(view, open, group.month))} onShowMore={() => changeView(showMore(view, group.month))}>
                 {entry => <>
-                  <EntryRow entry={entry} amounts={amounts} editing={!!editing && editing.id !== null && 'id' in entry.ref && entry.ref.kind === editing.kind && entry.ref.id === editing.id}
+                  <EntryRow entry={entry} amounts={amounts} debtBalance={entry.ref.kind === 'balance' && data.debts.some(debt => entry.accountIds.includes(debt.id))} editing={!!editing && editing.id !== null && 'id' in entry.ref && entry.ref.kind === editing.kind && entry.ref.id === editing.id}
                     onOpen={() => openEntry(entry)} />
                   {editing && editing.id !== null && entry.ref.kind === editing.kind && 'id' in entry.ref && entry.ref.id === editing.id && <div className="history-edit">
                     {editing.kind === 'expense' && <ExpenseForm data={data} today={today} record={data.expenses.find(e => e.id === editing.id)!} newId={newId} onSave={save('Spending saved.')} onCancel={() => setEditing(null)} />}
@@ -317,7 +318,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
             ))}
           </div>
         )}
-        <p className="field-help no-print">Bill payments open their bill, savings movements their goal, and balances open Accounts &amp; Savings in Money. Spending, transfers and income open here to change.</p>
+        <p className="field-help no-print">Bill payments open their bill, savings movements their goal, and balances open their account in Money or their card or loan details. Spending, transfers and income open here to change.</p>
       </section>
 
       <PrintList groups={groups} amounts={amounts} />
@@ -447,17 +448,17 @@ function extrasOf(entry: ActivityEntry, amounts: BlockAmounts): string[] {
   ].filter((line): line is string => line !== null)
 }
 
-function EntryRow({ entry, amounts, editing, onOpen }: { entry: ActivityEntry; amounts: BlockAmounts; editing: boolean; onOpen: () => void }) {
+function EntryRow({ entry, amounts, debtBalance, editing, onOpen }: { entry: ActivityEntry; amounts: BlockAmounts; debtBalance: boolean; editing: boolean; onOpen: () => void }) {
   const [showExtras, setShowExtras] = useState(false)
   const id = useId()
   const amount = amountOf(entry, amounts)
   const extras = extrasOf(entry, amounts)
   const action = entry.ref.kind === 'bill' ? 'Open bill' : entry.ref.kind === 'movement' || entry.ref.kind === 'opening' ? 'Open goal'
-    : entry.ref.kind === 'balance' ? 'Open in Money' : editing ? 'Close' : 'Change'
+    : entry.ref.kind === 'balance' ? debtBalance ? 'Open card or loan' : 'Open account' : editing ? 'Close' : 'Change'
   return (
     <>
       <div className="history-row">
-        <button type="button" className="line line-button history-line" onClick={onOpen} aria-expanded={entry.ref.kind === 'expense' || entry.ref.kind === 'transfer' || entry.ref.kind === 'income' ? editing : undefined}>
+        <button type="button" className="line line-button history-line" data-return-key={entry.key} onClick={onOpen} aria-expanded={entry.ref.kind === 'expense' || entry.ref.kind === 'transfer' || entry.ref.kind === 'income' ? editing : undefined}>
           <span>
             <small className={`type-tag type-${entry.type}`}>{tagOf(entry)}</small>{entry.label}
             {entry.detail && <small>{entry.detail}</small>}

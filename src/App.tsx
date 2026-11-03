@@ -33,6 +33,8 @@ import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
 import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/history/historyView'
 import { NO_FILTER } from './domain/finance/history'
+import { monthIncome } from './domain/finance/income'
+import { matchesValidity } from './domain/finance/validity'
 import { HomeScreen, type HomeAdd, type HomeSpot } from './features/home/HomeScreen'
 import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
@@ -178,8 +180,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // separately for the demo and the own space, so Back from a bill or a goal finds it as it was.
   const [demoHistoryView, setDemoHistoryView] = useState<HistoryView>(INITIAL_HISTORY_VIEW)
   const [ownHistoryView, setOwnHistoryView] = useState<{ spaceId: string; view: HistoryView } | null>(null)
-  // Where History was scrolled when a bill or a goal was opened from it, to go back to the same place.
-  const historyScroll = useRef<number | null>(null)
+  // Where History was scrolled when a bill, a goal or an account was opened from it, and which record
+  // (its data-return-key) gets the focus back, to go back to the same place.
+  const historyScroll = useRef<{ y: number; key: string | null } | null>(null)
+  // Where Goals was scrolled when a goal, New Goal or the Emergency Fund draft was opened from it, and which
+  // button gets the focus back. Its filter is kept anyway (goalsFilter).
+  const goalsReturn = useRef<{ y: number; key: string } | null>(null)
   // Where Bills was scrolled when a bill (or Add Bill on a day) was opened from it, and which button
   // (its data-return-key) gets the focus back: Back, Cancel and saving from a day return there.
   const billsReturn = useRef<{ y: number; key: string } | null>(null)
@@ -196,7 +202,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const homeReturn = useRef<{ chain: string; idx: number; y: number; spot: HomeSpot } | null>(null)
   // + Add Income or Add Spending: the form to open when Money or History opens, once.
   const [addRequest, setAddRequest] = useState<'income' | 'spending' | null>(null)
-  // The field that gets the focus when that form opens.
+  // What gets the focus when the next screen opens: a field's id (+ Add) or a selector (an account, an income month).
   const addFocus = useRef<string | null>(null)
   // Reports & Backup asked for from Money: Settings opens with the focus on that section.
   const settingsTarget = useRef(false)
@@ -287,7 +293,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     const field = addFocus.current
     addFocus.current = null
     if (field) {
-      const input = document.getElementById(field)
+      const input = /^[#[.]/.test(field) ? mainRef.current?.querySelector<HTMLElement>(field) : document.getElementById(field)
       if (input) { input.focus({ preventScroll: true }); input.scrollIntoView?.({ block: 'center' }); return }
     }
     // Back to Home, on the step a link was used from: the same place, with the focus on that link (or, when it is gone
@@ -323,14 +329,33 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       target?.scrollIntoView?.({ block: 'nearest' })
       return
     }
-    // Back to History from a bill or a goal opened there: the same place, with the focus on the title.
+    // Back to History from a bill, a goal or an account opened there: the same place, with the focus on the
+    // record used (else the title, when it is gone or no longer listed).
     const returnTo = screen === 'history' ? historyScroll.current : null
-    if (screen !== 'bill' && screen !== 'goal') historyScroll.current = null
+    if (screen !== 'bill' && screen !== 'goal' && screen !== 'money' && screen !== 'debt') historyScroll.current = null
     if (returnTo !== null) {
-      const title = mainRef.current?.querySelector<HTMLElement>('[data-screen="history"] h1')
-      if (title && !title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1')
-      title?.focus({ preventScroll: true })
-      window.scrollTo?.(0, returnTo)
+      const history = mainRef.current?.querySelector<HTMLElement>('[data-screen="history"]')
+      const row = returnTo.key ? history?.querySelector<HTMLElement>(`[data-return-key="${CSS.escape(returnTo.key)}"]`) : null
+      const title = history?.querySelector<HTMLElement>('h1')
+      if (!row && title && !title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1')
+      const target = row ?? title
+      target?.focus({ preventScroll: true })
+      window.scrollTo?.(0, returnTo.y)
+      if (row) row.scrollIntoView?.({ block: 'nearest' })
+      return
+    }
+    // Back to Goals from a goal, New Goal or the Emergency Fund: the same filter and place, with the focus on the
+    // button used (else the title, after a goal was deleted).
+    const goalsBack = screen === 'goals' ? goalsReturn.current : null
+    if (screen !== 'goal' && screen !== 'new-goal' && screen !== 'emergency') goalsReturn.current = null
+    if (goalsBack) {
+      const goals = mainRef.current?.querySelector<HTMLElement>('[data-screen="goals"]')
+      const title = goals?.querySelector<HTMLElement>('h1')
+      const target = goals?.querySelector<HTMLElement>(`[data-return-key="${goalsBack.key}"]`) ?? title
+      if (target === title && title && !title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1')
+      target?.focus({ preventScroll: true })
+      window.scrollTo?.(0, goalsBack.y)
+      target?.scrollIntoView?.({ block: 'nearest' })
       return
     }
     // Back to Money from a card, a loan or a goal opened there: the same place, with the focus on the button that
@@ -457,7 +482,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
   /** Money on one block: the block opens, and the view and the focus go to its heading. */
   const showMoneyBlock = (block: MoneyBlock) => {
-    changeMoneyView(setBlockOpen(moneyView, block, true))
+    changeMoneyView({ ...setBlockOpen(moneyView, block, true), incomeMonth: null })
     moneyTarget.current = block
     navigation.go('money')
   }
@@ -500,7 +525,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setSetupDraft(EMPTY_SETUP)
     replace('home')
   }
-  const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); historyScroll.current = null; billsReturn.current = null; homeReturn.current = null; setBillDay(null) }
+  const resetGoals = () => { setGoalId(null); setNewGoal(EMPTY_NEW_GOAL); setDebtId(null); setBillId(null); setHistoryFocus(null); setBillsView(INITIAL_BILLS_VIEW); historyScroll.current = null; billsReturn.current = null; homeReturn.current = null; goalsReturn.current = null; setBillDay(null) }
   /** Open Latest Version and Try Again read the space again: what was typed here and not saved is dropped only after a yes. */
   const requestReload = () => {
     if (unsaved.hasUnsaved()) { setConfirming('reload'); return }
@@ -578,7 +603,6 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }
   // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
   const showGoal = (id: Id) => { setGoalId(id); navigation.go('goal') }
-  const openGoal = (id: Id) => confirmLeave(ANY_FORM, () => showGoal(id))
   const showDebt = (id: Id | null) => { setDebtId(id); navigation.go('debt') }
   const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => showDebt(id))
   /** Opens a bill; with `forMonth` (a payment chosen in a card or loan, or in History), on that month, which becomes the shared month. */
@@ -629,7 +653,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    */
   const addFromHome = (what: HomeAdd, spot: HomeSpot) => fromHome(spot, () => {
     if (what === 'income') {
-      changeMoneyView({ ...setBlockOpen(moneyView, 'income', true), incomeSource: null })
+      changeMoneyView({ ...setBlockOpen(moneyView, 'income', true), incomeSource: null, incomeMonth: null })
       setAddRequest('income'); addFocus.current = 'income-name'
       navigation.go('money')
     } else if (what === 'spending') {
@@ -642,14 +666,39 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   })
   /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
   const cancelAdd = () => navigation.backAllowed()
-  /** History opens a bill or a goal: Back finds History scrolled where it was. */
-  const fromHistory = (show: () => void) => confirmLeave(ANY_FORM, () => { historyScroll.current = window.scrollY; show() })
-  /** A balance in History opens Accounts & Savings in Money, on its account. */
-  const openAccount = (id: Id) => confirmLeave(ANY_FORM, () => {
-    changeMoneyView({ ...setBlockOpen(moneyView, 'accounts', true), account: open?.data.moneyAccounts.some(a => a.id === id) ? id : null })
-    moneyTarget.current = 'accounts'
+  /** History opens a bill, a goal or an account: Back finds History scrolled where it was, with the focus on that record. */
+  const fromHistory = (key: string | null, show: () => void) => confirmLeave(ANY_FORM, () => { historyScroll.current = { y: window.scrollY, key }; show() })
+  /** Accounts & Savings in Money, on one account: it opens, with the focus on it (else on the block's heading). */
+  const showAccount = (id: Id) => {
+    const known = open?.data.moneyAccounts.some(a => a.id === id) ?? false
+    changeMoneyView({ ...setBlockOpen(moneyView, 'accounts', true), account: known ? id : null, incomeMonth: null })
+    if (known) addFocus.current = `[data-return-key="account-${id}"]`
+    else moneyTarget.current = 'accounts'
     navigation.go('money')
-  })
+  }
+  /** Goals opens a goal, New Goal or the Emergency Fund draft: Back finds Goals where it was, with the focus on the button used. */
+  const fromGoals = (key: string, show: () => void) => confirmLeave(ANY_FORM, () => { goalsReturn.current = { y: window.scrollY, key }; show() })
+  /**
+   * Income on Home, for the month shown. Income does not follow Home's month (it keeps its own view), so nothing
+   * there changes month: with one source in that month, Money opens it on that month's payment; with more
+   * (or none), Money › Income says which sources the month has, without choosing one.
+   */
+  const showIncomeFor = (forMonth: YearMonth) => {
+    const sources = open ? monthIncome(open.data, forMonth).lines.flatMap(line => (line.source ? [line.source] : [])) : []
+    const single = sources.length === 1 ? sources[0].id : null
+    // A source of that month may be ended (or upcoming) today: the list then shows All, so it can be found.
+    const listed = sources.every(source => matchesValidity(source, thisMonth, moneyView.incomeFilter))
+    changeMoneyView({ ...setBlockOpen(moneyView, 'income', true), incomeSource: single, incomeMonth: forMonth, incomeFilter: listed ? moneyView.incomeFilter : 'all' })
+    if (single) addFocus.current = `[data-income-row="${single}:${forMonth}"] button`
+    else addFocus.current = '#income-context'
+    navigation.go('money')
+  }
+  /** Spent on Home: History on that month, with no search or filter. */
+  const showSpentFor = (forMonth: YearMonth) => {
+    setHistoryFocus(null)
+    changeHistoryView({ ...historyView, filter: { ...NO_FILTER, period: { kind: 'month', month: forMonth } }, openMonths: null, shown: {} })
+    navigation.go('history')
+  }
   /** Money opens a card, a loan or a goal: Back finds Money where it was, with the focus on the button used. */
   const fromMoney = (block: MoneyBlock, key: string, show: () => void) => confirmLeave(ANY_FORM, () => { moneyReturn.current = { y: window.scrollY, block, key }; show() })
   const shownHidden = inDemo ? demoPrefs.hidden : hiddenAreas
@@ -810,6 +859,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 showAllBills={showAllBills} onShowAllBillsChange={changeShowAllBills}
                 onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => navigation.go(next))}
                 onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
+                onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} onOpenBill={(id, spot) => fromHome(spot, () => showBill(id))}
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAdd={addFromHome}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)} />
@@ -834,8 +884,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
             {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
-            <GoalsScreen data={open.data} today={space.today} filter={goalsFilter} onFilterChange={changeGoalsFilter} onNew={() => go('new-goal')} onOpenGoal={openGoal}
-              onStartEmergency={() => go('emergency')} />
+            <GoalsScreen data={open.data} today={space.today} filter={goalsFilter} onFilterChange={changeGoalsFilter}
+              onNew={() => fromGoals('add-goal', () => navigation.go('new-goal'))} onOpenGoal={id => fromGoals(`goal-${id}`, () => showGoal(id))}
+              onStartEmergency={() => fromGoals('start-emergency', () => navigation.go('emergency'))} />
           </div>}
           {shows('goal') && selectedGoal && <div className="screen" data-screen="goal">
             <GoalDetailScreen key={selectedGoal.id} data={open.data} goal={selectedGoal} today={space.today} isDemo={open.kind === 'demo'} newId={newId} onBack={back}
@@ -873,8 +924,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               <HistoryScreen key={historyFocus ?? 'all'} data={open.data} months={months} month={month} today={space.today} newId={newId} focusId={historyFocus}
                 view={historyView} onViewChange={changeHistoryView}
                 startAdding={addRequest === 'spending'} onStartedAdding={() => setAddRequest(null)} onCancelAdding={cancelAdd}
-                onChange={space.update} onOpenBill={(id, forMonth) => fromHistory(() => showBill(id, forMonth))} onOpenGoal={id => fromHistory(() => showGoal(id))}
-                onOpenAccount={openAccount} />
+                onChange={space.update} onOpenBill={(id, forMonth, key) => fromHistory(key, () => showBill(id, forMonth))} onOpenGoal={(id, key) => fromHistory(key, () => showGoal(id))}
+                onOpenAccount={(id, key) => fromHistory(key, () => open.data.debts.some(debt => debt.id === id) ? showDebt(id) : showAccount(id))} />
             </AmountVisibilityProvider>
           </div>}
           {/* A step of an earlier version (cards, data) also shows Money: moving to or from it starts Money again, so its forms close as on any other move. */}

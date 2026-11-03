@@ -285,7 +285,9 @@ describe('History navigation', () => {
     expect(openMonthNames()).toEqual(before.open)
     expect(rowKeys()).toEqual(before.rows)
     expect(count()).toBe(before.count)
-    expect(document.activeElement?.textContent).toBe('History')
+    // The focus is back on the record that was opened.
+    expect(document.activeElement?.closest('.history-month')?.querySelector('.block-name')?.textContent).toBe('August 2026')
+    expect(document.activeElement?.textContent).toMatch(/^Bill paymentCredit Card Payment/)
   })
 
   it('opens a goal from its savings movement', async () => {

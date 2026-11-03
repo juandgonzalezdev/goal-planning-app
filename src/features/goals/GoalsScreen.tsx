@@ -39,18 +39,18 @@ export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, on
     <div className="tab-screen">
       <div className="screen-top">
         <h1 className="tab-title">{title}</h1>
-        <button type="button" className="button-small button-small-primary" onClick={onNew}><Icon name="plus" size={16} /> Add Goal</button>
+        <button type="button" className="button-small button-small-primary" data-return-key="add-goal" onClick={onNew}><Icon name="plus" size={16} /> Add Goal</button>
       </div>
       <section className="block" aria-labelledby="goals-emergency">
         <h2 id="goals-emergency" className="section-title">Emergency Fund</h2>
         {fund
-          ? <button type="button" className="goal-card" onClick={() => onOpenGoal(fund.id)}>
+          ? <button type="button" className="goal-card" data-return-key={`goal-${fund.id}`} onClick={() => onOpenGoal(fund.id)}>
             <span className="line"><b>{fund.name}</b><small>For unexpected costs</small></span>
             <span className="goal-card-amount">{money(goalSaved(fund, data.goalMovements))} <small>{fund.target !== null && fund.target !== undefined ? `of ${money(fund.target)}` : 'saved'}</small></span>
           </button>
           : <>
             <p className="muted-note">No Emergency Fund yet. It keeps part of your savings for unexpected costs.</p>
-            <button type="button" className="button-small align-start" onClick={onStartEmergency}>Start an Emergency Fund</button>
+            <button type="button" className="button-small align-start" data-return-key="start-emergency" onClick={onStartEmergency}>Start an Emergency Fund</button>
           </>}
         <p className="field-help">The Emergency Fund is not added to Saved in Goals.</p>
       </section>
@@ -77,7 +77,7 @@ export function GoalsScreen({ data, today, filter, onFilterChange: setFilter, on
             const progress = goalProgress(goal, data.goalMovements, today)
             return (
               <li key={goal.id}>
-                <button type="button" className="goal-card" onClick={() => onOpenGoal(goal.id)}>
+                <button type="button" className="goal-card" data-return-key={`goal-${goal.id}`} onClick={() => onOpenGoal(goal.id)}>
                   <span className="line"><b>{goal.name}</b><small>{goal.deadline ? `With Date · ${formatDate(goal.deadline)}` : 'Flexible · No deadline'}</small></span>
                   {progress.hasTarget ? <>
                     <span className="goal-card-amount">{money(progress.saved)} <small>of {money(goal.target ?? 0)} · {Math.round(progress.percent)}%</small></span>

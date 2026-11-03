@@ -74,9 +74,35 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   const shown = data.incomeSources.filter(source => matchesValidity(source, reference, filter))
   const sourceCount = data.incomeSources.length
 
+  // Income on Home opened this block for one month: which sources that month has, without choosing one for you.
+  const contextMonth = view.incomeMonth
+  const contextLines = contextMonth ? monthIncome(data, contextMonth).lines : []
+  const contextSources = contextLines.flatMap(line => (line.source ? [line.source] : []))
+  const unnamed = contextLines.filter(line => !line.source).length
+  const showSource = (source: IncomeSource) => {
+    onViewChange({ ...setBlockOpen(view, 'income', true), incomeSource: source.id, incomeFilter: matchesValidity(source, reference, view.incomeFilter) ? view.incomeFilter : 'all' })
+    focusField.current = `[data-income-row="${source.id}:${contextMonth}"] button`
+  }
+  const context = contextMonth && (
+    <div id="income-context" className="callout income-context" tabIndex={-1} role="group" aria-label={`Income on Home for ${formatYearMonth(contextMonth)}`}>
+      <p><b>Income on Home for {formatYearMonth(contextMonth)}</b></p>
+      {contextSources.length === 0 && unnamed === 0 && <p>No income is expected or recorded for that month. Add Income, or record what arrived in a source.</p>}
+      {contextSources.length === 1 && <p>It comes from {contextSources[0].name}.</p>}
+      {contextSources.length > 1 && <p>It comes from {contextSources.length} sources. Open one to see that month.</p>}
+      {unnamed > 0 && <p>{unnamed === 1 ? 'One amount was' : `${unnamed} amounts were`} recorded without a source. It is in History.</p>}
+      <div className="inline-actions">
+        {contextSources.length > 1 && contextSources.map(source => (
+          <button key={source.id} type="button" className="button-small" aria-pressed={view.incomeSource === source.id} onClick={() => showSource(source)}>{source.name}</button>
+        ))}
+        <button type="button" className="button-small" onClick={() => onViewChange({ ...view, incomeMonth: null })}>Close</button>
+      </div>
+    </div>
+  )
+
   useEffect(() => {
     if (!focusField.current) return
-    document.getElementById(focusField.current)?.focus()
+    const target = focusField.current
+    ;(target.startsWith('[') ? document.querySelector<HTMLElement>(target) : document.getElementById(target))?.focus()
     focusField.current = null
   })
 
@@ -145,6 +171,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Income</button>}>
       <p className="field-help">Expected income is a plan. Home shows it as expected until you record what arrived.</p>
       <p className="field-help">Income does not use the month chosen in Cards &amp; Loans. Open a source to choose the year of its payments.</p>
+      {context}
       {editing?.id === null && form}
       {sourceCount === 0 && !editing && (
         <div className="empty-state">
@@ -173,7 +200,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
                 </button>
                 {open && (
                   <div id={detailId} className="item-detail">
-                    <SourcePayments data={data} source={source} months={months} reference={reference} today={today} money={money}
+                    <SourcePayments key={`${source.id}:${view.incomeMonth ?? ''}`} focusMonth={view.incomeMonth} data={data} source={source} months={months} reference={reference} today={today} money={money}
                       receiving={receiving} onReceivingChange={changeReceiving} onSaveReceived={() => void saveReceived(source)} saving={sending === 'received'}
                       onNotReceived={m => void save(`${formatYearMonth(m)} is expected again.`, current => recordIncomeReceived(current, source, m, null) ?? current)} />
                     {editing?.id === source.id ? form : (
@@ -208,6 +235,8 @@ type PaymentsProps = {
   onNotReceived: (month: YearMonth) => void
   /** The Record Received form is being saved. */
   saving: boolean
+  /** A month opened from Home: the period starts on its year. */
+  focusMonth: YearMonth | null
 }
 
 /**
@@ -215,7 +244,7 @@ type PaymentsProps = {
  * pay date, and what really arrived and when. Months go up to the last
  * month the app plans (or the source's first month, if it starts later).
  */
-function SourcePayments({ data, source, months, reference, today, money, receiving, onReceivingChange, onSaveReceived, onNotReceived, saving }: PaymentsProps) {
+function SourcePayments({ data, source, months, reference, today, money, receiving, onReceivingChange, onSaveReceived, onNotReceived, saving, focusMonth }: PaymentsProps) {
   const blocked = useWriteBlocked()
   const lastPlanned = months[months.length - 1] ?? reference
   const last = source.endMonth !== null && source.endMonth < lastPlanned ? source.endMonth
@@ -224,7 +253,8 @@ function SourcePayments({ data, source, months, reference, today, money, receivi
   const lastYear = Number(last.slice(0, 4))
   const years = Array.from({ length: Math.max(1, lastYear - firstYear + 1) }, (_, index) => String(firstYear + index))
   const referenceYear = reference.slice(0, 4)
-  const [period, setPeriod] = useState(years.includes(referenceYear) ? referenceYear : years[years.length - 1])
+  const focusYear = focusMonth?.slice(0, 4)
+  const [period, setPeriod] = useState(focusYear && years.includes(focusYear) ? focusYear : years.includes(referenceYear) ? referenceYear : years[years.length - 1])
   const usedPeriod = period === 'all' || years.includes(period) ? period : years[years.length - 1]
   const shownYears = usedPeriod === 'all' ? years : [usedPeriod]
   const rows = shownYears.flatMap(year => Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`))
@@ -246,7 +276,7 @@ function SourcePayments({ data, source, months, reference, today, money, receivi
         if (!line) return null
         const isOpen = receiving?.sourceId === source.id && receiving.month === month
         return (
-          <li key={month}>
+          <li key={month} data-income-row={`${source.id}:${month}`} className={month === focusMonth ? 'is-target' : undefined}>
             <div className="line">
               <span>{formatYearMonth(month)}
                 <small>Expected: {money(source.amount)} on {formatDate(line.payDate!)}</small>

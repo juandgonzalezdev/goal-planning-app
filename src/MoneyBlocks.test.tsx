@@ -339,12 +339,12 @@ describe('Links into Money', () => {
     expect(document.activeElement).toBe(toggleOf('Accounts & Savings'))
   })
 
-  it('Income on This Month opens the Income block', async () => {
+  it('Income on This Month opens the Income block on that month’s payment when it has one source', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
     await fire.click(within(regionOf('This Month')).getByText('Income').closest('button')!)
     expect(isOpen('Income')).toBe(true)
-    expect(document.activeElement).toBe(toggleOf('Income'))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Change: Salary, December 2026' }))
   })
 
   it('the Money tab keeps the blocks as they were, with the focus on the title', async () => {

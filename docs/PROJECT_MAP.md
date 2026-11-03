@@ -97,6 +97,7 @@ Cómo funcionan el guardado, las otras pestañas, la recuperación y la demo:
 | `src/HomeBlocks.test.tsx` | Mes compartido, enlaces cuota → factura, áreas y partes plegables, resúmenes y privacidad, Customize Home, preferencias y aislamiento de la demo, correcciones de la revisión manual. |
 | `src/HomeAreas.test.tsx` | Home en tres áreas: Left to Pay y Show All, vuelta a Home con posición y foco, + Add (Income, Spending, Bill, Goal) con Back, Cancel y guardado, preferencias de la versión anterior, privacidad de los resúmenes. |
 | `src/PrivacyCharts.test.tsx` | Importes ocultos (H1): gráficos sustituidos, sin forma, signo, color, frases de déficit ni detalles calculados; orden independiente del importe; PDF sin importes. |
+| `src/LinksReturn.test.tsx` | Enlaces exactos y regreso: Goals (filtro, posición, foco), History (foco en el registro), cuenta desde un saldo, Income con una, varias o ninguna fuente sin elegir por el usuario, Spent abre History en el mes. |
 | `src/App.test.tsx` | La app con el hogar Duo de pruebas y el espacio propio: navegación, guardado, importación, pantallas. |
 | `src/BillsCalendar.test.tsx` | Bills: calendario, lista, filtro, panel del día, Add Bill desde un día y regreso desde una factura. |
 | `src/SavingStates.test.tsx` | Apertura y guardado asíncronos en pantalla: Saving…, doble clic, fallos con Try Again, solo lectura, Erase incompleto, ids de espacio. |

@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { Id } from '../../domain/finance/types'
+import type { YearMonth } from '../../domain/calendar'
 import type { ValidityFilter } from '../../domain/finance/validity'
 
 /** The three blocks of Money, always in this order (Money has no Customize). */
@@ -25,10 +26,15 @@ export interface MoneyView {
   incomeSource: Id | null
   /** The account whose actions are shown (one at a time). */
   account: Id | null
+  /**
+   * Income opened from Home for one month: the month whose sources Income names at the top (and, with one
+   * source, whose payment it shows). Income itself never follows Home's month: this only says where the user came from.
+   */
+  incomeMonth: YearMonth | null
 }
 
 /** First entry, and after Reset Demo: every block closed, active items shown. */
-export const INITIAL_MONEY_VIEW: MoneyView = { open: [], incomeFilter: 'active', incomeSource: null, account: null }
+export const INITIAL_MONEY_VIEW: MoneyView = { open: [], incomeFilter: 'active', incomeSource: null, account: null, incomeMonth: null }
 
 export const isBlockOpen = (view: MoneyView, block: MoneyBlock) => view.open.includes(block)
 

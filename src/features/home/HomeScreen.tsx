@@ -51,6 +51,10 @@ type Props = {
   onOpen: (screen: 'bills' | 'goals' | 'history' | 'emergency', spot: HomeSpot) => void
   /** Opens Money on one block (Income, Accounts & Savings, Cards & Loans), with the focus on its heading. */
   onOpenMoneyBlock: (block: MoneyBlock, spot: HomeSpot) => void
+  /** Income of the month shown: Money › Income on that month's source (or the month's sources, when there are several). */
+  onOpenIncome: (month: YearMonth, spot: HomeSpot) => void
+  /** Spent of the month shown: History on that month. */
+  onOpenSpent: (month: YearMonth, spot: HomeSpot) => void
   onOpenGoal: (id: Id, spot: HomeSpot) => void
   onOpenDebt: (id: Id, spot: HomeSpot) => void
   onOpenBill: (id: Id, spot: HomeSpot) => void
@@ -190,8 +194,8 @@ export function HomeScreen(props: Props) {
   const areas: Record<HomeArea, ReactNode> = {
     month: (
       <HomeAreaFrame area="month" period={formatYearMonth(month)}>
-        <MonthSummary data={data} month={month} today={today} onOpenIncome={() => props.onOpenMoneyBlock('income', inMonth(undefined, 'stat-income'))}
-          onOpenBills={() => props.onOpen('bills', inMonth(undefined, 'stat-planned'))} onOpenHistory={() => props.onOpen('history', inMonth(undefined, 'stat-spent'))} />
+        <MonthSummary data={data} month={month} today={today} onOpenIncome={() => props.onOpenIncome(month, inMonth(undefined, 'stat-income'))}
+          onOpenBills={() => props.onOpen('bills', inMonth(undefined, 'stat-planned'))} onOpenHistory={() => props.onOpenSpent(month, inMonth(undefined, 'stat-spent'))} />
         <div className="home-parts">
           <SpendingByCategory data={data} month={month} today={today} view={props.chartView} onViewChange={props.onChartViewChange} onChange={props.onChange}
             onOpenBill={id => props.onOpenBill(id, inMonth('categories'))} onOpenExpense={id => props.onOpenExpense(id, inMonth('categories'))} />

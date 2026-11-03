@@ -877,3 +877,10 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 }
 .month-chip.is-active { border-color: var(--color-primary); color: var(--color-primary); }
 .month-chip:disabled { color: var(--color-text-muted); cursor: default; }
+
+/* Income opened from Home for one month: which sources it has, and that month's row. */
+.income-context { margin: 0 0 12px; }
+.income-context:focus { outline: 2px solid var(--color-focus, currentColor); outline-offset: 2px; }
+.income-context .inline-actions { flex-wrap: wrap; }
+.payment-list li.is-target { box-shadow: inset 3px 0 0 var(--color-primary, currentColor); padding-left: 10px; }
+.income-context .button-small { min-height: 44px; }

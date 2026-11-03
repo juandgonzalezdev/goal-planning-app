@@ -166,13 +166,33 @@ At the top of Home there is a month bar: the arrows go to the month before or af
 
 - the chosen month,
 - how Bills, History and Money look (view, filters, open blocks), and the Goals filter,
-- where you were in Bills, History and Money when you open a bill, a card or loan, or a goal from them.
+- where you were in Bills, History, Money and Goals when you open a bill, a card or loan, a goal or an account from them.
 
 **Back from a detail** goes to where you opened it. A card or loan opened from Money returns to Money, with the same block open, in the same place, on the card or loan you opened. Opened from Home or from a bill, it returns there.
 
 **Back to Home** returns to the same place on Home, with the keyboard on the line or link you used (for example the bill in Left to Pay, the goal in Goals, or **+ Add**). If that line is no longer there (for example the bill was paid or deleted), it goes to the heading of its part or area. If you had chosen **Show All** in Left to Pay, the full list is still shown.
 
+**Back to Goals and History** works the same way: the same filter (and in History the same period, search, filters, open months and records shown), the same place on the page, and the keyboard on the goal, the Emergency Fund card, **Add Goal** or the record you opened.
+
+History also restores the place and keyboard focus when you tap its tab directly from Money after opening an account from a History record. Bill, goal, card and loan details have a **Back** button instead of the main tabs. If you visit another main tab first, that return position is cleared. Opening History then starts at the top, with focus on its heading; its period, search, filters, open months and records shown are still kept.
+
 When you reload the page, these go back to the start.
+
+**Where links take you**
+
+A link opens exactly what it comes from when the app can tell what that is:
+
+| You tap | It opens |
+| --- | --- |
+| A bill in Left to Pay, Bills or History | That bill, on the month of that payment. |
+| A card or loan (Home, Money, a bill) | That card or loan. |
+| A goal (Home, Goals, Savings by purpose, History) | That goal. |
+| A balance in History | Money › Accounts & Savings, with that account open, or the details of that card or loan. |
+| **Income** on Home | Money › Income for the month shown on Home. With one source that month, it opens that source on that month's payment. With more than one, a note names them all and you choose; the app never chooses for you. With none, the note says so. |
+| **Spent** on Home | History on that month, with no search or filter. |
+| **Planned Bills** on Home | Bills, on the same month. |
+
+Income keeps its own view: opening it for a month doesn't change the month used by Home, Bills and Cards & Loans. If a source of that month has ended (or not started yet), the Income list shows **All** so it can be found. **Close** hides the note.
 
 **Leaving a form you changed**
 
@@ -210,8 +230,7 @@ An amount typed for one month is only ever saved for that month. If you choose a
 - In rare cases, a Back or Forward move that arrives late may change the screen after you left a form. It never closes a form you have changed.
 - **The back swipe on iPhone** has been checked on a real iPhone for a form you changed: a swipe you start and then cancel, and a swipe you complete. Coming back from Money has been checked too. The new Home paths (Show All, **+ Add**, coming back to Home) haven't been checked on an iPhone yet, and not every way of moving around has been checked in Safari. Safari may show the previous screen for a moment before the app comes back to your form.
 - Home only remembers its place when you come back with **Back**. Opening Home from the tab or the logo starts at the top.
-- Tapping **Income** on Home opens the Income block in Money, not the income source of that month.
-- Goals doesn't remember where you were on the page when you come back from a goal.
+- Money and Goals remember their place only when you come back with **Back**. Opening them from the tab starts at the top. History can also restore its place and record focus when you tap its tab directly from Money after opening an account from a History record, as described above.
 
 ## 7. Reading Home
 
@@ -448,7 +467,7 @@ History lists everything you recorded, grouped by month and day, newest first.
 - **Year Overview**: income and spending for each month of the year. Choose a month to show it in the list and see its spending by category.
 - **Search**, and **More Filters** for the type of record, category and account. Each filter shows as a label you can remove. **Clear Filters** keeps the period.
 - **Show More** loads more records in a month. **Expand All** and **Collapse All** open or close the months.
-- A balance in History (**Open in Money**) opens the account in Money › Accounts & Savings. Open a bill or a goal from History, and **Back** returns to the same place.
+- A balance in History has the accessible action **Open account** for an account in Money › Accounts & Savings, or **Open card or loan** for a card or loan's details. **Back** returns to the same place with focus on that record. Tapping the History tab directly from Money after opening an account also restores the place and focus; visiting another main tab first clears that return position.
 
 ## 16. Hiding Amounts and Customizing Home
 
