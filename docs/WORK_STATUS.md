@@ -10,17 +10,19 @@ en esta carpeta de trabajo.
 ## Repositorio comprobado por Codex
 
 - Carpeta: `C:\Projects\goal-planning-app`.
-- Base integrada (HEAD): `579117b` — Improve navigation links and restore return context.
+- Base integrada en main: `579117b` — Improve navigation links and restore return context.
 - Rumbo 02 está integrado en `main` y `origin/main`.
-- Rama actual: `feature/rumbo-03-mark-paid`, creada desde esa base.
-- Los archivos sin seguimiento anteriores se conservan. Los cambios actuales
-  corresponden al parche 03, sus correcciones y documentación; están preparados
-  para revisión, sin commit. Los archivos ajenos siguen sin seguimiento.
+- Rama candidata actual: `integration/rumbo-03-08`.
+- Los archivos sin seguimiento anteriores se conservan y excluyen de los commits.
+  Rumbo 03 y coordinación se guardaron por separado antes de continuar 04–08.
 
 ## Integración actual
 
 - Rumbo 02 confirmado e integrado en `579117b`, comprobado por Codex en Git.
-- Rumbo 03 aplicado, sin commit. Incrementos 04–08 pendientes de aplicar.
+- Rumbo 03–08 aplicados con commits locales separados; sin push ni integración
+  a main. La autorización de Juan de preparar la candidata sustituyó la pausa.
+- Estado vigente de la candidata y revisión: apartado final de este documento.
+  Los apartados anteriores conservan la cronología y sus confirmaciones.
 - La tarea inicial creó las reglas de coordinación. En la corrección actual,
   Codex es el editor y Claude el revisor, sin edición simultánea.
   Juan comunicó la revisión de Claude: precisar las acciones accesibles de
@@ -98,7 +100,7 @@ Se actualizaron la ayuda de History y las dos referencias del manual de uso.
 - `npm run lint` y `git diff --check`: correctos tras los ajustes.
   No se repitieron la suite completa ni el build en esta revisión.
 
-## Rumbo 03: Mark as Paid (sin commit)
+## Rumbo 03: Mark as Paid (guardado localmente en 18ddb1e)
 
 Codex es el editor; Claude queda como revisor. Juan comunicó seis hallazgos
 para el incremento 03. `REVISION-03.md` no se encontró en la carpeta de trabajo;
@@ -222,6 +224,83 @@ Los resultados de la entrega del parche no cuentan como comprobaciones propias.
 
 ## Siguiente trabajo
 
-Revisar Rumbo 03 y completar su prueba manual con Juan. Siguen pendientes las
-pruebas manuales de Small Loan y Credit Card de Rumbo 02. Los incrementos 04–08
-siguen pendientes. No hacer commit, push ni merge sin indicación de Juan.
+Revisión de Claude de los paquetes adjuntos y prueba de la candidata por Juan.
+Los hallazgos que Juan entregue se corregirán en commits adicionales, sin
+reescribir los extremos revisados. Siguen pendientes Small Loan y Credit Card
+manuales del 02 y los recorridos nuevos del 03–08. Sin push, merge a main ni
+publicación hasta nueva autorización de Juan.
+
+## Candidata local Rumbo 03–08 (3 de noviembre de 2026)
+
+Base integrada: `579117bf8edc1b1714e9c92c11750099e5c78009`.
+Rama: `integration/rumbo-03-08`. Extremo de código: `dbb3967`.
+El registro y el guion de prueba se entregan en un commit documental posterior;
+el hash final de la candidata se comunica con `git log -1` al entregar.
+
+| Commit local | Contenido |
+| --- | --- |
+| `18ddb1e` | Rumbo 03, correcciones de pagos y borrado, confirmaciones previas. |
+| `ee65443` | Coordinación: AGENTS, CLAUDE y WORKFLOW. |
+| `7a3012d` | 04: referencia temporal de Left to Pay y Coming up. |
+| `3f51bd0` | 05: Add global y regreso al origen. Extremo fijo de revisión 03–05. |
+| `f5dc496` | 06: barra lateral y columnas responsive. |
+| `eaf828d` | 07: gráficas, teclado, tablas y privacidad de History. |
+| `dbb3967` | 08: Help, Getting Started, mensajes, skeleton; adaptación Windows y privacidad de ayudas. |
+
+Adaptaciones y controles por incremento: [INTEGRATION_NOTES.md](INTEGRATION_NOTES.md).
+No cambiaron package.json ni package-lock.json; no se añadieron dependencias.
+No se incluyeron parches descargados, capturas, datos personales ni archivos
+ajenos en los commits.
+
+### Revisiones y acceso real
+
+- Entrega 03–05: base `579117b`, extremo `3f51bd0`; paquete generado localmente
+  en `review-deliveries/rumbo-03-05-review.zip`, fuera de src y fuera de Git.
+  Contiene hashes completos, diff con archivos nuevos y snapshot de archivos
+  seguidos. Juan indicó que todavía no lo ha entregado a Claude.
+- No hay acceso confirmado de Claude ni informe recibido. No se le atribuye
+  ejecución de pruebas o comandos locales. La revisión de 03–05 está pendiente.
+- La segunda entrega abarca desde `3f51bd0` al commit final de la candidata,
+  incluyendo 06–08 y documentación final; los hashes completos constan en su
+  archivo commits.txt. La entrega no equivale a una revisión aprobada.
+- No se han inventado ni resuelto hallazgos de un informe aún no recibido.
+  Las correcciones propias de Windows y privacidad están documentadas en 08.
+
+### Responsive, privacidad y navegador
+
+- Comprobación responsive automática: Layout simula matchMedia, cambio de
+  anchura y controles no duplicados; inspección del CSS para 740/1024/1200 px.
+  No se ha verificado overflow, disposición visual o toque en navegador real.
+- Privacidad: pruebas de H1, gráficas ocultas de History y ejemplos de ayudas
+  de This Month al ocultar importes, incluido ocultar una nota ya abierta.
+  Money, metas y deudas mantienen su visibilidad existente; ocultar importes
+  no es cifrado ni bloqueo de acceso.
+- Intento de navegador de esta candidata: servidor local arrancado y navegador
+  integrado sin conexión (ERR_CONNECTION_TIMED_OUT). Show Fewer sigue comprobado
+  automáticamente, no en navegador. No se declaran recorridos de navegador,
+  Safari, iPhone, iPad, VoiceOver ni gestos táctiles como realizados por Codex.
+- Las confirmaciones de Juan de Test Delete y Student Loan registradas arriba
+  se conservan con su alcance original; no se extienden a las nuevas funciones.
+
+### Entrega para probar
+
+Funciones, instrucciones para ordenador/teléfono y checklist breve:
+[CANDIDATE.md](CANDIDATE.md). Juan prueba la candidata antes de autorizar
+cualquier integración final.
+
+### Comprobaciones finales propias de Codex
+
+- Sobre el código `dbb39677791a84d0ec8727ce90d2b6b7d46b21cd`:
+  `npm test -- --maxWorkers=2`: **813 pruebas aprobadas en 58 archivos**,
+  213,85 s. Incluye Show Fewer, pagos, borrado con saldo, enlaces, Coming up,
+  Add, Layout, gráficas, H1, Getting Started y privacidad de notas abiertas.
+- `npm run lint`: correcto. `npm run build`: correcto, 153 módulos;
+  JS 692,27 kB (192,89 kB gzip). El aviso conocido de tamaño apareció en las
+  compilaciones de los incrementos; no se elevó el límite para ocultarlo.
+- `git diff --check` y comprobación del diff desde la base: correctos.
+  Solo documentación cambia después de los controles de código; no justifica
+  repetir la suite completa.
+- Avisos conocidos de jsdom: scrollTo y navegación a otro documento, sin fallos.
+  No se ejecutó npm audit: no hubo cambios de dependencias en esta tarea.
+- Logs propios fuera de Git: `review-deliveries/final-tests.txt`,
+  `final-lint.txt`, `final-build.txt`. No se incluyen en commits.

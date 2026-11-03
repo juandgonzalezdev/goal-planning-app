@@ -64,3 +64,13 @@ recepción como adjunto por Juan; no se presupone acceso a esta carpeta.
   de cuentas con solo saldos y el bloqueo por movimientos vinculados.
 - Tras adaptar Windows y privacidad: 28 pruebas afectadas en 4 archivos
   (Help, gettingStarted, Layout y MarkPaid) y build correctos.
+
+## Validación conjunta
+
+- Código final de 08: `dbb3967`; 813 pruebas en 58 archivos con maxWorkers=2,
+  lint y build correctos. No se cambió código después de estos controles.
+- Navegador integrado: timeout de conexión a la candidata local. Responsive
+  se comprobó mediante Layout y lectura del CSS; faltan pruebas visuales y
+  táctiles reales. Safari/iPhone no comprobados por Codex.
+- Juan aún no entregó el paquete 03–05 a Claude. No hay informe recibido ni
+  acceso confirmado; no se atribuyen hallazgos o aprobación al revisor.
