@@ -86,8 +86,9 @@ Se corrigieron el checklist H2 y el comentario H3. Ver resultados y alcance
 en WORK_STATUS.md. Las correcciones se entregan a Claude en un diff pequeño.
 Codex comprobó las correcciones con 48 pruebas afectadas y cerró el código
 `c40f502` con **815 pruebas aprobadas en 59 archivos**, `--maxWorkers=2`,
-lint, build y diff check correctos. Queda pendiente la revisión de este diff
-por Claude; sus comprobaciones de 813 pruebas corresponden a `8db763e`.
+lint, build y diff check correctos. Claude aprobó este diff en
+`review-deliveries/REVISION-correcciones-f7081aa.md`, sin bloqueantes.
+Sus comprobaciones de 813 pruebas corresponden a `8db763e`.
 
 Se conserva la confirmación manual de Juan de crear Test Delete con saldo 10,
 cancelar y confirmar después en ordenador y teléfono en la versión anterior.
@@ -98,3 +99,30 @@ El navegador integrado de Codex tuvo timeout; los recorridos Chromium de Claude
 no se extienden automáticamente a las correcciones posteriores a `8db763e`.
 Build conserva el aviso de tamaño del fragmento JavaScript. No se añadieron
 dependencias. No se hará push, merge a main ni despliegue sin autorización.
+
+## Validación de los dos ajustes finales
+
+La entrega fija está en `review-deliveries/final-adjustments/<commit-final>/`.
+Incluye los dos ajustes posteriores a f7081aa, sus pruebas y los cambios de
+coordinación en un commit separado. No añade otras mejoras.
+Codex comprobó 53/53 pruebas afectadas, lint y build; se reutilizan esos
+resultados porque el código y el entorno no han cambiado.
+
+Con datos ficticios, en la demo:
+
+1. Money → Accounts & Savings: crear Test Delete sin movimientos vinculados.
+   Delete enfoca la confirmación; Cancel devuelve el foco a Delete.
+   Confirmar el borrado deja el foco en la lista Accounts si quedan cuentas.
+2. Para comprobar la última cuenta sin tocar datos propios, borrar en la demo
+   todas las cuentas que se puedan borrar (sin forzar las vinculadas). Si hay
+   cuentas vinculadas, usar un espacio de prueba vacío en un perfil de navegador
+   separado, crear Only account y borrarla. El foco debe quedar en
+   Add Your First Account; pulsar Enter debe abrir el formulario.
+3. El rechazo coincidente con not-saved o conflict está cubierto por la prueba
+   aislada AccountDeletionUi: conserva la cuenta y la confirmación y entrega
+   a say el resultado real para mostrar el aviso de guardado. No se pide
+   reproducir artificialmente esa coincidencia durante la validación manual.
+
+Estos recorridos siguen pendientes de confirmación expresa de Juan. También
+sigue pendiente la revisión de los dos ajustes finales por Claude; su aprobación
+de f7081aa no se extiende a ellos.

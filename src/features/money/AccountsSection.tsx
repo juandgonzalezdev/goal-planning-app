@@ -61,7 +61,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
       return next ?? current
     }, base).finally(() => setSending(null))
     if (outcome === 'stale') return
-    if (refusal) { tell(refusal); return }
+    if (refusal && isKept(outcome)) { tell(refusal); return }
     say(`${name} deleted.`, outcome)
     if (isKept(outcome)) {
       focusField.current = accountListId
@@ -71,7 +71,9 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
 
   useEffect(() => {
     if (!focusField.current) return
-    document.getElementById(focusField.current)?.focus()
+    const target = focusField.current === accountListId && items.length === 0 && !form
+      ? `${accountListId}-add-first` : focusField.current
+    document.getElementById(target)?.focus()
     focusField.current = null
   })
 
@@ -151,7 +153,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
       {items.length === 0 && !form && (
         <div className="empty-state">
           <p className="muted-note">No accounts yet. Add the account you spend from, and any savings or investments.</p>
-          <button type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Account</button>
+          <button id={`${accountListId}-add-first`} type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Account</button>
         </div>
       )}
       <ul id={accountListId} tabIndex={-1} aria-label="Accounts" className="line-list compact-list">

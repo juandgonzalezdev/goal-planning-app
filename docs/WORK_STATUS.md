@@ -374,3 +374,55 @@ la lista Accounts. Verificado automáticamente, no con lector de pantalla.
 - Solo documentación cambia después de estos controles. No se reescribieron
   los commits revisados, no cambiaron dependencias y no se hizo push, merge
   a main ni despliegue. Los archivos ajenos se conservan sin incluir en commits.
+
+## Revisión de correcciones f7081aa y observaciones opcionales (4 de noviembre de 2026)
+
+- Codex leyó `review-deliveries/REVISION-correcciones-f7081aa.md`, escrito por
+  Claude. El revisor considera correctos H1–H4 y el ajuste de foco, sin
+  bloqueantes ni regresiones en el alcance revisado. Sus pruebas dirigidas,
+  lint, build y recorridos Chromium son resultados del revisor sobre su
+  snapshot reconstruido, no ejecuciones nuevas de Codex en esta carpeta.
+- Se atienden las dos observaciones opcionales: si un rechazo coincide con
+  un fallo de guardado se comunica el resultado de guardado; tras borrar la
+  última cuenta se enfoca Add Your First Account. Con cuentas restantes se
+  conserva el foco en la lista Accounts. No cambia el contrato de ChangeSpace.
+- Archivos propios: `src/features/money/AccountsSection.tsx`,
+  `src/AccountDeletionUi.test.tsx`, `src/MoneyBlocks.test.tsx` y este registro.
+- Evidencia propia: antes del arreglo, 3 casos fallaron (not-saved, conflict y
+  foco de última cuenta), con 27 aprobados. Después: 53/53 en 4 archivos,
+  23,72 s, ejecutando MarkPaid, MoneyBlocks, AccountDeletionUi y accountDeletion
+  con `npm test -- ... --maxWorkers=2`. Lint, build y git diff --check correctos.
+  Persisten los avisos conocidos de scrollTo en jsdom y del fragmento >500 kB.
+- No se repite la suite completa: cambio localizado y cobertura de las áreas
+  afectadas. Las 815 pruebas anteriores corresponden al código c40f502.
+  No se ejecutó audit; no cambiaron dependencias. Sin nueva prueba manual de
+  Juan ni navegador propio. Safari/iPhone, gestos, teclado móvil, movimiento
+  reducido real y lector de pantalla siguen pendientes.
+- Git comprobado: rama `integration/rumbo-03-08`, HEAD/base de estos ajustes
+  `f7081aad88f27a80c36ad0b1a65be895f76c13ce`. Cambios propios sin preparar,
+  índice vacío. Se preservaron AGENTS.md, CLAUDE.md y docs/WORKFLOW.md pendientes,
+  y todos los archivos ajenos sin seguimiento. Sin commit, push, merge o despliegue.
+- Siguiente paso: Juan puede probar con datos ficticios la última cuenta:
+  crear una cuenta en un espacio vacío, borrarla y comprobar que el foco queda
+  en Add Your First Account. Con varias cuentas, debe quedar en Accounts.
+  La revisión de estos ajustes sigue pendiente. No se anuncia entrega fija
+  hasta autorizar su commit; después se generará el snapshot según WORKFLOW.
+
+## Preparación de entrega fija final-adjustments (4 de noviembre de 2026)
+
+Juan autorizó guardar los ajustes funcionales y la coordinación en commits
+locales separados. Se conserva como base f7081aad88f27a80c36ad0b1a65be895f76c13ce.
+El primer commit guarda los tres archivos de código/pruebas y CANDIDATE y este
+registro. El segundo guarda exclusivamente AGENTS.md, CLAUDE.md y WORKFLOW.md,
+con el contenido de coordinación ya pendiente, sin incorporar archivos ajenos.
+La entrega fija se obtiene del extremo de esos dos commits, en
+`review-deliveries/final-adjustments/<hash-final-completo>/`; allí se registran
+los hashes exactos, diff completo, copias de archivos del commit y comprobaciones.
+
+Se reutilizan las 53 pruebas y lint/build ejecutados por Codex el 4 de noviembre:
+solo se añaden documentación y commits desde esos controles, sin cambios de
+código o dependencias. El log original de las 53 pruebas se conserva; lint y
+build se documentan como resultados observados en las herramientas de esta
+conversación, sin presentar una transcripción reconstruida como log original.
+No se repiten suite, lint ni build por preparar la entrega. CANDIDATE contiene
+los recorridos de Juan, aún pendientes. Sin push, merge a main ni despliegue.

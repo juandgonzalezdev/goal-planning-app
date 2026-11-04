@@ -314,6 +314,21 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     expect(screen.queryByRole('button', { name: /^Balance updateShoebox/ })).toBeNull()
   })
 
+  it('focuses Add Your First Account after deleting the last account', async () => {
+    render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
+    await settle()
+    await createOwnSpace()
+    await fire.click(tab('Money'))
+    await openBlock('Accounts & Savings')
+    await fire.click(button(/Add Your First Account/))
+    await fire.change(screen.getByLabelText('Account Name'), { target: { value: 'Only account' } })
+    await fire.click(button('Save Account'))
+    await fire.click(button(/^Only account/))
+    await fire.click(button('Delete: Only account'))
+    await fire.click(button('Delete Account and Balances'))
+    expect(document.activeElement).toBe(button(/Add Your First Account/))
+  })
+
   it('can remove an account created by mistake with an initial balance', async () => {
     await openMoney()
     await openBlock('Accounts & Savings')

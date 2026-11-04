@@ -10,7 +10,7 @@ import { fire } from './test/space'
 afterEach(cleanup)
 
 describe('account deletion revalidation', () => {
-  it('does not announce deletion if a reference is found when the change runs', async () => {
+  it.each(['saved', 'demo', 'not-saved', 'conflict', 'stale'] as const)('handles a reference found during deletion with outcome %s', async outcome => {
     const data = createAlexDemo()
     data.moneyAccounts.push({ id: 'test-delete', name: 'Test Delete', kind: 'daily-spending', owner: 'alex', currency: 'PLN' })
     const current = structuredClone(data)
@@ -19,7 +19,7 @@ describe('account deletion revalidation', () => {
     const tell = vi.fn()
     const onChange = vi.fn<SectionProps['onChange']>(async change => {
       expect(change(current)).toBe(current)
-      return 'saved'
+      return outcome
     })
     const view: MoneyView = { ...INITIAL_MONEY_VIEW, open: ['accounts'], account: 'test-delete' }
     const props: SectionProps = {
@@ -31,8 +31,14 @@ describe('account deletion revalidation', () => {
     await fire.click(screen.getByRole('button', { name: 'Delete: Test Delete' }))
     await fire.click(screen.getByRole('button', { name: 'Delete Account and Balances' }))
     expect(onChange).toHaveBeenCalledOnce()
-    expect(say).not.toHaveBeenCalled()
-    expect(tell).toHaveBeenCalledWith(expect.stringContaining('bill payments'))
+    if (outcome === 'saved' || outcome === 'demo') {
+      expect(say).not.toHaveBeenCalled()
+      expect(tell).toHaveBeenCalledWith(expect.stringContaining('bill payments'))
+    } else {
+      expect(tell).not.toHaveBeenCalled()
+      if (outcome === 'stale') expect(say).not.toHaveBeenCalled()
+      else expect(say).toHaveBeenCalledWith('Test Delete deleted.', outcome)
+    }
     expect(screen.getByRole('group', { name: 'Delete Test Delete?' })).toBeTruthy()
     expect(current.moneyAccounts.some(account => account.id === 'test-delete')).toBe(true)
   })
