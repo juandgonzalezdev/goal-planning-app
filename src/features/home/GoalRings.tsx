@@ -78,6 +78,7 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
   const go = (next: RingsView, focus = 'rings-title') => guard(f => f.tag === 'rings-contribution', () => {
     if (view === next && !form) { root.current?.querySelector<HTMLElement>(`[data-rings-focus="${CSS.escape(focus)}"]`)?.focus(); return }
     focusTo.current = focus
+    if (next !== view) setChange(null)
     setForm(false); setHover(null); setNotice(''); setLocalView(next); onViewChange?.(next)
   })
   useLayoutEffect(() => {
@@ -85,7 +86,12 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
     const target = root.current?.querySelector<HTMLElement>(`[data-rings-focus="${CSS.escape(focusTo.current)}"]`)
     target?.focus(); focusTo.current = null
   }, [view, form])
-  const openArea = (area: Area, origin = `area-${area}`) => { areaOrigin.current = origin; go(area) }
+  const openArea = (area: Area, origin = `area-${area}`) => {
+    // Hidden SVG targets must not navigate or ask to discard a Contribution.
+    if (goal) return
+    areaOrigin.current = origin
+    go(area)
+  }
   const back = () => {
     if (form) guard(f => f.tag === 'rings-contribution', () => { focusTo.current = 'contribution'; setForm(false) })
     else if (goal) go('goals', `goal-${goal.id}`)
@@ -115,8 +121,8 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
               return <g key={area} className={`rings-band${selected === area ? ' is-selected' : ''}${hover === area ? ' is-hover' : ''}`}>
                 <path d={bandPath(radius)} className="rings-band-track" />
                 <path d={bandPath(radius)} pathLength="100" className="rings-band-sweep" />
-                <path d={bandPath(radius)} className="rings-hit" data-ring-hit={area} onClick={() => go(area)} onMouseEnter={() => setHover(area)} onMouseLeave={() => setHover(null)} />
-                <rect x="142" y={200 - radius - 18} width="116" height="36" className="rings-label-hit" data-ring-label={area} onClick={() => go(area)} onMouseEnter={() => setHover(area)} onMouseLeave={() => setHover(null)} />
+                <path d={bandPath(radius)} className="rings-hit" data-ring-hit={area} onClick={() => openArea(area)} onMouseEnter={() => setHover(area)} onMouseLeave={() => setHover(null)} />
+                <rect x="142" y={200 - radius - 18} width="116" height="36" className="rings-label-hit" data-ring-label={area} onClick={() => openArea(area)} onMouseEnter={() => setHover(area)} onMouseLeave={() => setHover(null)} />
                 <text x="200" y={200 - radius}>{NAMES[area]}</text>
               </g>
             })}

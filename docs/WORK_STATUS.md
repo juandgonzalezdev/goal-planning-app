@@ -571,3 +571,75 @@ solo se añade esta anotación documental, sin cambiar código ni dependencias.
 La entrega fija se genera del commit final completo en
 `review-deliveries/goal-rings/<hash-final-completo>/`, con base exacta, diff,
 copias del commit, evidencia y ruta exclusiva para REVISION.md de Claude.
+## Goal Rings: correcciones tras revisión de Claude (4 de noviembre de 2026)
+
+Codex leyó directamente el informe fijo
+`review-deliveries/goal-rings/03e66bb558bfa4b069c0e303b1e5d213971f925c/REVISION.md`.
+Claude recomienda resolver P2-1 y P3-2 a P3-4; sus verificaciones de navegador son
+del revisor, no de Juan. El informe y toda la entrega anterior quedan intactos.
+
+Git propio al empezar: `codex/goal-rings-home`, HEAD `03e66bb`, índice vacío y
+sin cambios versionados. Se conservan los archivos ajenos sin seguimiento.
+Las correcciones quedan sin preparar y sin commit; falta autorización de Juan
+para un nuevo commit y su entrega fija. Sin push, merge ni despliegue.
+
+Resoluciones:
+
+- P2-1: los hijos SVG invisibles usan pointer-events:none dentro de una meta.
+  openArea ignora además los intentos de navegación mientras hay una meta,
+  antes de invocar la protección de borradores.
+- P3-2: se limpia change al cambiar de vista, dentro de la acción aceptada por
+  la protección de borradores. Cerrar solo Contribution conserva el indicador;
+  salir y reabrir la meta no lo repite ni desactiva su dibujo inicial.
+- P3-3: anillo y nombre usan openArea y registran la fila equivalente para
+  restaurar el foco. Se conserva el regreso al centro cuando ese fue el origen.
+- P3-4: la vista previa compara el saldo anterior y posterior de cada cuenta;
+  si coinciden muestra «no change», sin flecha. También corrige el formulario
+  compartido del detalle de Goals. No cambia ningún cálculo ni guardado.
+
+Comprobaciones propias de Codex sobre estas correcciones:
+
+- Antes de corregir: 7 comprobaciones fallaron y 11 pasaron en GoalRings.test.tsx;
+  los fallos reproducen los cuatro hallazgos (incluido el diálogo inesperado).
+  Evidencia: review-deliveries/goal-rings/regressions-before-fixes.json.
+- Después: npm test -- src/GoalRings.test.tsx src/LeaveForms.test.tsx
+  src/AlexDemo.test.tsx --maxWorkers=2: 69/69 en 3 archivos, 33,06 s.
+  Incluye todos los casos nuevos/ampliados y regresión del formulario compartido.
+- npm run lint, npm run build y git diff --check: correctos.
+  Build conserva el aviso de fragmento >500 kB; comprimido 197,45 kB.
+- No se repite la suite completa por estas correcciones locales de interacción
+  y texto. 839/839 sigue siendo la suite anterior del commit 03e66bb, no un
+  resultado nuevo. Se reutiliza el audit anterior (12 moderados de desarrollo,
+  0 en producción); no cambiaron las dependencias.
+- Navegador integrado en 127.0.0.1:5196, panel visible, escritorio 1280×900:
+  seis zonas SVG con pointer-events:none; elementFromPoint junto al arco en
+  radios equivalentes 125/175 no encuentra controles invisibles. Un clic en
+  r=175 mantiene la meta. Bills por nombre y regreso restaura area-bills.
+  New savings ficticio de 25 muestra Piggy Bank «150,00 zł · no change»;
+  tras guardar, salir y reabrir no hay rings-added ni rings-progress-new,
+  y draw-on-open está presente. Meta 1825→1850 en esta demo local.
+  La protección de un borrador frente a clics directos está cubierta por las
+  pruebas automáticas; no se atribuye ese caso al recorrido de navegador.
+- Se comprobó el importe final del contador; no se acredita una evaluación
+  completa de su ritmo o fluidez. El intento de muestrear fotogramas mediante
+  el navegador no pudo ejecutarse por una limitación de su evaluador.
+
+Los logs nuevos y el resumen mutable están en review-deliveries/goal-rings/
+(review-fixes-*.log y CORRECCIONES.md). No se incluyen en commits de la app.
+Pendientes la nueva revisión de Claude y la prueba manual de Juan, incluidas
+animaciones/contador, teléfono real, Safari/iPhone y lector de pantalla.
+No se aplican las observaciones opcionales de tamaño móvil, semántica,
+vista previa en Goals ni diferencia temporal: se conservan para valoración.
+## Goal Rings: commit de correcciones autorizado (4 de noviembre de 2026)
+
+Juan autoriza guardar estas correcciones en un nuevo commit y preparar otra
+entrega fija para Claude. Sustituye únicamente el pendiente de autorización
+de commit del apartado anterior. No autoriza push, merge ni despliegue y no
+acredita pruebas manuales de Juan.
+
+Codex prepara solo los cinco archivos de las correcciones y su documentación.
+Se reutilizan las 69 pruebas afectadas, lint y build del mismo código y entorno;
+solo se añade este registro documental antes del commit. La nueva entrega fija
+usará como base 03e66bb558bfa4b069c0e303b1e5d213971f925c y el nuevo hash final,
+sin alterar el informe ni las copias anteriores. Los archivos ajenos sin
+seguimiento y todo review-deliveries quedan fuera del commit.

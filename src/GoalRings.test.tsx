@@ -84,6 +84,9 @@ describe('optional Goal Rings on Home', () => {
     render(<App storage={storage} createDemo={() => ({ data: fixture(), today: '2026-12-31' })} />); await settle(); await fire.click(button('Explore the App'))
     openBooks(); await fire.click(button('Add Contribution'))
     await fire.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
+    await fire.click(region().querySelector('[data-ring-label="income"]')!)
+    expect(screen.queryByRole('alertdialog', { name: 'Leave without saving?' })).toBeNull()
+    expect(inRings().getByRole('heading', { name: 'Books for my child' })).toBeTruthy()
     await fire.keyDown(region(), { key: 'Escape' })
     expect(screen.getByRole('alertdialog', { name: 'Leave without saving?' })).toBeTruthy()
     await fire.click(button('Keep Editing'))
@@ -100,6 +103,21 @@ describe('optional Goal Rings on Home', () => {
     expect(inRings().getByRole('button', { name: /^Open Goals,/ })).toBeTruthy()
     expect(document.activeElement).toBe(inRings().getByRole('heading', { name: 'Bills' }))
     expect(inRings().getAllByText(/✓ Paid/).length).toBeGreaterThan(0)
+    fireEvent.click(button('← All areas'))
+    expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('area-bills')
+  })
+
+  it.each(['hit', 'label'])('ignores hidden ring %s targets inside a goal, including a typed Contribution', kind => {
+    mount(); openBooks()
+    for (const area of ['income', 'bills', 'debts']) {
+      fireEvent.click(region().querySelector(`[data-ring-${kind}="${area}"]`)!)
+      expect(inRings().queryByRole('heading', { name: 'Books for my child' })).toBeTruthy()
+    }
+    fireEvent.click(button('Add Contribution'))
+    fireEvent.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
+    fireEvent.click(region().querySelector(`[data-ring-${kind}="bills"]`)!)
+    expect(inRings().queryByRole('heading', { name: 'Books for my child' })).toBeTruthy()
+    expect((screen.getByLabelText('Amount (PLN)') as HTMLInputElement).value).toBe('25')
   })
 
   it('saves assigned savings once, previews the effect, updates money progress and restores focus', async () => {
@@ -121,6 +139,11 @@ describe('optional Goal Rings on Home', () => {
     fireEvent.click(button('← Goals'))
     expect((document.activeElement as HTMLElement).textContent).toContain('Books for my child')
     expect(inRings().getByRole('button', { name: /Books for my child/ }).textContent).toContain(`${money(12500)} of ${money(25000)}`)
+    fireEvent.click(inRings().getByRole('button', { name: /Books for my child/ }))
+    expect(region().querySelector('.rings-added,.rings-progress-new')).toBeNull()
+    expect(region().querySelector('.rings-progress-value')?.classList.contains('draw-on-open')).toBe(true)
+    expect(region().querySelector('.rings-progress-value')?.getAttribute('stroke-dashoffset')).toBe('50')
+    fireEvent.click(button('← Goals'))
     fireEvent.click(button('← All areas'))
     expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('core')
   })
@@ -193,7 +216,16 @@ describe('optional Goal Rings on Home', () => {
     openBooks(); fireEvent.click(button('Add Contribution'))
     fireEvent.change(screen.getByLabelText('Savings Account'), { target: { value: 'second' } })
     fireEvent.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
-    expect(screen.getByLabelText('Effect before saving').textContent).toContain(money(52500))
+    const preview = screen.getByLabelText('Effect before saving')
+    expect(preview.textContent).toContain(money(52500))
+    for (const item of savingsSummary(data).accounts.filter(a => a.account.id !== 'second')) {
+      const row = within(preview).getByText(item.account.name, { selector: 'dt' }).parentElement!
+      expect(row.textContent).toContain('no change')
+      expect(row.textContent).not.toContain('→')
+    }
+    const changedRow = within(preview).getByText('Second savings', { selector: 'dt' }).parentElement!
+    expect(changedRow.textContent).toContain('→')
+    expect(changedRow.textContent).not.toContain('no change')
     fireEvent.click(button('Save Contribution'))
     await waitFor(() => expect(region().querySelector('.rings-added')).toBeTruthy())
     const accounts = savingsSummary(harness.data()).accounts

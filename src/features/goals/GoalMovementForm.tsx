@@ -107,6 +107,7 @@ export function GoalMovementForm({ ref, data, goal, today, newId, onChange, cont
     id: 'preview-only', goalId: goal.id, effect, amount: read.amount, date: read.date, note: read.note,
     ...(needsAccount ? { accountId } : {}),
   })
+  const previewSavings = preview?.status === 'ok' ? savingsSummary(preview.data) : null
   return (
       <section className="block" aria-labelledby="goal-move">
         <h2 id="goal-move" className="section-title">{contributionOnly ? 'Contribution' : 'Add or Take Out'}</h2>
@@ -158,7 +159,10 @@ export function GoalMovementForm({ ref, data, goal, today, newId, onChange, cont
         {preview?.status === 'ok' && <dl className="fact-rows" aria-label="Effect before saving">
           <div><dt>Goal</dt><dd>{money(progress.saved)} → {money(goalSaved(goal, preview.data.goalMovements))}</dd></div>
           <div><dt>Unassigned savings</dt><dd>{money(savings.unassigned)} → {money(savingsSummary(preview.data).unassigned)}</dd></div>
-          {savings.accounts.map(item => <div key={item.account.id}><dt>{item.account.name}</dt><dd>{money(item.balance)} → {effect === 'assigned' || effect === 'unassigned' ? 'no change' : money(savingsSummary(preview.data).accounts.find(a => a.account.id === item.account.id)?.balance ?? null)}</dd></div>)}
+          {savings.accounts.map(item => {
+            const after = previewSavings?.accounts.find(a => a.account.id === item.account.id)?.balance ?? null
+            return <div key={item.account.id}><dt>{item.account.name}</dt><dd>{money(item.balance)}{item.balance === after ? ' · no change' : <> → {money(after)}</>}</dd></div>
+          })}
         </dl>}
         <button type="button" disabled={sending} className="button-small button-small-primary align-start" aria-disabled={blocked || undefined} onClick={() => void saveMovement()}>
           {sending ? 'Saving…' : `Save ${movement.kind === 'contribution' ? 'Contribution' : 'Withdrawal'}`}
