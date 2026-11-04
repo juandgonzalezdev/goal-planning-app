@@ -681,3 +681,52 @@ La nueva entrega fija toma 2fcde466561166bbf8afd35f29d3f94adb836b91 como base y
 el nuevo commit completo como extremo. No se incluyen review-deliveries ni
 archivos ajenos en el commit. Claude escribirá solo REVISION.md en la nueva
 carpeta después del aviso de Juan. Sin push, merge ni despliegue.
+## Goal Rings: revisión de código terminada (4 de noviembre de 2026)
+
+Codex leyó directamente el informe
+`review-deliveries/goal-rings/9b39cb7a4d9fe0faa6589032073714b382e0349b/REVISION.md`.
+Claude confirma P3-5 resuelto y sin hallazgos nuevos; los cuatro hallazgos
+anteriores ya estaban resueltos. La revisión de código queda cerrada y la rama
+lista para la prueba manual de Juan. No equivale a aprobación de integración.
+
+Claude no ejecutó pruebas, lint, build ni navegador para P3-5; reutilizó las
+71 pruebas afectadas, lint y build de Codex. Su comprobación de «Not known · no
+change» sin cuenta es por inspección. No se atribuye a una prueba manual de Juan.
+Codex no repite comprobaciones funcionales al registrar esta revisión: no hay
+cambios de código ni dependencias. Se comprobó Git directamente: rama
+codex/goal-rings-home, HEAD 9b39cb7, índice vacío y sin cambios versionados antes
+de esta anotación. Se preservan los archivos ajenos sin seguimiento y todas
+las entregas e informes. Esta anotación queda sin preparar y sin commit.
+
+Siguiente paso: Juan activa Show rings on Home en Settings con la demo y sigue
+el recorrido de DELIVERY.md de 2fcde46, con el panel visible para valorar arco
+y contador, también en teléfono y con movimiento reducido. Continúan pendientes
+Safari/iPhone, tacto, teclado móvil y lector de pantalla; no hay confirmaciones
+nuevas de Juan. Después Juan decide si autoriza integrar en main y publicar.
+No se hizo commit, push, merge ni despliegue al registrar el cierre de revisión.
+## Goal Rings: integración y publicación autorizadas (4 de noviembre de 2026)
+
+Juan aprueba publicar en main. Esta autorización permite guardar el registro
+documental pendiente de revisión, integrar codex/goal-rings-home en main y hacer
+push normal a origin/main. Sustituye las restricciones de integración anteriores
+para Goal Rings. No autoriza push forzado ni cambios en la configuración de
+Cloudflare Pages; la publicación se activa automáticamente al recibir main.
+
+Codex actualizó las referencias con git fetch origin: main y origin/main están
+en d825c7400e8706270c09e181b16254d773873a07 y son antecesores de la candidata
+9b39cb7a4d9fe0faa6589032073714b382e0349b, comprobado con merge-base. No hay
+divergencia y se puede usar fast-forward. Antes de integrar se guarda únicamente
+este registro y la anotación pendiente de cierre de revisión en un commit
+documental. Las entregas fijas y los informes no se alteran; los archivos ajenos
+sin seguimiento se conservan y quedan excluidos.
+
+Se reutilizan los resultados vigentes: suite completa 839/839 de 03e66bb,
+69/69 de 2fcde46 y 71/71 de 9b39cb7; lint y build correctos en el último código.
+Solo cambia documentación desde esas comprobaciones. No se repiten pruebas,
+lint, build ni audit por integrar el mismo contenido. Audit anterior: 12
+moderados de desarrollo, 0 de producción. El ajuste sigue desactivado por defecto.
+
+La autorización de publicar no acredita una prueba manual de Juan. Se conservan
+los pendientes registrados de animaciones/contador, teléfono real, Safari/iPhone,
+tacto, teclado móvil, lector de pantalla y movimiento reducido real. Los hashes
+y el resultado exacto del push y de la publicación se comunicarán tras verificar.
