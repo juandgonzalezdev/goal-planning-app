@@ -426,3 +426,71 @@ build se documentan como resultados observados en las herramientas de esta
 conversación, sin presentar una transcripción reconstruida como log original.
 No se repiten suite, lint ni build por preparar la entrega. CANDIDATE contiene
 los recorridos de Juan, aún pendientes. Sin push, merge a main ni despliegue.
+
+## Aprobación de Claude y preparación manual de Juan (4 de noviembre de 2026)
+
+Codex leyó directamente
+`review-deliveries/final-adjustments/53a61fc1ec0ce2d92df75a39c81a4cb587cc924e/REVISION.md`.
+Claude aprueba los dos ajustes y la coordinación: no encuentra errores ni
+regresiones pendientes. Revisión del alcance f7081aa..53a61fc, con código en
+eda9966. No se modifica el informe ni el snapshot fijo.
+
+Resultados propios de Claude sobre su snapshot reconstruido, Linux/Node 22.23:
+53/53 pruebas en 4 archivos, lint y build correctos; comprobó además que las
+3 pruebas de regresión fallan con AccountsSection de f7081aa. En Chromium,
+390 y 1280 px, verificó Delete → confirmación, Cancel → Delete y borrado →
+lista Accounts cuando quedan cuentas, sin errores de consola. Son resultados
+del revisor, no ejecuciones nuevas de Codex ni confirmaciones manuales de Juan.
+
+El borrado de la última cuenta y su foco en Add Your First Account siguen
+cubiertos solo automáticamente; Claude no los probó en navegador. El rechazo
+coincidente con fallo de guardado también tiene cobertura automática aislada.
+Los recorridos de Juan sobre esta candidata, Safari/iPhone, gestos, teclado
+móvil, movimiento reducido real y lector de pantalla continúan pendientes.
+Se conservan las confirmaciones históricas de Juan con su versión original.
+
+Git comprobado al iniciar esta preparación: integration/rumbo-03-08,
+HEAD 53a61fc1ec0ce2d92df75a39c81a4cb587cc924e, índice vacío y sin cambios en
+archivos seguidos. Archivos ajenos sin seguimiento conservados. Solo se registra
+la revisión y se prepara el acceso local; sin nuevas funcionalidades, nueva
+suite, push, merge a main ni despliegue. Esta anotación queda sin preparar.
+
+Servidor manual preparado por Codex: Vite PID 43080, escucha 0.0.0.0:5194,
+carpeta C:\Projects\goal-planning-app. El puerto 5193 estaba ocupado por un
+Vite del proyecto, pero no respondió por HTTP; se dejó intacto y se usó 5194.
+Direcciones exactas de esta sesión: http://localhost:5194/ (ordenador) y
+http://192.168.0.238:5194/ (teléfono en la misma Wi-Fi). Respuesta HTTP 200
+comprobada por Codex en localhost y dirección LAN desde el ordenador; esto no
+acredita conexión desde el teléfono ni recorrido manual en navegador.
+Se actualiza CANDIDATE.md con la aprobación y el acceso actual. Ambos cambios
+documentales quedan sin preparar; HEAD sigue siendo 53a61fc. No se repitieron
+pruebas, lint o build porque no cambió funcionalidad. La entrega fija permanece
+intacta y el informe de Claude no se edita.
+
+## Cierre autorizado de Rumbo 03–08 (4 de noviembre de 2026)
+
+Juan autoriza cerrar Rumbo 03–08, guardar únicamente esta documentación e
+integrar integration/rumbo-03-08 en main, con fast-forward si es posible y
+push normal a origin/main. No autoriza despliegue manual ni push forzado.
+Este apartado sustituye las restricciones de integración de los registros
+históricos anteriores; no modifica las entregas fijas ni los informes.
+
+No se han comunicado nuevas confirmaciones manuales de Juan. Continúan
+pendientes los recorridos de CANDIDATE.md, incluida la última cuenta y su foco,
+y Safari/iPhone, gestos, teclado móvil, movimiento reducido real y lector de
+pantalla. Small Loan y Credit Card conservan su pendiente manual del 02.
+Se mantienen con su alcance original las confirmaciones históricas de
+Student Loan y Test Delete; autorizar el cierre no acredita nuevas pruebas.
+
+Se reutilizan las comprobaciones vigentes del código eda9966: 53/53 pruebas
+afectadas, lint y build correctos, y la suite de 815/815 sobre c40f502 con su
+alcance anterior. En este cierre solo cambia documentación: no se repiten
+suite, lint, build ni audit. Codex comprueba el diff y el índice documental.
+Se conservan y excluyen todos los archivos ajenos sin seguimiento.
+
+La integración requiere actualizar primero las referencias remotas y comprobar
+que main y origin/main son antecesores de la candidata, preservando todos sus
+commits. Si aparece una divergencia inesperada se informa antes de resolverla.
+El resultado exacto de integración y push se comunica con los hashes de Git.
+Según DEVELOPMENT.md, Cloudflare Pages publica automáticamente main al recibir
+el push; no se ejecuta ni se modifica el despliegue manualmente.

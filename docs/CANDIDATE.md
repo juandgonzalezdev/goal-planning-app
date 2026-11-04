@@ -123,6 +123,40 @@ Con datos ficticios, en la demo:
    a say el resultado real para mostrar el aviso de guardado. No se pide
    reproducir artificialmente esa coincidencia durante la validación manual.
 
-Estos recorridos siguen pendientes de confirmación expresa de Juan. También
-sigue pendiente la revisión de los dos ajustes finales por Claude; su aprobación
-de f7081aa no se extiende a ellos.
+Estos recorridos siguen pendientes de confirmación expresa de Juan. Claude
+aprobó los dos ajustes finales y la coordinación en el REVISION.md de la entrega
+53a61fc, sin errores ni regresiones pendientes. El borrado de la última cuenta
+sigue cubierto solo automáticamente, sin comprobación en navegador.
+
+## Sesión manual preparada el 4 de noviembre de 2026
+
+Rama comprobada: `integration/rumbo-03-08`.
+Commit actual: `53a61fc1ec0ce2d92df75a39c81a4cb587cc924e`.
+Solo se actualiza documentación local después de ese commit; no hay cambios
+funcionales ni se modifica la entrega fija revisada.
+
+El puerto 5193 estaba ocupado y no respondió por HTTP. Se conserva ese proceso.
+Servidor de esta sesión: Vite, PID 43080, escucha en 0.0.0.0:5194.
+Codex comprobó HTTP 200 por ambas direcciones desde el ordenador:
+
+- Ordenador: http://localhost:5194/
+- Teléfono en la misma Wi-Fi: http://192.168.0.238:5194/
+
+No se ha comprobado la conexión desde el teléfono; queda para Juan. Estas
+direcciones corresponden a esta sesión y sustituyen al puerto 5193 del ejemplo
+anterior. Usar Explore the App y comprobar la franja Demo. Los recorridos del
+checklist siguen pendientes en esta candidata; no se repiten automáticamente
+las confirmaciones históricas de Juan. Ver WORK_STATUS para la atribución de
+las pruebas de Codex y Claude.
+
+## Cierre autorizado (4 de noviembre de 2026)
+
+Juan autoriza integrar Rumbo 03–08 en main y ejecutar push normal a origin/main.
+El estado inicial de candidata local descrito arriba queda como histórico.
+No ha comunicado nuevos resultados manuales: el checklist y las limitaciones
+siguen pendientes, con las confirmaciones históricas limitadas a su versión.
+La autorización de cierre no equivale a confirmar esos recorridos.
+La revisión final de Claude está aprobada. Solo cambia documentación desde
+53a61fc; se reutilizan las comprobaciones vigentes descritas en WORK_STATUS.md.
+El push a main activa la publicación automática de Cloudflare Pages descrita
+en DEVELOPMENT.md; no se realiza un despliegue manual.
