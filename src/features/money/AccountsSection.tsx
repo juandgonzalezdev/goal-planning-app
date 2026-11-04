@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useId, useRef, useState } from 'react'
 import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
@@ -26,13 +26,14 @@ type AccountForm = { id: Id | null; name: string; kind: MoneyAccountKind; balanc
  * Delete. A balance never entered stays "Not entered", never 0. Below,
  * Savings divided by purpose, as on Home (the goals are part of Savings).
  */
-export function AccountsSection({ data, today, owner, newId, onChange, say, onOpenGoal }: SectionProps) {
+export function AccountsSection({ data, today, owner, newId, onChange, say, tell, onOpenGoal }: SectionProps) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const { items } = summarizeMoney(data)
   const [form, setForm] = useState<AccountForm | null>(null)
   const [balanceFor, setBalanceFor] = useState<{ id: Id; amount: string; asOf: string; error?: string } | null>(null)
   const { view, onViewChange } = useContext(MoneyBlocksContext)
   const focusField = useRef<string | null>(null)
+  const accountListId = useId()
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
   // The revision each form was opened on, and which change is being saved.
@@ -49,6 +50,23 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, onOp
     const outcome = await onChange(change, base).finally(() => setSending(null))
     say(done, outcome)
     return outcome
+  }
+
+  const confirmDeletion = async (id: Id, name: string, base: number) => {
+    let refusal: string | null = null
+    setSending('form')
+    const outcome = await onChange(current => {
+      const next = deleteAccount(current, id)
+      if (!next) refusal = accountDeletionReason(current, id) ?? 'This account cannot be deleted. Nothing was deleted.'
+      return next ?? current
+    }, base).finally(() => setSending(null))
+    if (outcome === 'stale') return
+    if (refusal) { tell(refusal); return }
+    say(`${name} deleted.`, outcome)
+    if (isKept(outcome)) {
+      focusField.current = accountListId
+      setDeleting(null)
+    }
   }
 
   useEffect(() => {
@@ -136,7 +154,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, onOp
           <button type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Account</button>
         </div>
       )}
-      <ul className="line-list compact-list">
+      <ul id={accountListId} tabIndex={-1} aria-label="Accounts" className="line-list compact-list">
         {items.map(({ account, balance, asOf }) => {
           const open = view.account === account.id
           const detailId = `account-${account.id}`
@@ -172,20 +190,19 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, onOp
                         focusField.current = 'account-new-balance'
                       })}>Update Balance</button>
                       <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => openForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })}>Edit</button>
-                      <button type="button" className="button-small" aria-label={`Delete: ${account.name}`} aria-disabled={blocked || !!deletionReason || undefined} aria-describedby={deletionReason ? `${detailId}-delete-reason` : undefined} onClick={() => {
+                      <button id={`${detailId}-delete`} type="button" className="button-small" aria-label={`Delete: ${account.name}`} aria-disabled={blocked || !!deletionReason || undefined} aria-describedby={deletionReason ? `${detailId}-delete-reason` : undefined} onClick={() => {
                         if (blocked || deletionReason) return
+                        focusField.current = `${detailId}-delete-confirmation`
                         setDeleting({ id: account.id, base: revision })
                       }}>Delete</button>
                       {deletionReason && <p className="field-help" id={`${detailId}-delete-reason`}>{deletionReason}</p>}
-                      {deleting?.id === account.id && <div className="callout callout-warning" role="group" aria-label={`Delete ${account.name}?`}>
+                      {deleting?.id === account.id && <div id={`${detailId}-delete-confirmation`} tabIndex={-1} className="callout callout-warning" role="group" aria-label={`Delete ${account.name}?`}>
                         <p>Delete {account.name} and all its saved balances? This removes the account and every balance update for it from History. This cannot be undone. Other accounts and their records stay.</p>
                         <button type="button" className="button-small" aria-disabled={blocked || !!deletionReason || sending !== null || undefined} onClick={() => {
                           if (blocked || deletionReason || sending) return
-                          void save(`${account.name} deleted.`, current => deleteAccount(current, account.id) ?? current, deleting.base, 'form').then(outcome => {
-                            if (isKept(outcome)) setDeleting(null)
-                          })
+                          void confirmDeletion(account.id, account.name, deleting.base)
                         }}>{sending === 'form' ? 'Deleting…' : 'Delete Account and Balances'}</button>
-                        <button type="button" className="button-small" onClick={() => setDeleting(null)}>Cancel</button>
+                        <button type="button" className="button-small" onClick={() => { focusField.current = `${detailId}-delete`; setDeleting(null) }}>Cancel</button>
                       </div>}
                     </div>}
                 </div>
