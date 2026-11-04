@@ -1,6 +1,6 @@
 # Estado de trabajo y coordinación
 
-Actualizado: 3 de noviembre de 2026.
+Actualizado: 4 de noviembre de 2026.
 
 Este registro describe la integración actual de Rumbo. `STATUS.md` conserva
 el estado histórico fechado allí; los resúmenes de `rumbo-01-08/` describen
@@ -211,7 +211,7 @@ Los resultados de la entrega del parche no cuentan como comprobaciones propias.
   pulsar Show Fewer y comprobar la pregunta; Keep Editing conserva el formulario
   y el importe. Reejecución específica: 1 prueba aprobada, 12 omitidas
   (6,05 s, `src/MarkPaid.test.tsx`, `--maxWorkers=2`).
-- Show Fewer no se verificó en navegador: el navegador integrado agotó el
+- En el intento inicial de Codex, Show Fewer no se verificó en navegador: el navegador integrado agotó el
   tiempo de conexión a la sesión local de prueba (timeout). No se registra
   como prueba manual ni como recorrido comprobado en navegador.
 
@@ -224,9 +224,9 @@ Los resultados de la entrega del parche no cuentan como comprobaciones propias.
 
 ## Siguiente trabajo
 
-Revisión de Claude de los paquetes adjuntos y prueba de la candidata por Juan.
-Los hallazgos que Juan entregue se corregirán en commits adicionales, sin
-reescribir los extremos revisados. Siguen pendientes Small Loan y Credit Card
+Revisión de Claude de las correcciones posteriores a su informe y prueba de
+la candidata por Juan. Las correcciones se guardan en commits adicionales,
+sin reescribir los extremos revisados. Siguen pendientes Small Loan y Credit Card
 manuales del 02 y los recorridos nuevos del 03–08. Sin push, merge a main ni
 publicación hasta nueva autorización de Juan.
 
@@ -257,27 +257,30 @@ ajenos en los commits.
 - Entrega 03–05: base `579117b`, extremo `3f51bd0`; paquete generado localmente
   en `review-deliveries/rumbo-03-05-review.zip`, fuera de src y fuera de Git.
   Contiene hashes completos, diff con archivos nuevos y snapshot de archivos
-  seguidos. Juan indicó que todavía no lo ha entregado a Claude.
-- No hay acceso confirmado de Claude ni informe recibido. No se le atribuye
-  ejecución de pruebas o comandos locales. La revisión de 03–05 está pendiente.
+  seguidos. Claude confirmó en el informe recibido el 4 de noviembre que pudo
+  abrir todos los adjuntos de ambos bloques en su propio entorno.
 - La segunda entrega abarca desde `3f51bd0` al commit final de la candidata,
   incluyendo 06–08 y documentación final; los hashes completos constan en su
   archivo commits.txt. La entrega no equivale a una revisión aprobada.
-- No se han inventado ni resuelto hallazgos de un informe aún no recibido.
-  Las correcciones propias de Windows y privacidad están documentadas en 08.
+- El informe REVISION-03-08.md, de Claude (4 de noviembre), revisa los extremos
+  `579117b..3f51bd0` y `3f51bd0..8db763e`. No tuvo acceso al repositorio de Juan
+  ni verificó allí los commits intermedios; comprobó coherencia de snapshots
+  y diffs y declaró esa limitación. Sus hallazgos se evalúan más abajo.
 
 ### Responsive, privacidad y navegador
 
 - Comprobación responsive automática: Layout simula matchMedia, cambio de
   anchura y controles no duplicados; inspección del CSS para 740/1024/1200 px.
-  No se ha verificado overflow, disposición visual o toque en navegador real.
+  Codex no verificó la disposición visual; posteriormente Claude comprobó
+  responsive en Chromium sobre 8db763e, según el informe recibido.
 - Privacidad: pruebas de H1, gráficas ocultas de History y ejemplos de ayudas
   de This Month al ocultar importes, incluido ocultar una nota ya abierta.
   Money, metas y deudas mantienen su visibilidad existente; ocultar importes
   no es cifrado ni bloqueo de acceso.
 - Intento de navegador de esta candidata: servidor local arrancado y navegador
-  integrado sin conexión (ERR_CONNECTION_TIMED_OUT). Show Fewer sigue comprobado
-  automáticamente, no en navegador. No se declaran recorridos de navegador,
+  integrado sin conexión (ERR_CONNECTION_TIMED_OUT). Posteriormente Claude
+  verificó Show Fewer en Chromium sobre 8db763e. No se atribuyen esos recorridos
+  a Codex. No se declaran recorridos de navegador,
   Safari, iPhone, iPad, VoiceOver ni gestos táctiles como realizados por Codex.
 - Las confirmaciones de Juan de Test Delete y Student Loan registradas arriba
   se conservan con su alcance original; no se extienden a las nuevas funciones.
@@ -304,3 +307,70 @@ cualquier integración final.
   No se ejecutó npm audit: no hubo cambios de dependencias en esta tarea.
 - Logs propios fuera de Git: `review-deliveries/final-tests.txt`,
   `final-lint.txt`, `final-build.txt`. No se incluyen en commits.
+
+## Correcciones de REVISION-03-08 (4 de noviembre de 2026)
+
+Editor: Codex. Revisor del informe: Claude. Base revisada e inmutable:
+`8db763ef273e8338847aca2307069ee514abfadb`. Los resultados del informe son
+información recibida; no se presentan como ejecuciones propias de Codex.
+
+### Evidencia recibida de Claude sobre 8db763e
+
+- Claude ejecutó **813/813 pruebas en 58 archivos**, `--maxWorkers=2`
+  (129,8 s), lint y build correctos en su snapshot, Linux y Node 22, tras
+  npm ci. Build mantuvo el aviso conocido de tamaño. No ejecutó estos comandos
+  sobre el repositorio de Juan ni comprobó con Git la identidad de la base.
+- En Chromium, con vite preview y datos de la demo, verificó Show Fewer a
+  390 y 1280 px: pregunta, Keep Editing conserva lista y valor y Discard and
+  Leave cierra el formulario. Verificó también responsive a 320, 390, 768,
+  1023, 1024, 1199, 1200 y 1440 px, sin desbordamiento lateral en las pantallas
+  indicadas en el informe. Confirmó sidebar desde 1024 y columnas desde 1200.
+- Safari/iPhone, gestos, teclado móvil, movimiento reducido real y lector de
+  pantalla siguen pendientes en la candidata final. No se extienden los
+  recorridos Chromium de 8db763e a las correcciones posteriores.
+- Se conservan las confirmaciones manuales de Juan de Test Delete con saldo
+  10, Cancel y borrado posterior en ordenador y teléfono sobre el 03 anterior.
+  No se marca una repetición de ese recorrido sobre la candidata corregida.
+
+### Resolución de los hallazgos
+
+| Hallazgo | Evaluación y corrección |
+| --- | --- |
+| H1 | Reproducido por Codex: una prueba nueva falló porque no aparecía Leave without saving al cambiar de Gym Membership a Transit Pass. Se protege el formulario anterior con useLeaveGuard y su tag. Keep Editing conserva importe, fecha y cuenta; Discard and Leave abre la otra factura sin guardar la primera. La prueba reabre la primera y comprueba sus valores iniciales. Commit `284fd48`. |
+| H2 | La frase Cancel podía referirse al botón del formulario, pero era ambigua en el paso del diálogo. CANDIDATE ahora distingue Discard and Leave del Cancel explícito del formulario. |
+| H3 | Eliminado el comentario obsoleto Add on Home; queda la explicación del Add global. Commit `284fd48`. |
+| H4 | Endurecido el mensaje de borrado: si deleteAccount rechaza la operación al evaluar los datos actuales, se muestra el motivo, se mantiene la confirmación y no se anuncia deleted. La prueba aislada falló antes al recibir el mensaje falso. Se conserva la protección normal de revisiones entre pestañas. Commit `c40f502`. |
+
+La propuesta de devolver null en H4 no encaja con ChangeSpace, cuyo callback
+devuelve FinanceData. No se amplió ese contrato: al rechazo se conservan los
+datos actuales y se informa del motivo; un adaptador que confirmase ese cambio
+sin efectos ya no provoca un mensaje falso de borrado. La prueba simula ese
+camino defensivo, no una carrera reproducida en dos navegadores.
+
+También se atendió la observación de foco: al abrir Delete se enfoca la
+confirmación, Cancel vuelve al botón Delete y un borrado confirmado enfoca
+la lista Accounts. Verificado automáticamente, no con lector de pantalla.
+
+### Comprobaciones propias de las correcciones
+
+- Antes del arreglo H1, su nueva prueba falló al no encontrar el diálogo.
+- Antes del arreglo H4, su nueva prueba falló porque se anunciaba deleted.
+- Pruebas afectadas: 48 aprobadas en 4 archivos (MarkPaid, MoneyBlocks,
+  AccountDeletionUi y accountDeletion), 27,38 s.
+- El primer build encontró un tipo demasiado amplio en el doble de prueba
+  de AccountDeletionUi; se tipó con ChangeSpace antes de la validación final.
+- Código de cierre de correcciones: `c40f502`.
+- Suite completa de cierre propia de Codex: `npm test -- --maxWorkers=2`,
+  **815/815 pruebas aprobadas en 59 archivos**, 214,34 s. Se ejecutó una vez
+  después de cerrar las correcciones de código.
+- Lint y build finales correctos; build conserva el aviso de fragmento
+  JavaScript superior a 500 kB. JS 692,72 kB (193,02 kB gzip).
+- `git diff --check` y comprobación desde la base revisada: sin errores.
+  Avisos conocidos de jsdom sobre scrollTo y navegación, sin pruebas fallidas.
+- La entrega pequeña de correcciones se genera fuera de Git en
+  `review-deliveries/corrections-8db763e-review.zip`: diff completo desde
+  `8db763e`, hashes base/final, archivos cambiados y logs propios de cierre.
+  Su recepción y revisión por Claude todavía no se dan por realizadas.
+- Solo documentación cambia después de estos controles. No se reescribieron
+  los commits revisados, no cambiaron dependencias y no se hizo push, merge
+  a main ni despliegue. Los archivos ajenos se conservan sin incluir en commits.

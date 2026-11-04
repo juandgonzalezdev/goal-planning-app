@@ -3,6 +3,9 @@
 Rama: `integration/rumbo-03-08`. Base integrada en main: `579117b`.
 El hash final se entrega junto al resultado de `git log -1 --oneline`.
 Esta candidata no está publicada ni integrada en main.
+Base de la revisión de Claude: `8db763e`. Correcciones de código posteriores:
+`284fd48` (H1/H3) y `c40f502` (H4 y foco). La documentación final se guarda
+en un commit adicional, sin reescribir la versión revisada.
 
 ## Qué incluye
 
@@ -49,7 +52,11 @@ Getting Started en la demo, abrir Help & Guide y Show Getting Started on Home.
   Change Amount y Mark as Paid: Keep Editing conserva el borrador.
 - **Conservar lo escrito:** demo → January 2027 → Show All → sexta factura
   pendiente → Mark as Paid → importe 321 → Show Fewer. Debe preguntar;
-  Keep Editing conserva lista y 321. Cancel descarta solo ese formulario.
+  Keep Editing conserva lista y 321. Discard and Leave descarta ese formulario
+  y muestra menos facturas. Cancel es un botón del formulario de pago, no del diálogo.
+  Probar también cambiar de Gym Membership a Transit Pass con un importe
+  modificado: Keep Editing conserva Gym; Discard and Leave abre Transit Pass
+  sin guardar el borrador de Gym.
 - **Cuentas e historial:** crear Test Delete con saldo 10; Cancel en Delete
   conserva todo, confirmar elimina cuenta y sus saldos. Una cuenta con pagos
   o movimientos vinculados queda bloqueada con explicación. Este recorrido
@@ -65,11 +72,29 @@ Getting Started en la demo, abrir Help & Guide y Show Getting Started on Home.
   comprobar menú Add, formularios con teclado y ausencia de recorte lateral.
   Abrir ayuda, saltar y retomar Getting Started; probar movimiento reducido.
 
-## Limitaciones de la entrega
+## Revisión y limitaciones de la entrega
 
-La revisión de Claude aún no se ha recibido y su acceso no está confirmado.
-Las comprobaciones automáticas no equivalen a pruebas manuales. El navegador
-integrado de Codex tuvo timeout de conexión: quedan pendientes verificación
-visual responsive, Show Fewer en navegador, Safari/iPhone y gestos táctiles.
+Según REVISION-03-08.md (Claude, 4 de noviembre), Claude abrió los dos paquetes
+y ejecutó 813 pruebas, lint y build sobre el snapshot de `8db763e` en Linux,
+Node 22. También verificó Show Fewer a 390 y 1280 px y responsive en Chromium
+de 320 a 1440 px. Son comprobaciones de Claude sobre esa versión, no ejecuciones
+de Codex ni una aprobación de las correcciones posteriores.
+
+H1 protege el cambio de factura con un pago modificado en Home. H4 impide
+anunciar un borrado rechazado al revalidar los datos y mejora el foco de Delete.
+Se corrigieron el checklist H2 y el comentario H3. Ver resultados y alcance
+en WORK_STATUS.md. Las correcciones se entregan a Claude en un diff pequeño.
+Codex comprobó las correcciones con 48 pruebas afectadas y cerró el código
+`c40f502` con **815 pruebas aprobadas en 59 archivos**, `--maxWorkers=2`,
+lint, build y diff check correctos. Queda pendiente la revisión de este diff
+por Claude; sus comprobaciones de 813 pruebas corresponden a `8db763e`.
+
+Se conserva la confirmación manual de Juan de crear Test Delete con saldo 10,
+cancelar y confirmar después en ordenador y teléfono en la versión anterior.
+No se atribuye una nueva prueba manual de borrado a esta candidata corregida.
+Safari/iPhone y gestos de la candidata final siguen pendientes, al igual que
+teclado móvil, movimiento reducido real y gráficas con lector de pantalla.
+El navegador integrado de Codex tuvo timeout; los recorridos Chromium de Claude
+no se extienden automáticamente a las correcciones posteriores a `8db763e`.
 Build conserva el aviso de tamaño del fragmento JavaScript. No se añadieron
 dependencias. No se hará push, merge a main ni despliegue sin autorización.
