@@ -13,7 +13,7 @@ import { Icon } from './components/Icon'
 import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
-import { clearGuideProgress, readGuideProgress, writeGuideProgress } from './data/uiPrefs'
+import { readHomeRings, writeHomeRings, clearGuideProgress, readGuideProgress, writeGuideProgress } from './data/uiPrefs'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
@@ -41,6 +41,7 @@ import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/
 import { NO_FILTER } from './domain/finance/history'
 import { monthIncome } from './domain/finance/income'
 import { matchesValidity } from './domain/finance/validity'
+import type { RingsView } from './features/home/GoalRings'
 import { HomeScreen, type HomeSpot } from './features/home/HomeScreen'
 import { ADD_LABELS, addChoices, type AddChoice } from './app/addMenu'
 import { MenuButton, type MenuOption } from './components/MenuButton'
@@ -151,6 +152,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [billId, setBillId] = useState<Id | null>(null)
   // The record History opens on (a purchase chosen on Home).
   const [historyFocus, setHistoryFocus] = useState<Id | null>(null)
+  const [ringsLocation, setRingsLocation] = useState<{ generation: number; view: RingsView } | null>(null)
+  const [showRings, setShowRings] = useState(() => readHomeRings(storage))
   const [chartView, setChartView] = useState<BillsChartView>(() => readChartView(storage))
   const [confirmReset, setConfirmReset] = useState(false)
   // Hidden amounts on Home and "Maybe Later" on the emergency fund: screen preferences of this device, never data.
@@ -964,7 +967,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         {open && <Fragment key={space.generation}>
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
-              <HomeScreen data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
+              <HomeScreen ringsView={ringsLocation?.generation === space.generation ? ringsLocation.view : 'all'} onRingsViewChange={view => setRingsLocation({ generation: space.generation, view })} showRings={showRings} newId={newId} data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 showAllBills={showAllBills} onShowAllBillsChange={changeShowAllBills}
                 onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => navigation.go(next))}
@@ -1054,7 +1057,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onShowGuide={() => changeGuide(resumeGuide())} onBack={back} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
-            <SettingsScreen data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}
+            <SettingsScreen showRings={showRings} onShowRingsChange={shown => { setShowRings(shown); writeHomeRings(storage, shown) }} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}
               onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onOpenHelp={() => openGuide()} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
               onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />

@@ -494,3 +494,80 @@ commits. Si aparece una divergencia inesperada se informa antes de resolverla.
 El resultado exacto de integración y push se comunica con los hashes de Git.
 Según DEVELOPMENT.md, Cloudflare Pages publica automáticamente main al recibir
 el push; no se ejecuta ni se modifica el despliegue manualmente.
+
+## Goal Rings: implementación local (4 de noviembre de 2026)
+
+Juan autorizó crear la rama e implementar el encargo local
+`review-deliveries/goal-rings/ENCARGO.md`. Editor: Codex; revisor previsto:
+Claude, tras el aviso de Juan. No hay autorización de commit, push, merge ni
+publicación para esta tarea.
+
+Git comprobado directamente por Codex: rama `codex/goal-rings-home`, base y
+HEAD `d825c7400e8706270c09e181b16254d773873a07`. Tras `git fetch origin`,
+`origin/main` coincide con esa base. Índice vacío; cambios de esta tarea sin
+preparar, incluidos los archivos nuevos. Se conservan todos los archivos ajenos
+sin seguimiento y las entregas anteriores.
+
+- Nuevo bloque de Home con anillos SVG, nombres seleccionables, paneles,
+  metas y formulario de Contribution compartido con GoalDetailScreen.
+- Settings: Show rings on Home, desactivado por defecto y recordado en este
+  dispositivo. No se modifica el menú ni las áreas existentes.
+- Usa addGoalMovement para assigned y new-savings, con vista previa del efecto,
+  elección de cuenta, validaciones y mensajes de guardado existentes. No hay
+  Undo en el flujo anterior; no se inventa uno.
+- Privacidad por área mediante amountVisibility: también se ocultan las formas,
+  porcentajes, vista previa y mensajes posteriores al guardado. Migas, Escape,
+  protección de borradores y restauración de foco; movimiento reducido.
+- Resúmenes por el mes y la fecha de saldos de Home; una meta abierta muestra su
+  estado actual, como Goals. Las metas no se suman a Savings.
+- Calendario de next payment y orientación por meses en el dominio; reutiliza
+  la programación de facturas. Regular solo se muestra si hay fuente e Irregular
+  si el ingreso está marcado extraordinary; en los demás casos se omite la etiqueta.
+- Vitest limita el descubrimiento a src: la primera ejecución completa intentó
+  ejecutar también snapshots de review-deliveries y se interrumpió. No se cambian
+  ni eliminan esas copias.
+
+Comprobaciones propias de Codex sobre el código final, Windows, 4 de noviembre:
+
+- Pruebas afectadas previas: 69/69 en 4 archivos; luego se añadió el caso de dos
+  cuentas, incluido en la ejecución completa final.
+- `npm test -- --maxWorkers=2`: 839/839, 61 archivos, 204,60 s. Avisos conocidos
+  de jsdom sobre scrollTo y navegación, sin fallos.
+- `npm run lint`, `npm run build` y `git diff --check`: correctos.
+  Build: aviso conocido de fragmento >500 kB; JS comprimido 197,42 kB.
+- `npm audit`: 12 avisos moderados en dependencias de desarrollo, sin modificar
+  dependencias. `npm audit --omit=dev`: 0 vulnerabilidades. No se presenta el
+  audit completo como correcto ni se aplica audit fix.
+- Navegador integrado: tras fallar el acceso inicial, servidor local accesible
+  en 127.0.0.1:5196. Se abrió el prototipo local y la app; revisión a 1280×900
+  y 390×844, modo claro/oscuro, Bills por su nombre, centro siempre Goals,
+  Contribution ficticia new-savings de 25 (meta 1800→1825; Savings 2900→2925),
+  regreso y ocultación de cifras/arco/porcentajes/formulario. A 390 px se comprobó
+  ausencia de desbordamiento horizontal (scrollWidth 375, viewport 390).
+  Son verificaciones de Codex, no confirmaciones manuales de Juan.
+
+Resumen de trabajo y recorrido de Juan:
+`review-deliveries/goal-rings/WORKING.md`. Logs y capturas al lado. Es material
+mutable, no una entrega fija. Pendientes: prueba manual de Juan en ordenador y
+móvil real, Safari/iPhone, tacto/teclado móvil, lector de pantalla y movimiento
+reducido real; revisión de Claude. La cobertura de assigned y movimiento reducido
+es automática, sin atribuirla al recorrido de navegador anterior.
+
+Siguiente paso: Juan prueba y autoriza el commit cuando proceda. Después Codex
+creará la entrega fija por hash según WORKFLOW.md, sin sobrescribir ENCARGO,
+prototipo ni entregas previas. No se hizo commit, push, merge ni despliegue.
+## Goal Rings: commit autorizado para revisión (4 de noviembre de 2026)
+
+Juan autoriza guardar el commit y preparar la entrega fija para Claude. Esta
+indicación sustituye únicamente el pendiente de autorización de commit del
+apartado anterior. No autoriza push, merge a main ni despliegue, y no confirma
+las pruebas manuales pendientes.
+
+Codex guarda solo los 15 archivos de implementación, pruebas, configuración y
+WORK_STATUS de esta tarea. ENCARGO, prototipo, logs, capturas, material de revisión
+y demás archivos ajenos sin seguimiento quedan fuera del commit. Se reutilizan
+los resultados propios anteriores de 839 pruebas, lint y build: en este paso
+solo se añade esta anotación documental, sin cambiar código ni dependencias.
+La entrega fija se genera del commit final completo en
+`review-deliveries/goal-rings/<hash-final-completo>/`, con base exacta, diff,
+copias del commit, evidencia y ruta exclusiva para REVISION.md de Claude.

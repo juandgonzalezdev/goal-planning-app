@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
-import { HelpTip } from '../../components/HelpTip'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
-import { addGoalMovement, deleteGoal, goalMovementsOf, goalProgress, goalSaved, updateGoal, type MovementError, type MovementKind } from '../../domain/finance/goals'
-import { savingsSummary } from '../../domain/finance/savings'
+import { deleteGoal, goalMovementsOf, goalProgress, updateGoal } from '../../domain/finance/goals'
 import { ownerColor } from '../../domain/finance/space'
-import type { FinanceData, Goal, MovementEffect } from '../../domain/finance/types'
+import type { FinanceData, Goal } from '../../domain/finance/types'
 import { formatAmount, formatDate } from '../../ui/format'
 import { EFFECT_NAMES } from '../../ui/labels'
 import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { useEditBase, useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
+import { GoalMovementForm, type GoalMovementHandle } from './GoalMovementForm'
 import { GoalFormFields } from './GoalFormFields'
-import { draftFromGoal, NOTE_MAX_LENGTH, readGoalDraft, readMovementDraft, type GoalDraft, type GoalDraftErrors, type MovementDraft, type MovementDraftErrors } from './goalDraft'
+import { draftFromGoal, readGoalDraft, type GoalDraft, type GoalDraftErrors } from './goalDraft'
 import { GoalExplore } from './GoalExplore'
 import { GoalPace } from './GoalPace'
 import { emergencyCover } from '../../domain/finance/emergency'
@@ -48,33 +47,23 @@ function daysLeftText(days: number | null, today: CalendarDate, isDemo: boolean)
  * between purposes never makes Savings grow.
  */
 export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onChange, onDeleted, onReviewEmergency }: Props) {
+  const movementRef = useRef<GoalMovementHandle>(null)
   const currency = data.space.currency
   const money = (minor: number) => formatAmount(minor, currency)
   const progress = goalProgress(goal, data.goalMovements, today)
   const activity = goalMovementsOf(data.goalMovements, goal.id).reverse()
-  const savings = savingsSummary(data)
-  const savingsAccounts = data.moneyAccounts.filter(account => account.kind === 'savings')
-  const hasAccounts = savingsAccounts.length > 0
   const isEmergency = goal.kind === 'emergency'
 
-  const defaultEffect = (kind: MovementKind): MovementEffect =>
-    kind === 'contribution' ? (hasAccounts ? 'new-savings' : 'assigned') : 'unassigned'
-  const emptyMovement = (kind: MovementKind): MovementDraft => ({ kind, amount: '', date: today, note: '' })
-  const [movement, setMovement] = useState<MovementDraft>(() => emptyMovement('contribution'))
-  const [effect, setEffect] = useState<MovementEffect>(() => defaultEffect('contribution'))
-  const [accountId, setAccountId] = useState(savingsAccounts[0]?.id ?? '')
-  const [movementErrors, setMovementErrors] = useState<MovementDraftErrors & { saved?: string }>({})
-  const [savedMessage, setSavedMessage] = useState('')
   const [reachedNow, setReachedNow] = useState(false)
   const [editing, setEditing] = useState<GoalDraft | null>(null)
   const [editErrors, setEditErrors] = useState<GoalDraftErrors>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
-  // The revision this screen (Add or Take Out) and the goal editor were opened on.
+  // The revision used when deleting this goal; the editor records its own base.
   const base = useEditBase()
   const [editBase, setEditBase] = useState(revision)
-  const [sending, setSending] = useState<'movement' | 'edit' | 'delete' | null>(null)
+  const [sending, setSending] = useState<'edit' | 'delete' | null>(null)
   const [refusal, setRefusal] = useState<{ what: 'edit' | 'delete'; text: string } | null>(null)
   // The record chosen on the chart, shown in Savings Activity ('opening' for what was already saved).
   const [shownRecord, setShownRecord] = useState<{ key: string } | null>(null)
@@ -84,55 +73,12 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
     row?.focus({ preventScroll: true })
     row?.scrollIntoView?.({ block: 'center' })
   }, [shownRecord])
-  // A movement counts once something is typed in it; the goal's edit form, once it differs from the goal.
-  const typedMovement = movement.amount.trim() !== '' || movement.note.trim() !== ''
-  useUnsavedChanges(`Goal movement: ${goal.name}`, typedMovement ? {
-    'Kind': movement.kind, 'Amount': movement.amount, 'Date': movement.date, 'Note': movement.note,
-    'Account': savingsAccounts.find(account => account.id === accountId)?.name,
-  } : null, {})
+  // The goal editor counts as modified once it differs from the goal.
   useUnsavedChanges(`Edit goal: ${goal.name}`, editing ? { 'Name': editing.name, 'Target': editing.target, 'Has a date': editing.dated, 'Date': editing.dated ? editing.deadline : '' } : null)
   /** Saves one change; what was typed stays when it is not kept. */
   const send = async (what: NonNullable<typeof sending>, run: () => Promise<SaveOutcome>) => {
     setSending(what)
     return run().finally(() => setSending(null))
-  }
-
-  const errorText = (error: MovementError) => {
-    const account = savingsAccounts.find(a => a.id === accountId)
-    switch (error) {
-      case 'more-than-saved': return `You can take out up to ${money(progress.saved)}, what is saved in this goal.`
-      case 'more-than-unassigned': return (savings.unassigned ?? 0) <= 0
-        ? 'All your savings already have a purpose. Reduce another allocation first, or choose New savings if you’re adding new money.'
-        : `Only ${money(savings.unassigned ?? 0)} of your savings has no purpose yet. Move that much or less, or choose New savings if you’re adding new money.`
-      case 'account-balance-unknown': return `Enter the balance of ${account?.name ?? 'the savings account'} in Money first.`
-      case 'before-balance-date': return `${account?.name ?? 'The account'} has a balance from a later date. Use that date or a later one.`
-      case 'more-than-account': return `${account?.name ?? 'The account'} does not hold that much.`
-      default: return 'This could not be saved. Check the amount and date.'
-    }
-  }
-
-  const saveMovement = async () => {
-    setSavedMessage('')
-    const read = readMovementDraft(movement, today)
-    if (read.status === 'invalid') { setMovementErrors(read.errors); return }
-    const needsAccount = effect === 'new-savings' || effect === 'taken-out'
-    const result = addGoalMovement(data, {
-      id: newId(), goalId: goal.id, effect, amount: read.amount, date: read.date, note: read.note,
-      ...(needsAccount ? { accountId } : {}),
-    })
-    if (result.status === 'rejected') { setMovementErrors({ amount: errorText(result.error) }); return }
-    const outcome = await send('movement', () => onChange(result.data, base))
-    // The message only says what was confirmed as saved; the bar then moves from the old amount to the new one.
-    const after = goalSaved(goal, result.data.goalMovements)
-    const how = EFFECT_NAMES[effect].toLowerCase()
-    setSavedMessage(outcomeText(movement.kind === 'contribution'
-      ? `Added ${money(read.amount)} to ${goal.name} (${how}).`
-      : `Took out ${money(read.amount)} (${how}). ${goal.name} now has ${money(after)}.`, outcome))
-    if (!isKept(outcome)) return
-    // Goal reached: once, when this contribution takes it to its target.
-    setReachedNow(goal.target !== null && progress.saved < goal.target && after >= goal.target)
-    setMovementErrors({})
-    setMovement(emptyMovement(movement.kind))
   }
 
   const saveEdit = async () => {
@@ -152,20 +98,6 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
     const outcome = await send('delete', () => onDeleted(deleteGoal(data, goal.id), base))
     if (!isKept(outcome)) setRefusal({ what: 'delete', text: outcomeText('', outcome) })
   }
-
-  const kindButton = (kind: MovementKind, label: string) => (
-    <button type="button" aria-pressed={movement.kind === kind} className={movement.kind === kind ? 'is-active' : ''}
-      onClick={() => { setMovement({ ...movement, kind }); setEffect(defaultEffect(kind)); setMovementErrors({}); setSavedMessage('') }}>{label}</button>
-  )
-  const effectOption = (value: MovementEffect, label: string, help: string, disabled = false) => (
-    <label className={`effect-option${disabled ? ' is-disabled' : ''}`}>
-      <input type="radio" name="movement-effect" value={value} checked={effect === value} disabled={disabled} onChange={() => { setEffect(value); setMovementErrors({}) }} />
-      <span><b>{label}</b><small>{help}</small></span>
-    </label>
-  )
-  const fieldError = (id: string, text?: string) => text && <p id={id} className="field-error">{text}</p>
-  const unassignedText = savings.unassigned === null ? 'not known' : money(Math.max(savings.unassigned, 0))
-  const needsAccount = effect === 'new-savings' || effect === 'taken-out'
 
   return (
     <div className="tab-screen">
@@ -198,64 +130,13 @@ export function GoalDetailScreen({ data, goal, today, isDemo, newId, onBack, onC
 
       <GoalSavedOverTime data={data} goal={goal} today={today} money={money} onShowRecord={key => setShownRecord({ key })}
         onAddContribution={() => {
-          setMovement({ ...movement, kind: 'contribution' }); setEffect(defaultEffect('contribution'))
+          movementRef.current?.addContribution()
           const input = document.getElementById('move-amount')
           input?.focus({ preventScroll: true }); input?.scrollIntoView?.({ block: 'center' })
         }} />
 
-      <section className="block" aria-labelledby="goal-move">
-        <h2 id="goal-move" className="section-title">Add or Take Out</h2>
-        <div className="month-switch" role="group" aria-label="Type of change">
-          {kindButton('contribution', 'Add')}
-          {kindButton('withdrawal', 'Withdraw')}
-        </div>
-        <fieldset className="effect-list">
-          <legend>{movement.kind === 'contribution' ? 'Where is the money from?' : 'Where does the money go?'}</legend>
-          {movement.kind === 'contribution' ? <>
-            {effectOption('new-savings', 'New savings', 'Money you saved now. It adds to your Savings once.', !hasAccounts)}
-            {effectOption('assigned', 'Savings I already have', `Gives a purpose to unassigned savings (${unassignedText}). Savings stay the same.`)}
-          </> : <>
-            {effectOption('unassigned', 'Back to unassigned savings', 'The money stays in Savings, with no purpose. Savings stay the same.')}
-            {effectOption('taken-out', 'Out of my savings', 'You spent it or moved it out of Savings. Savings go down.', !hasAccounts)}
-          </>}
-        </fieldset>
-        {movement.kind === 'contribution' && <div className="help-tips"><HelpTip topic="new-savings" label /></div>}
-        {!hasAccounts && <p className="field-help">No savings account is entered, so only the goal is recorded. Add your savings account in Money to see your savings divided by purpose.</p>}
-        <div className="form-stack">
-          {needsAccount && savingsAccounts.length > 1 && (
-            <div className="form-field">
-              <label htmlFor="move-account">Savings Account</label>
-              <select id="move-account" value={accountId} onChange={e => setAccountId(e.target.value)}>
-                {savingsAccounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
-              </select>
-            </div>
-          )}
-          {needsAccount && savingsAccounts.length === 1 && <p className="field-help">Savings account: {savingsAccounts[0].name}</p>}
-          <div className="form-field">
-            <label htmlFor="move-amount">Amount ({currency})</label>
-            <input id="move-amount" inputMode="decimal" value={movement.amount} aria-invalid={!!movementErrors.amount} aria-describedby={movementErrors.amount ? 'move-amount-error' : undefined}
-              onChange={e => setMovement({ ...movement, amount: e.target.value })} />
-            {fieldError('move-amount-error', movementErrors.amount)}
-          </div>
-          <div className="form-field">
-            <label htmlFor="move-date">Date</label>
-            <input id="move-date" type="date" value={movement.date} max={today} aria-invalid={!!movementErrors.date} aria-describedby={movementErrors.date ? 'move-date-error' : undefined}
-              onChange={e => setMovement({ ...movement, date: e.target.value })} />
-            {fieldError('move-date-error', movementErrors.date)}
-          </div>
-          <div className="form-field">
-            <label htmlFor="move-note">Note (optional)</label>
-            <input id="move-note" value={movement.note} maxLength={NOTE_MAX_LENGTH} aria-invalid={!!movementErrors.note} aria-describedby={movementErrors.note ? 'move-note-error' : undefined}
-              onChange={e => setMovement({ ...movement, note: e.target.value })} />
-            {fieldError('move-note-error', movementErrors.note)}
-          </div>
-        </div>
-        <button type="button" className="button-small button-small-primary align-start" aria-disabled={blocked || undefined} onClick={() => void saveMovement()}>
-          {sending === 'movement' ? 'Saving…' : `Save ${movement.kind === 'contribution' ? 'Contribution' : 'Withdrawal'}`}
-        </button>
-        <p className="muted-note" role="status">{savedMessage}</p>
-        <p className="muted-note">This records the change. No money is moved between accounts and nothing is paid automatically.</p>
-      </section>
+      <GoalMovementForm ref={movementRef} data={data} goal={goal} today={today} newId={newId} onChange={onChange}
+        onSaved={(_amount, before, after) => setReachedNow(goal.target !== null && before < goal.target && after >= goal.target)} />
 
       <section className="block" aria-labelledby="goal-edit">
         <h2 id="goal-edit" className="section-title">{isEmergency ? 'Remove' : 'Edit Goal'}</h2>

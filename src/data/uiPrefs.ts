@@ -135,3 +135,12 @@ export function clearGuideProgress(storage: Storage | null): void {
     // Nothing to forget.
   }
 }
+
+const RINGS_KEY = 'goal-planning-app.home-rings'
+/** Optional Home experiment, off until enabled on this device. */
+export function readHomeRings(storage: Storage | null): boolean {
+  try { return storage?.getItem(RINGS_KEY) === 'yes' } catch { return false }
+}
+export function writeHomeRings(storage: Storage | null, shown: boolean): void {
+  try { storage?.setItem(RINGS_KEY, shown ? 'yes' : 'no') } catch { /* Session only. */ }
+}

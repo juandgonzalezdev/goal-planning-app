@@ -1,0 +1,50 @@
+.goal-rings { overflow: hidden; }
+.rings-crumbs { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.rings-crumbs button { min-height:44px; background:none; border:0; color:var(--color-text); text-decoration:underline; }
+.rings-layout { display:grid; grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:24px; align-items:start; }
+.rings-stage { width:100%; aspect-ratio:1; position:relative; align-self:start; }
+.rings-stage > svg { position:absolute; inset:0; width:100%; height:100%; }
+.rings-bands { transform-origin:200px 200px; transition:transform 420ms var(--motion-ease),opacity 420ms var(--motion-ease); }
+.is-goal .rings-bands { transform:scale(1.22); opacity:0; pointer-events:none; }
+.rings-band { transition:opacity 420ms var(--motion-ease); }
+.has-selection .rings-band:not(.is-selected):not(.is-hover) { opacity:.42; }
+.rings-band-track,.rings-band-sweep { fill:none; stroke:var(--color-ring-band); stroke-width:34; stroke-linecap:round; }
+.rings-band-sweep { stroke:var(--color-ring-selected); stroke-dasharray:100 100; stroke-dashoffset:100; transition:stroke-dashoffset 700ms var(--motion-ease); }
+.rings-band.is-selected .rings-band-sweep { stroke-dashoffset:0; }
+.rings-band.is-hover .rings-band-track { stroke:var(--color-ring-hover); }
+.rings-hit { fill:none; stroke:transparent; stroke-width:42; pointer-events:stroke; cursor:pointer; }
+.rings-label-hit { fill:transparent; pointer-events:all; cursor:pointer; }
+.rings-band text { text-anchor:middle; dominant-baseline:central; font-size:12px; font-weight:600; fill:var(--color-text); pointer-events:none; }
+.rings-core { position:absolute; width:29%; height:29%; left:35.5%; top:35.5%; border-radius:50%; border:1px solid var(--color-border-strong); background:var(--color-surface); color:var(--color-text); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; cursor:pointer; }
+.rings-core.is-selected { background:var(--color-accent-soft); border-color:var(--color-progress); }
+.rings-core span { font-size:clamp(10px,1.4vw,14px); font-weight:600; }
+.rings-core small { font-size:10px; max-width:90px; }
+.rings-goal-center { position:absolute; inset:22%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; overflow-wrap:anywhere; }
+.rings-goal-center strong { font-size:clamp(18px,2.5vw,28px); }
+.rings-progress-track,.rings-progress-value,.rings-progress-new { fill:none; stroke-width:20; }
+.rings-progress-track { stroke:var(--color-track); }
+.rings-progress-value { stroke:var(--color-progress); transition:stroke-dashoffset 700ms var(--motion-ease); }
+.rings-progress-value.draw-on-open { animation:rings-draw 700ms var(--motion-ease); }
+.rings-progress-new { stroke:var(--color-progress-new); }
+@keyframes rings-draw { from { stroke-dashoffset:100; } to { stroke-dashoffset:var(--progress-offset); } }
+.rings-panel { min-width:0; display:grid; gap:12px; animation:rings-panel-in 420ms var(--motion-ease); }
+@keyframes rings-panel-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.rings-area-list { display:grid; gap:8px; }
+.rings-area { min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); color:var(--color-text); text-align:left; cursor:pointer; }
+.rings-area span { min-width:0; overflow-wrap:anywhere; }
+.rings-area small { display:block; color:var(--color-text-muted); font-size:12px; margin-top:4px; }
+.rings-area b { flex-shrink:0; }
+.rings-area.is-selected,.rings-area:hover,.rings-area:focus-visible { background:var(--color-accent-soft); border-color:var(--color-selected-border); }
+.rings-main-value { font-size:24px; font-weight:600; }
+.rings-split { height:12px; border-radius:6px; background:var(--color-track); overflow:hidden; }
+.rings-split i { display:block; height:100%; background:var(--color-progress); }
+.rings-mini { width:40px; height:40px; flex-shrink:0; fill:none; stroke:var(--color-track); stroke-width:4; }
+.rings-mini .rings-mini-value { stroke:var(--color-progress); }
+.rings-timeline { border-block:1px solid var(--color-border); padding:12px 0; }
+.rings-added { color:var(--color-text); font-weight:600; }
+@media (max-width:700px) { .rings-layout { grid-template-columns:minmax(0,1fr); } .rings-stage { max-width:400px; justify-self:center; } }
+@media (prefers-reduced-motion:reduce) {
+  .goal-rings *, .goal-rings *::before, .goal-rings *::after { animation:none !important; transition:none !important; }
+}
+
+.goal-rings.is-reduced-motion *, .goal-rings.is-reduced-motion *::before, .goal-rings.is-reduced-motion *::after { animation:none !important; transition:none !important; }

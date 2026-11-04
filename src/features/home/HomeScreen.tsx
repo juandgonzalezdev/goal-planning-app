@@ -10,6 +10,7 @@ import { HomeAmountsEye } from '../../ui/privacy'
 import type { ChangeSpace } from '../../ui/saveOutcome'
 import { formatDate, formatYearMonth } from '../../ui/format'
 import { Icon } from '../../components/Icon'
+import { GoalRings, type RingsView } from './GoalRings'
 import { LeftToPay } from './LeftToPay'
 import { MonthSummary } from './MonthSummary'
 import { SpendingByCategory } from './SpendingByCategory'
@@ -33,6 +34,10 @@ export interface HomeSpot { area?: HomeArea; section?: HomeSection; key?: string
 /** What + Add opens: the forms that already exist in Money, History, Bills and Goals. */
 
 type Props = {
+  ringsView?: RingsView
+  onRingsViewChange?: (view: RingsView) => void
+  showRings?: boolean
+  newId?: () => string
   data: FinanceData
   months: YearMonth[]
   month: YearMonth
@@ -248,6 +253,14 @@ export function HomeScreen(props: Props) {
       </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
       {!customizing && guide}
+      {props.showRings && <GoalRings view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
+        onChange={(next, base) => props.onChange(() => next, base)}
+        onOpen={area => {
+          const spot: HomeSpot = { key: 'rings-open' }
+          if (area === 'income') props.onOpenIncome(month, spot)
+          else if (area === 'debts') props.onOpenMoneyBlock('debts', spot)
+          else props.onOpen(area, spot)
+        }} />}
       <HomeBlocksContext.Provider value={control}>
         <div className={`home-blocks${customizing ? ' is-customizing' : ''}${drag?.started ? ' is-dragging' : ''}`} ref={blocksRef}>
           {layout.order.map(area => <div key={area} className="home-block-slot">{areas[area]}</div>)}

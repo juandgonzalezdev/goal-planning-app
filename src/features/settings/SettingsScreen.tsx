@@ -16,6 +16,8 @@ import { ReportSection } from './ReportSection'
 const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
 
 type Props = {
+  showRings?: boolean
+  onShowRingsChange?: (shown: boolean) => void
   data: FinanceData
   isDemo: boolean
   /** For Reports & Backup: the months the report can cover, the month chosen, and today. */
@@ -47,7 +49,7 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
   'busy': 'Still saving the last change. Try again in a moment.',
 }
 
-export function SettingsScreen({ data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
+export function SettingsScreen({ showRings = false, onShowRingsChange, data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [eraseText, setEraseText] = useState('')
   const [themeText, setThemeText] = useState('')
@@ -97,6 +99,7 @@ export function SettingsScreen({ data, isDemo, months, month, today, onReplace, 
         </dl>
         <p className="field-help">Chosen when the space was created. Amounts are never converted.</p>
         <div className="form-stack">
+          {onShowRingsChange && <label className="effect-option"><input type="checkbox" checked={showRings} onChange={event => onShowRingsChange(event.target.checked)} /><span><b>Show rings on Home</b><small>Optional map of your money and goals, on this device.</small></span></label>}
           <LanguageSelect />
           <ThemeSelect value={data.preferences.theme} onChange={theme => void changeTheme(theme)} />
         </div>
