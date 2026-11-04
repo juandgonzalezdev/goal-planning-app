@@ -19,18 +19,24 @@ AGENTS.md es la fuente de reglas comunes; CLAUDE.md remite a ella sin duplicarla
 - Las comprobaciones del índice corresponden al editor con acceso a Git.
 - Preserva los cambios existentes, incluidos los archivos sin seguimiento.
   No los sobrescribas, descartes ni incluyas en otra tarea por iniciativa propia.
-- Un solo asistente modifica cada tarea; el otro revisa. Antes de editar,
-  deja claro quién modifica y quién revisa. El revisor no modifica archivos
-  ni el índice de Git; entrega sus observaciones al editor a través de Juan.
-- En su entorno actual, Claude actúa como revisor de solo lectura del material
-  recibido. No se le atribuye capacidad para ejecutar pruebas ni comandos locales.
-- No presupongas conversaciones, carpetas ni acceso compartidos entre asistentes.
-  Usa la entrega y la ubicación de revisiones definidas en `docs/WORKFLOW.md`.
+- Un solo asistente edita el código por tarea: Codex implementa y corrige;
+  Claude revisa. Claude solo puede escribir su informe en la ubicación acordada
+  en `review-deliveries/`; no modifica código, documentación común, pruebas,
+  entregas del editor ni el índice de Git.
+- Claude confirmó lectura y escritura local en
+  [review-deliveries/claude-local-access.md](review-deliveries/claude-local-access.md),
+  sin ejecución de comandos. Codex proporciona el estado de Git y las
+  comprobaciones; Claude los identifica como información recibida. Leer
+  `.git/HEAD` no equivale a comprobar el estado, el índice o los commits con Git.
+- Con acceso local confirmado, usar directamente las entregas fijas por commit
+  y los informes en `review-deliveries/`, según `docs/WORKFLOW.md`, sin exigir
+  ZIP ni adjuntos. No presumir acceso a conversaciones o a otras carpetas.
+  Juan comunica cuándo está lista cada entrega o revisión.
 - Si Juan pausa una tarea, conserva sus archivos y su contenido preparado.
   No cambies el índice ni reanudes esa tarea sin indicación de Juan. Los cambios
   de otra tarea quedan separados y sin preparar si ese es el alcance autorizado.
-- Respeta el alcance indicado por Juan. No hagas commit, push ni merge sin
-  indicación de Juan.
+- Respeta el alcance indicado por Juan. No hagas commit, push, merge a main
+  ni despliegue sin su autorización.
 
 ## Datos y comprobaciones
 

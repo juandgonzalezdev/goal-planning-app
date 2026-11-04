@@ -13,11 +13,12 @@ las confirmaciones y los pendientes; no se duplican aquí.
 2. **Implementación y pruebas de Codex.** Codex actúa como editor en el flujo
    habitual. Implementa el alcance y entrega
    un diff identificable junto con las comprobaciones necesarias.
-3. **Revisión de Claude.** Claude revisa exactamente la entrega recibida,
+3. **Revisión de Claude.** Tras el aviso de Juan, Claude lee la entrega fija,
    en el rol y con las limitaciones de acceso definidos en AGENTS.md.
    Señala errores y riesgos con
    referencias a archivos y líneas, efecto observable y reproducción propuesta.
    Distingue hallazgos de inspección, hipótesis y resultados recibidos del editor.
+   Escribe únicamente el informe acordado; Juan avisa a Codex cuando está listo.
 4. **Correcciones.** El mismo editor resuelve los hallazgos y comunica para cada
    uno la corrección y su evidencia, o el motivo por el que sigue pendiente.
    El revisor inspecciona el diff actualizado recibido. Un cambio de alcance
@@ -43,27 +44,50 @@ Cada entrega debe ser autosuficiente y contener:
 | Limitaciones | Qué no se ejecutó, incidencias abiertas, riesgos y pruebas manuales pendientes. |
 | Siguiente paso | Quién debe actuar, qué revisar o probar y qué autorización falta. |
 
-Si no hay commit, adjuntar el diff correspondiente y el contenido de los archivos
-nuevos: un hash de base no describe los cambios locales. Identificar la versión
-de esa entrega para que una revisión no se atribuya a cambios posteriores.
+Codex proporciona el estado de Git comprobado y fija cada entrega a un commit
+final completo, con su base exacta. Si todavía no hay commit, no se anuncia como
+entrega fija: el trabajo queda en curso hasta que Juan autorice guardarlo.
 Aplicar las reglas de alcance y datos de AGENTS.md.
 
-## Ubicación y transporte de revisiones
+## Entregas e informes con acceso local
 
-Las revisiones se entregan como **archivo adjunto** a Juan, que lo proporciona
-a Codex. Cuando Juan lo solicite, Codex puede copiar el adjunto a
-`docs/reviews/REVISION-<tarea>.md` (por ejemplo, `REVISION-03.md`), conservando
-autor, fecha, alcance y limitaciones del informe original. No se guarda una
-revisión en el repositorio por iniciativa propia.
+El acceso confirmado está documentado en
+[claude-local-access.md](../review-deliveries/claude-local-access.md).
+Se trabaja directamente en `review-deliveries/`, sin exigir ZIP ni adjuntos
+cuando ambos asistentes puedan acceder. Esta ubicación sustituye a
+`docs/reviews/` para las nuevas revisiones locales; los paquetes anteriores
+conservan su valor como entregas históricas.
 
-Antes de revisar, el revisor verifica que ha recibido AGENTS.md y la entrega
-autosuficiente descrita arriba. Una ruta local o un enlace a otra conversación
-no garantiza acceso. Si falta material imprescindible, lo pide a Juan;
-no presupone que pueda consultar carpetas o ejecutar comandos del editor.
+Para cada tarea, Codex crea `review-deliveries/<tarea>/<commit-final-completo>/`:
 
-El informe identifica tarea, autor, fecha, rama, base y versión del diff revisado.
+- `DELIVERY.md`: la entrega autosuficiente de la tabla anterior y la ruta
+  exacta en la que Claude debe escribir su informe.
+- `GIT_STATUS.md`: estado, rama, HEAD, base y contenido preparado comprobados
+  por Codex, con fecha y límites de la consulta. Los cambios locales ajenos
+  a la entrega se identifican y no se incluyen en el snapshot revisado.
+- `changes.diff`: diff completo base..final, incluidos archivos nuevos.
+- `files/`: copias de los archivos cambiados obtenidas del commit final;
+  cualquier archivo adicional necesario se obtiene del mismo commit.
+
+Codex deja fijos los archivos de entrega. Si cambia el contenido, crea otra
+entrega con el nuevo commit final, sin sobrescribir la anterior. Claude revisa
+esas copias y ese diff, aunque el código de la carpeta de trabajo haya avanzado.
+No se incluye `review-deliveries/` en commits de la app por iniciativa propia.
+
+La única escritura de Claude para esa revisión es
+`review-deliveries/<tarea>/<commit-final-completo>/REVISION.md`. Codex no edita
+ese informe: resuelve los hallazgos en código y devuelve una nueva entrega.
+El informe identifica autor, fecha, alcance base..final y limitaciones.
 Cada hallazgo incluye prioridad, referencia, problema, efecto y comprobación
 propuesta. La entrega posterior relaciona cada hallazgo con su resolución.
+
+Juan comunica que la entrega está lista indicando la ruta, y después que la
+revisión está lista indicando la ruta del informe. No se presupone que los
+asistentes compartan conversaciones ni se envían mensajes entre ellos por
+iniciativa propia. Antes de revisar, Claude comprueba que puede leer los archivos
+indicados. Si pierde acceso, lo comunica a Juan; un adjunto queda como alternativa,
+no como requisito del flujo local. Codex tampoco da por leído un informe que
+no haya abierto.
 
 ## Comprobaciones sin repeticiones innecesarias
 
