@@ -643,3 +643,41 @@ solo se añade este registro documental antes del commit. La nueva entrega fija
 usará como base 03e66bb558bfa4b069c0e303b1e5d213971f925c y el nuevo hash final,
 sin alterar el informe ni las copias anteriores. Los archivos ajenos sin
 seguimiento y todo review-deliveries quedan fuera del commit.
+## Goal Rings: P3-5, ahorro sin asignar (4 de noviembre de 2026)
+
+Codex leyó directamente
+`review-deliveries/goal-rings/2fcde466561166bbf8afd35f29d3f94adb836b91/REVISION.md`.
+Claude considera resueltos los cuatro hallazgos previos y comunica P3-5 en la
+fila Unassigned savings. Sus pruebas son del revisor, no confirmaciones de Juan.
+Juan solicita corregirlo y autoriza expresamente el commit y una nueva entrega
+fija. No autoriza push, merge ni despliegue.
+
+Git comprobado al empezar: codex/goal-rings-home, HEAD 2fcde466561166bbf8afd35f29d3f94adb836b91,
+índice vacío y sin cambios versionados. Se preservan los archivos ajenos sin
+seguimiento y todas las entregas e informes anteriores.
+
+- La fila Unassigned savings compara antes y después mediante savingsSummary,
+  como las cuentas: si coinciden, «· no change» sin flecha; si difieren, «→».
+  Se reutiliza previewSavings ya calculado. No cambia cálculo ni guardado.
+- Prueba parametrizada con New savings (no change, sin flecha) y Savings I
+  already have (flecha, sin no change, importe esperado). No guarda datos.
+- Antes del arreglo: New savings falló; Savings I already have pasó (18 pruebas
+  omitidas por el filtro). Evidencia original: p3-5-before.json.
+- Después: npm test -- src/GoalRings.test.tsx src/LeaveForms.test.tsx
+  src/AlexDemo.test.tsx --maxWorkers=2: 71/71 en 3 archivos, 33,77 s.
+- npm run lint, npm run build y git diff --check: correctos. Build conserva
+  aviso de fragmento >500 kB; comprimido 197,46 kB.
+- Resultados propios de Codex, Windows, 4 de noviembre; logs p3-5-*.log en
+  review-deliveries/goal-rings/. No hay nueva comprobación en navegador ni
+  confirmación manual de Juan. Se conservan los pendientes de prueba manual,
+  animaciones/contador y dispositivos reales descritos anteriormente.
+- Por ser un cambio localizado de presentación sin dependencias ni lógica
+  financiera, no se repite la suite completa ni audit. 839/839 corresponde a
+  03e66bb; 69/69 corresponde a 2fcde46. No son ejecuciones sobre P3-5.
+  El audit anterior conserva sus 12 moderados de desarrollo y 0 de producción.
+
+Se guardan únicamente GoalMovementForm.tsx, GoalRings.test.tsx y este registro.
+La nueva entrega fija toma 2fcde466561166bbf8afd35f29d3f94adb836b91 como base y
+el nuevo commit completo como extremo. No se incluyen review-deliveries ni
+archivos ajenos en el commit. Claude escribirá solo REVISION.md en la nueva
+carpeta después del aviso de Juan. Sin push, merge ni despliegue.

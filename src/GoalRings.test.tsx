@@ -148,6 +148,24 @@ describe('optional Goal Rings on Home', () => {
     expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('core')
   })
 
+  it.each(['New savings', 'Savings I already have'] as const)('explains the unassigned savings effect of %s before saving', effect => {
+    const harness = mount(); openBooks(); fireEvent.click(button('Add Contribution'))
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${effect}`) }))
+    fireEvent.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
+    const preview = screen.getByLabelText('Effect before saving')
+    const row = within(preview).getByText('Unassigned savings', { selector: 'dt' }).parentElement!
+    expect(row.textContent).toContain(money(savingsSummary(harness.data()).unassigned!))
+    if (effect === 'New savings') {
+      expect(row.textContent).toContain('no change')
+      expect(row.textContent).not.toContain('→')
+    } else {
+      expect(row.textContent).toContain('→')
+      expect(row.textContent).not.toContain('no change')
+      expect(row.textContent).toContain(money(savingsSummary(harness.data()).unassigned! - 2500))
+    }
+    expect(harness.saved).not.toHaveBeenCalled()
+  })
+
   it('new savings increases the account and the goal once, without counting the goal on top', async () => {
     const harness = mount(); const before = savingsSummary(harness.data()).total!
     openBooks(); await contribute('New savings')

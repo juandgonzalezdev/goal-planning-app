@@ -158,7 +158,7 @@ export function GoalMovementForm({ ref, data, goal, today, newId, onChange, cont
         </div>
         {preview?.status === 'ok' && <dl className="fact-rows" aria-label="Effect before saving">
           <div><dt>Goal</dt><dd>{money(progress.saved)} → {money(goalSaved(goal, preview.data.goalMovements))}</dd></div>
-          <div><dt>Unassigned savings</dt><dd>{money(savings.unassigned)} → {money(savingsSummary(preview.data).unassigned)}</dd></div>
+          <div><dt>Unassigned savings</dt><dd>{money(savings.unassigned)}{savings.unassigned === previewSavings?.unassigned ? ' · no change' : <> → {money(previewSavings?.unassigned ?? null)}</>}</dd></div>
           {savings.accounts.map(item => {
             const after = previewSavings?.accounts.find(a => a.account.id === item.account.id)?.balance ?? null
             return <div key={item.account.id}><dt>{item.account.name}</dt><dd>{money(item.balance)}{item.balance === after ? ' · no change' : <> → {money(after)}</>}</dd></div>
