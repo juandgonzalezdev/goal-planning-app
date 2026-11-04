@@ -88,7 +88,10 @@ export function LeftToPay({ data, month, today, isDemo, showAll, onShowAllChange
           onSaved={done => { setPaying(null); setPaidNote({ month, text: done }); focusNote.current = true }} onCancel={() => setPaying(null)} />
         : <div className="pay-row-actions">
           <button type="button" className="text-button" aria-label={`Mark as Paid: ${occurrence.bill.name}, ${formatYearMonth(month)}`}
-            onClick={() => { focusNote.current = false; setPaying({ month, billId: occurrence.bill.id }) }}>Mark as Paid</button>
+            onClick={() => guard(form => paying?.month === month && form.tag === `home-payment:${paying.billId}`, () => {
+              focusNote.current = false
+              setPaying({ month, billId: occurrence.bill.id })
+            })}>Mark as Paid</button>
         </div>}
     </li>
   )

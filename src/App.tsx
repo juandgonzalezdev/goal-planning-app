@@ -698,11 +698,6 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     show()
   })
   /**
-   * + Add on Home: the form that already exists, on its own screen, one step after Home. Income and Spending open
-   * their form once (Back and Forward do not open it again); Cancel there closes it and goes back to Home; saving
-   * keeps that screen, with the new record, and Back goes to Home. A bill or a goal works as from Bills and Goals.
-   */
-  /**
    * + Add in the header, on any tab: the form or place that already exists for each choice, one step after where it was
    * used (forms changed elsewhere ask first). Back, or Cancel on a form it opened, goes back there with the keyboard on it.
    */

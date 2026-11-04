@@ -36,6 +36,30 @@ async function showBillsList() {
 }
 
 describe('Mark as Paid on Home', () => {
+  it('asks before replacing a changed payment with another bill and never saves the first draft', async () => {
+    await openAlex()
+    await pickMonth('2027-01')
+    await fire.click(button('Mark as Paid: Gym Membership, January 2027'))
+    await fire.change(inForm('Gym Membership', 'January 2027').getByLabelText(/^Amount/), { target: { value: '77.70' } })
+    await fire.change(inForm('Gym Membership', 'January 2027').getByLabelText('Paid on'), { target: { value: '2026-12-30' } })
+    await fire.change(inForm('Gym Membership', 'January 2027').getByLabelText('Paid from'), { target: { value: 'not-sure' } })
+    await fire.click(button('Mark as Paid: Transit Pass, January 2027'))
+    expect(screen.getByRole('alertdialog', { name: 'Leave without saving?' })).toBeTruthy()
+    await fire.click(button('Keep Editing'))
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText(/^Amount/) as HTMLInputElement).value).toBe('77.70')
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText('Paid on') as HTMLInputElement).value).toBe('2026-12-30')
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText('Paid from') as HTMLSelectElement).value).toBe('not-sure')
+    expect(screen.queryByRole('group', { name: 'Mark as paid: Transit Pass, January 2027' })).toBeNull()
+    await fire.click(button('Mark as Paid: Transit Pass, January 2027'))
+    await fire.click(button('Discard and Leave'))
+    expect(screen.queryByRole('group', { name: 'Mark as paid: Gym Membership, January 2027' })).toBeNull()
+    expect((inForm('Transit Pass', 'January 2027').getByLabelText(/^Amount/) as HTMLInputElement).value).toBe('110.00')
+    await fire.click(inForm('Transit Pass', 'January 2027').getByRole('button', { name: 'Cancel' }))
+    await fire.click(button('Mark as Paid: Gym Membership, January 2027'))
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText(/^Amount/) as HTMLInputElement).value).toBe('129.00')
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText('Paid on') as HTMLInputElement).value).toBe('2026-12-31')
+    expect((inForm('Gym Membership', 'January 2027').getByLabelText('Paid from') as HTMLSelectElement).value).toBe('everyday')
+  })
   it('explains why an account with history cannot be deleted before saving', async () => {
     await openAlex()
     await fire.click(tab('Money'))
