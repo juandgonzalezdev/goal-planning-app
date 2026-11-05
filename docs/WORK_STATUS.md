@@ -862,3 +862,49 @@ Solo se añade este resultado documental después de las comprobaciones.
 La nueva entrega fija contendrá diff base..final, copias del commit, sumas
 SHA-256, logs y resoluciones O1–O3. Claude escribirá solo REVISION.md en
 la nueva carpeta tras aviso de Juan. No hay confirmaciones manuales nuevas.
+
+## Incremento 1: revisión de código cerrada (5 de noviembre de 2026)
+
+Codex leyó directamente
+review-deliveries/mobile-increment-1/bef715bc70c81c0602271d409fa8e549e5da0358/REVISION.md.
+Claude aprueba O1–O3 sin hallazgos nuevos y considera completa la revisión de
+código de 07223f2..bef715b. Sus comprobaciones son por inspección; reutiliza
+las 59 pruebas, lint y build de Codex, sin ejecutar app, navegador ni lector.
+Esta aprobación no autoriza integrar ni acredita pruebas manuales de Juan.
+
+Git comprobado por Codex: codex/mobile-increment-1-money, HEAD bef715b, índice
+vacío y sin cambios versionados antes de esta anotación. Se preservan archivos
+ajenos y todas las entregas e informes. Solo se añade este registro, sin
+preparar ni commit; no se repiten pruebas por un cierre documental.
+
+Siguiente paso: recorrido de Juan en Chrome a 390 px y Safari/iPhone real,
+claro/oscuro, con VoiceOver: About Balances anuncia collapsed/expanded sin
+signos; ayudas abren/cierran, guía y Back vuelven a Money; un Add por sección;
+espacio ficticio vacío y Reports & Backup desde Settings. Revisar que Balances
+y Savings comparten fila cuando caben y que al abrir Balances su nota ocupa
+fila completa y desplaza Savings debajo, patrón existente no probado aquí
+en navegador. Continúan pendientes todas estas confirmaciones manuales.
+Sin merge, push ni despliegue; no se inicia Incremento 2.
+
+## Incremento 1: envío a main autorizado (5 de noviembre de 2026)
+
+Juan autoriza mandar el Incremento 1 a main. Permite guardar este registro
+y el cierre de revisión pendiente, integrar codex/mobile-increment-1-money
+y hacer push normal a origin/main. Cloudflare Pages publica automáticamente
+al recibir main; no se cambia su configuración ni se usa push forzado.
+La autorización no confirma las pruebas manuales pendientes de Chrome,
+Safari/iPhone, VoiceOver y espacio vacío. No se inicia Incremento 2.
+
+Codex ejecutó git fetch origin y comprobó main y origin/main en
+07223f24a1958fef09e98af9fb5a14060e9010a1, antecesor de bef715b
+mediante merge-base. Integración por fast-forward, sin divergencia. Índice
+vacío y único cambio versionado pendiente: registro de cierre de revisión.
+Se guarda solo WORK_STATUS antes de integrar. Archivos ajenos sin seguimiento
+y todas las entregas e informes se preservan y quedan fuera del commit.
+
+Se reutilizan las comprobaciones del mismo código: 198 pruebas de 0c2f76f,
+82 de 7f699b8 y 59 de bef715b, con lint y build correctos en cada entrega.
+No se presentan como una suite completa de la candidata. Solo cambia
+documentación tras bef715b; no se repiten pruebas, lint ni build por integrar
+el mismo contenido. Build conserva aviso >500 kB, gzip 197,36 kB. Resultado
+exacto del push y publicación se comunicará después de comprobarlo.
