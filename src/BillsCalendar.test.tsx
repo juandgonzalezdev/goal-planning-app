@@ -7,6 +7,7 @@ import type { BillMonth, FinanceData, RecurringBill } from './domain/finance/typ
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { openCardsAndLoans } from './test/money'
+import { billsForMonth } from './domain/finance/bills'
 
 freshDatabaseForEachTest()
 
@@ -305,7 +306,7 @@ const saved = async () => (await storedData())!
   it('shows the main fields first, in English, and a check sentence', async () => {
     await openAddBill()
     expect(heading('Add Bill')).toBeTruthy()
-    for (const label of ['Bill name', 'Amount (PLN)', 'Amount not known yet', 'Due day', 'Repeat every month']) expect(field(label)).toBeTruthy()
+    for (const label of ['Bill name', 'Amount (PLN)', 'Amount not known yet', 'Due day', 'Frequency']) expect(field(label)).toBeTruthy()
     expect(screen.getByText('Shorter months use their last day.')).toBeTruthy()
     expect(screen.queryByLabelText(/End month/)).toBeNull()
     expect(button(/More details/).getAttribute('aria-expanded')).toBe('false')
@@ -341,7 +342,7 @@ const saved = async () => (await storedData())!
     await type('Bill name', 'Test repair')
     await type('Amount (PLN)', '75')
     await type('Due day', '8')
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     await fire.click(addButton())
     await fire.click(button('Edit Details'))
     await fire.click(button(/More details/))
@@ -358,20 +359,20 @@ const saved = async () => (await storedData())!
     expect((await saved()).bills[0]).toMatchObject({ startMonth: '2026-10', endMonth: '2026-10' })
   })
 
-  it('H3 keeps a persistent live recurrence summary between Repeat and More details', async () => {
+  it('H3 keeps a persistent live recurrence summary between Frequency and More details', async () => {
     await openAddBill()
-    const repeat = field('Repeat every month')
+    const frequency = field('Frequency')
     const schedule = document.getElementById('bill-schedule')!
     expect(schedule).not.toBeNull()
     expect(schedule.textContent).toBe('Choose a due day to see when this bill is due.')
     expect(schedule.getAttribute('aria-live')).toBe('polite')
     expect(schedule.getAttribute('aria-atomic')).toBe('true')
-    expect(repeat.getAttribute('aria-describedby')).toContain(schedule.id)
+    expect(frequency.getAttribute('aria-describedby')).toContain(schedule.id)
     await type('Due day', '8')
     await fire.click(button(/More details/))
-    expect(repeat.closest('label')!.nextElementSibling).toBe(schedule)
+    expect(frequency.closest('.form-field')!.nextElementSibling).toBe(schedule)
     expect(schedule.nextElementSibling).toBe(button('More details').parentElement)
-    await fire.click(repeat)
+    await fire.change(frequency, { target: { value: 'once' } })
     expect(document.getElementById('bill-schedule')).toBe(schedule)
     expect(schedule.textContent).toBe('One month only: October 2026, on day 8.')
   })
@@ -395,21 +396,17 @@ const saved = async () => (await storedData())!
     expect(moreSummary().textContent).toContain('Note added')
   })
 
-  it('H5 explains Yearly beside Repeat and in the collapsed details summary', async () => {
+  it('H5 keeps the yearly choice explicit in the main selector when More is toggled', async () => {
     await openAddBill()
-    expect(moreSummary().textContent).toContain('Category: Other')
     await type('Due day', '9')
-    await fire.click(button(/More details/))
-    await fire.click(field('Yearly'))
-    await fire.click(button(/More details/))
-    const note = screen.getByText('Yearly is on (More details).')
-    expect(field('Repeat every month').getAttribute('aria-describedby')).toContain(note.id)
-    expect(moreSummary().textContent).toContain('Yearly')
-    expect(field('Repeat every month').checked).toBe(false)
-    await fire.click(button(/More details/))
-    await fire.click(field('Yearly'))
-    expect(field('Repeat every month').checked).toBe(true)
-    expect(screen.queryByText('Yearly is on (More details).')).toBeNull()
+    await fire.change(field('Frequency'), { target: { value: 'yearly' } })
+    for (let i = 0; i < 2; i++) {
+      await fire.click(button('More details'))
+      expect(field('Frequency').value).toBe('yearly')
+      expect(document.getElementById('bill-schedule')!.textContent).toContain('Once a year in October')
+      expect(screen.queryByRole('checkbox', { name: 'Yearly' })).toBeNull()
+    }
+    await fire.change(field('Frequency'), { target: { value: 'monthly' } })
     expect(document.getElementById('bill-schedule')!.textContent).toContain('Monthly on day 9')
   })
 
@@ -418,7 +415,7 @@ const saved = async () => (await storedData())!
     await type('Bill name', 'Test single subscription')
     await type('Amount (PLN)', '25')
     await type('Due day', '30')
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     await fire.click(button(/More details/))
     await fire.change(field('Category'), { target: { value: 'Subscriptions' } })
     await fire.click(addButton())
@@ -437,7 +434,7 @@ const saved = async () => (await storedData())!
     await type('Bill name', 'Test one month')
     await type('Amount (PLN)', '20')
     await type('Due day', '8')
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     expect(screen.getByText('One month only: October 2026, on day 8.')).toBeTruthy()
     expect(screen.queryByText(/Ends October 2026/)).toBeNull()
     await fire.click(addButton())
@@ -548,12 +545,81 @@ const saved = async () => (await storedData())!
     expect((await saved()).bills).toEqual([])
   })
 
+  it('frequency selector exposes all three choices in the main form and updates the live summary', async () => {
+    await openAddBill()
+    const frequency = screen.getByRole('combobox', { name: 'Frequency' }) as HTMLSelectElement
+    expect([...frequency.options].map(option => option.text)).toEqual(['Every month', 'Every year', 'One month only'])
+    expect(frequency.value).toBe('monthly')
+    expect(frequency.closest('#bill-more')).toBeNull()
+    expect(frequency.getAttribute('aria-describedby')).toBe('bill-schedule')
+    await type('Due day', '8')
+    const schedule = document.getElementById('bill-schedule')!
+    await fire.change(frequency, { target: { value: 'yearly' } })
+    expect(schedule.textContent).toBe('Once a year in October, on day 8, starting October 2026. No end date.')
+    await fire.change(frequency, { target: { value: 'once' } })
+    expect(schedule.textContent).toBe('One month only: October 2026, on day 8.')
+    await fire.change(frequency, { target: { value: 'monthly' } })
+    expect(schedule.textContent).toBe('Monthly on day 8, starting October 2026. No end date.')
+    await fire.click(button('More details'))
+    expect(screen.queryByRole('checkbox', { name: 'Yearly' })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: 'Repeat every month' })).toBeNull()
+    expect(screen.getAllByRole('combobox', { name: 'Frequency' })).toHaveLength(1)
+  })
+
+  it.each([
+    { choice: 'monthly', january: 1, anniversary: 1 },
+    { choice: 'yearly', january: 0, anniversary: 1 },
+    { choice: 'once', january: 0, anniversary: 0 },
+  ])('frequency selector saves $choice from the selected December without retroactive bills', async ({ choice, january, anniversary }) => {
+    await openAddBill()
+    await fire.click(within(document.querySelector('.bill-form') as HTMLElement).getByRole('button', { name: 'Cancel' }))
+    await pickMonth('2026-12')
+    await fire.click(button('Add Bill'))
+    await type('Bill name', 'Test December')
+    await type('Amount (PLN)', '40')
+    await type('Due day', '5')
+    await fire.change(field('Frequency'), { target: { value: choice } })
+    expect(button('More details').getAttribute('aria-expanded')).toBe('false')
+    await fire.click(addButton())
+    const data = await saved()
+    expect(data.bills).toHaveLength(1)
+    expect(data.bills[0]).toMatchObject({ startMonth: '2026-12', endMonth: choice === 'once' ? '2026-12' : null, frequency: choice === 'yearly' ? 'yearly' : 'monthly' })
+    expect(billsForMonth(data, '2026-11')).toHaveLength(0)
+    expect(billsForMonth(data, '2026-12')).toHaveLength(1)
+    expect(billsForMonth(data, '2027-01')).toHaveLength(january)
+    expect(billsForMonth(data, '2027-12')).toHaveLength(anniversary)
+  })
+
+  it('frequency selector keeps the advanced end date across choices but saves a one-month boundary', async () => {
+    await openAddBill()
+    await type('Bill name', 'Test frequency')
+    await type('Amount (PLN)', '25')
+    await type('Due day', '8')
+    const frequency = screen.getByRole('combobox', { name: 'Frequency' })
+    await fire.click(button('More details'))
+    await fire.change(screen.getByRole('combobox', { name: 'End month: month' }), { target: { value: '12' } })
+    for (const value of ['yearly', 'monthly']) {
+      await fire.change(frequency, { target: { value } })
+      expect((screen.getByRole('combobox', { name: 'End month: month' }) as HTMLSelectElement).value).toBe('12')
+      expect(document.getElementById('bill-schedule')!.textContent).toContain('ending December 2026')
+    }
+    await fire.change(frequency, { target: { value: 'once' } })
+    expect(screen.queryByRole('combobox', { name: 'End month: month' })).toBeNull()
+    expect(moreSummary().textContent).not.toContain('Ends')
+    await fire.change(frequency, { target: { value: 'yearly' } })
+    expect((screen.getByRole('combobox', { name: 'End month: month' }) as HTMLSelectElement).value).toBe('12')
+    expect(document.getElementById('bill-schedule')!.textContent).toContain('Once a year')
+    await fire.change(frequency, { target: { value: 'once' } })
+    await fire.click(addButton())
+    expect((await saved()).bills[0]).toMatchObject({ frequency: 'monthly', startMonth: '2026-10', endMonth: '2026-10' })
+  })
+
   it('creates a single-month bill without opening More details, with Other as category', async () => {
     await openAddBill()
     await type('Bill name', 'Bike repair')
     await type('Amount (PLN)', '75')
     await type('Due day', '8')
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     expect(screen.getByText('One month only: October 2026, on day 8.')).toBeTruthy()
     await fire.click(addButton())
     expect((await saved()).bills).toMatchObject([{ name: 'Bike repair', category: 'Other', startMonth: '2026-10', endMonth: '2026-10' }])
@@ -565,22 +631,22 @@ const saved = async () => (await storedData())!
 
   it('asks before Back when only recurrence changed, and Keep Editing retains it', async () => {
     await openAddBill()
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     await fire.click(button('Back'))
     const question = screen.getByRole('alertdialog', { name: 'Leave without saving?' })
     await fire.click(within(question).getByRole('button', { name: 'Keep Editing' }))
-    expect(field('Repeat every month').checked).toBe(false)
+    expect(field('Frequency').value).toBe('once')
     expect((await saved()).bills).toEqual([])
   })
 
-  it('creates a yearly bill from the selected month through More details', async () => {
+  it('creates a yearly bill from the selected month through the main selector', async () => {
     await openAddBill()
     await type('Bill name', 'Annual pass')
     await type('Amount (PLN)', '60')
     await type('Due day', '9')
     await fire.click(button(/More details/))
-    await fire.click(field('Yearly'))
-    expect(field('Repeat every month').checked).toBe(false)
+    await fire.change(field('Frequency'), { target: { value: 'yearly' } })
+    expect(field('Frequency').value).toBe('yearly')
     expect(screen.getByText('Once a year in October, on day 9, starting October 2026. No end date.')).toBeTruthy()
     await fire.change(screen.getByRole('combobox', { name: 'End month: month' }), { target: { value: '12' } })
     expect(moreSummary().textContent).toContain('Ends December 2026')
@@ -854,7 +920,7 @@ describe('Bills day panel', () => {
     await fire.click(day('Monday 21 February 2028'))
     await addOnDay('Monday 21 February 2028')
     await fillBill('Parking')
-    await fire.click(field('Repeat every month'))
+    await fire.change(field('Frequency'), { target: { value: 'once' } })
     expect(screen.getByText('One month only: February 2028, on day 21.')).toBeTruthy()
     await saveBill()
     expect(day('Monday 21 February 2028').getAttribute('aria-pressed')).toBe('true')

@@ -1170,3 +1170,112 @@ base e626006, extremo completo, diff, copias y evidencias de O1. Logs propios en
 review-deliveries/increment-2a-bills/o1-help/. Sin navegador, VoiceOver ni recorrido
 manual ejecutados por Codex. Aceptación manual pendiente; sin merge, push,
 despliegue, 2B ni otros incrementos.
+
+
+## Incremento 2A: comprobación de cierre solicitada (5 de noviembre de 2026)
+
+Juan comunica aprobación de Claude sin hallazgos y solicita comprobar el cierre;
+la autorización inicial de integración y push está condicionada a no tener bloqueos.
+Al precisar el alcance manual, indica mantener pendientes las pruebas restantes y
+continuar la validación antes de integrar. No se cierra 2A ni se inicia otro incremento.
+
+Codex comprobó Git directamente: codex/increment-2a-bills, HEAD
+e71781f7f155ec2bb0e0444933f23d4878a93d40, índice vacío y sin cambios versionados
+al comenzar. Leyó la quinta revisión en la carpeta fija: aprobación de O1 sin
+hallazgos nuevos, por inspección de Claude, sin ejecución de pruebas ni navegador.
+Verificados los SHA-256 de la entrega final: intacta. Archivos ajenos sin seguimiento
+y todas las entregas e informes conservados.
+
+Después de git fetch origin: main y origin/main coinciden en
+48f6aea44de1c6fb0448d12b5dbe5178cf353fb4; ambos son antecesores de e71781f.
+No hay divergencia y Git permitiría fast-forward. Esto no sustituye la aceptación manual.
+Se reutilizan los resultados del mismo código y entorno: 94/94 dirigidas, lint/build
+correctos. No se repiten por un cierre documental ni se presentan como suite completa.
+
+Confirmaciones manuales satisfactorias comunicadas expresamente por Juan:
+
+- Creación de una factura mensual.
+- Recurrencia de diciembre de 2026 a enero de 2027 en ordenador y teléfono.
+- Creación y edición de una factura de un solo mes.
+- Cambio de factura única a recurrente.
+- Cancelación de una edición sin guardar cambios.
+- Facturas con importe desconocido.
+- Funcionamiento de la corrección final O1.
+
+No son ejecuciones propias de Codex. Solo la recurrencia tiene atribución explícita
+a ordenador y teléfono; no se especificaron navegadores, anchuras, modelos, temas
+o lector. No se extiende esa atribución al resto de recorridos.
+
+Juan no confirma aún History completo, suscripciones, PDF, teclado, VoiceOver ni
+comprobaciones específicas en ambos temas visuales. También quedan sin acreditación
+los demás pasos no incluidos en la lista confirmada (Coming up, anuales y fines,
+doble envío, recarga y vínculos), así como Chrome a 390 px y Safari/iPhone identificados.
+El estado exacto y el guion se mantienen en INCREMENT_2A.md.
+
+Se actualizan únicamente WORK_STATUS.md e INCREMENT_2A.md, sin preparar ni commit.
+No cambia código ni datos; no hay nueva entrega de código. Índice vacío, main sin
+cambios y sin push. Siguiente paso: completar y confirmar los recorridos pendientes
+antes de retomar el cierre y la integración. No se inicia 2B ni otro incremento.
+
+
+## Incremento 2A: selector único de frecuencia (5 de noviembre de 2026)
+
+Juan solicita reunir las frecuencias de Add Bill en Every month, Every year y
+One month only, con resumen actualizado y sin la casilla Yearly en More. Autoriza
+incorporar el ajuste a 2A y preparar una nueva entrega fija para Claude. No implica
+retomar la integración: la validación manual pendiente y la decisión de continuar
+antes de integrar se conservan; no se inicia otro incremento.
+
+Git comprobado al iniciar: codex/increment-2a-bills, HEAD/base
+e71781f7f155ec2bb0e0444933f23d4878a93d40, índice vacío. Existían dos modificaciones
+documentales propias de 2A, INCREMENT_2A.md y WORK_STATUS.md, con las siete
+confirmaciones manuales de Juan y sus pendientes. Se guardaron copias y diff en
+review-deliveries/increment-2a-bills/frequency-selector/preexisting/ y
+preexisting-docs.diff antes de trabajar. Se incorporan a la documentación de esta
+misma tarea, preservando literalmente el registro de confirmaciones. Archivos
+ajenos sin seguimiento, entregas e informes se conservan y quedan excluidos.
+
+Implementación: selector Frequency nativo en el principal, mensual inicial, asociado
+al resumen polite/atomic. Las tres opciones se excluyen por construcción; ya no hay
+casillas Repeat every month o Yearly ni la ayuda Yearly is on. More conserva fechas,
+categoría, nota y vínculo. Su resumen no anuncia una opción anual que se configure
+dentro; en edición puede seguir indicando la frecuencia anual original como dato.
+
+Se usa el modelo actual: mensual/anual existentes y mes único con inicio=fin.
+No cambia dominio, esquema, migración, cálculos ni relaciones con préstamos.
+El selector es de creación; al editar se conserva frecuencia original y fechas
+originales, aunque el mes seleccionado sea otro. Se conserva el fin del borrador
+al alternar opciones y se ignora al guardar One month only, sin crear retroactividad.
+
+Comprobaciones propias de Codex:
+- Antes: dos pruebas nuevas seleccionadas por nombre fallaron, 49 omitidas (51),
+  7,18 s. No es ejecución completa de BillsCalendar.
+- Primera dirigida: 101/101, antes de ampliar las tres pruebas de guardado en diciembre.
+- Dirigida final: npm test -- src/BillsCalendar.test.tsx
+  src/features/bills/BillForm.test.tsx src/AlexDemo.test.tsx
+  src/domain/finance/singleMonthBills.test.ts src/features/bills/billsView.test.ts
+  --maxWorkers=2: 104/104 en cinco archivos, 47,71 s.
+- Incluye las tres altas sin More desde diciembre de 2026, noviembre sin cargos
+  retroactivos, enero y aniversario según frecuencia, transiciones con End month,
+  resumen accesible y Back. Cinco variantes de edición comparan todo el dato salvo
+  nota, History y resúmenes mensuales: mensual implícita/explícita, anual, mes único
+  y anual de un mes. Fechas, amountChanges, pausas, billMonths y vínculo intactos.
+- Regresión HomeAreas/LeaveForms/OtherTabs: 54/55, 58,15 s. HomeAreas y LeaveForms
+  aprobadas; un caso de OtherTabs usaba /^Amount/ y encontraba también la casilla
+  visible del ajuste anterior. Se precisó solo su consulta a Amount (PLN).
+- OtherTabs final: 15/15, 51,93 s. Se reutilizan las dos suites de regresión que
+  ya pasaban porque no cambió código de producto después, solo la consulta de prueba.
+  Cobertura final conjunta: 104 afectadas + 40 Home/LeaveForms + 15 OtherTabs,
+  159 pruebas distintas de ocho archivos, en ejecuciones separadas, no suite completa.
+- Lint y build finales: salida 0; JS 708,57 kB, gzip 197,81 kB, aviso conocido >500 kB.
+- git diff --check correcto; lista e índice se comprobarán antes del commit.
+  Sin cambios de dependencias; se reutiliza audit anterior (10 vulnerabilidades
+  moderadas de herramientas). Sin audit fix ni nueva suite completa por este
+  cambio localizado, cuya regresión se cubre con las suites indicadas.
+
+Documentación actualizada para Frequency y sus pruebas manuales. Las confirmaciones
+de Juan sobre la interfaz anterior conservan su alcance, no se extienden al selector.
+No se ejecutó navegador, Safari/iPhone, teclado real ni VoiceOver; aceptación del
+selector y recorridos previos pendientes. Solo se guardan BillForm.tsx, sus dos
+archivos de pruebas (BillsCalendar y el nuevo BillForm.test), ajuste de prueba
+OtherTabs y tres documentos de 2A. Sin merge, push, despliegue, 2B ni otros incrementos.

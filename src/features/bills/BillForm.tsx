@@ -30,11 +30,16 @@ type Props = {
   onSaved: (message: string) => void
 }
 
+type BillRecurrence = 'monthly' | 'yearly' | 'once'
+const RECURRENCE_NAMES: Record<BillRecurrence, string> = {
+  monthly: 'Every month', yearly: 'Every year', once: 'One month only',
+}
+
 interface BillDraft {
   name: string; category: string; amount: string; amountUnknown: boolean; dueDay: string
-  startMonth: string; endMonth: string; debtId: string; note: string; repeat: boolean; yearly: boolean
+  startMonth: string; endMonth: string; debtId: string; note: string; recurrence: BillRecurrence
 }
-type DraftField = Exclude<keyof BillDraft, 'amountUnknown' | 'repeat' | 'yearly'>
+type DraftField = Exclude<keyof BillDraft, 'amountUnknown' | 'recurrence'>
 type DraftErrors = Partial<Record<DraftField, string>>
 
 const FIELD_ERRORS: Record<BillFieldError, [DraftField, string]> = {
@@ -61,7 +66,7 @@ const FIELD_ORDER = Object.keys(FIELD_IDS) as DraftField[]
 const MORE_FIELDS: readonly DraftField[] = ['category', 'startMonth', 'endMonth', 'debtId', 'note']
 
 const draftOf = (bill: RecurringBill | null, month: YearMonth, dueDay?: number): BillDraft => ({
-  repeat: bill ? bill.startMonth !== bill.endMonth && bill.frequency !== 'yearly' : true, yearly: bill?.frequency === 'yearly',
+  recurrence: bill?.frequency === 'yearly' ? 'yearly' : bill && bill.startMonth === bill.endMonth ? 'once' : 'monthly',
   name: bill?.name ?? '', category: bill?.category ?? 'Other', amount: '', amountUnknown: false, dueDay: bill ? String(bill.dueDay) : dueDay ? String(dueDay) : '',
   startMonth: bill?.startMonth ?? month, endMonth: bill?.endMonth ?? '', debtId: bill?.debtId ?? '', note: bill?.note ?? '',
 })
@@ -90,19 +95,20 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   useUnsavedChanges(bill ? 'Edit Bill Details' : 'Add Bill', {
     'Name': draft.name, 'Category': draft.category, 'Usual amount': bill ? undefined : draft.amountUnknown ? 'Not known yet' : draft.amount,
     'Due day': draft.dueDay, 'Start month': draft.startMonth, 'End month': draft.endMonth,
-    'Repeat every month': draft.repeat, 'Yearly': draft.yearly,
+    'Frequency': bill ? undefined : RECURRENCE_NAMES[draft.recurrence],
     'Pays a card or loan': data.debts.find(debt => debt.id === draft.debtId)?.name, 'Note': draft.note,
   })
   const focusField = useRef<DraftField | null>(null)
   const years = yearsAround(Number(today.slice(0, 4)))
   const startYear = isYearMonth(draft.startMonth) ? Number(draft.startMonth.slice(0, 4)) : Number(yearMonthOf(today).slice(0, 4))
   const availableDebts = data.debts.filter(debt => !data.bills.some(b => b.debtId === debt.id && b.id !== bill?.id))
-  const endMonth = !bill && !draft.repeat && !draft.yearly ? draft.startMonth : draft.endMonth
-  const sentence = scheduleSentence({ ...draft, endMonth }, draft.yearly)
+  const yearly = bill ? bill.frequency === 'yearly' : draft.recurrence === 'yearly'
+  const endMonth = !bill && draft.recurrence === 'once' ? draft.startMonth : draft.endMonth
+  const sentence = scheduleSentence({ ...draft, endMonth }, yearly)
   const detailsSummary = [
     `Category: ${draft.category}`,
-    draft.yearly ? 'Yearly' : null,
-    (bill || draft.repeat || draft.yearly) && endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
+    bill && yearly ? 'Yearly' : null,
+    (bill || draft.recurrence !== 'once') && endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
     draft.debtId ? `Pays ${data.debts.find(debt => debt.id === draft.debtId)?.name ?? 'card or loan'}` : null,
     draft.note.trim() ? 'Note added' : null,
   ].filter(Boolean).join(' · ')
@@ -131,7 +137,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
 
   const save = async () => {
     if (saving.current) return
-    const fields = readDraft(!bill && !draft.repeat && !draft.yearly ? { ...draft, endMonth: draft.startMonth } : draft, bill?.owner ?? owner)
+    const fields = readDraft({ ...draft, endMonth }, bill?.owner ?? owner)
     const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
     let amount: number | null = null
     if (!bill && !draft.amountUnknown) {
@@ -144,7 +150,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     if (Object.keys(found).length > 0) { showErrors(found); return }
 
     const id = bill?.id ?? newId()
-    const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount, draft.yearly ? 'yearly' : 'monthly'))
+    const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount, yearly ? 'yearly' : 'monthly'))
     const checked = apply(data)
     if (checked.status !== 'ok') { showErrors(Object.fromEntries(checked.errors.map(problem => FIELD_ERRORS[problem]))); return }
     saving.current = true
@@ -176,12 +182,13 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
             </div>
           )}
           <Field id="bill-due" label="Due day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Shorter months use their last day." />
-          {!bill && <label className="check-row">
-            <input type="checkbox" checked={draft.repeat} aria-describedby={`bill-schedule${draft.yearly ? ' bill-yearly-help' : ''}`} onChange={e => set({ repeat: e.target.checked, yearly: false })} />
-            <span>Repeat every month</span>
-          </label>}
+          {!bill && <div className="form-field">
+            <label htmlFor="bill-frequency">Frequency</label>
+            <select id="bill-frequency" value={draft.recurrence} aria-describedby="bill-schedule" onChange={e => set({ recurrence: e.target.value as BillRecurrence })}>
+              {(Object.keys(RECURRENCE_NAMES) as BillRecurrence[]).map(value => <option key={value} value={value}>{RECURRENCE_NAMES[value]}</option>)}
+            </select>
+          </div>}
           <p id="bill-schedule" className="bill-schedule" aria-live="polite" aria-atomic="true">{sentence ?? 'Choose a due day to see when this bill is due.'}</p>
-          {!bill && draft.yearly && <p id="bill-yearly-help" className="field-help">Yearly is on (More details).</p>}
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 10px', justifySelf: 'start' }}>
             <button type="button" className="more-toggle" aria-expanded={moreOpen} aria-controls="bill-more" aria-describedby="bill-more-summary" onClick={() => setMoreOpen(!moreOpen)}>
@@ -197,18 +204,11 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
                   {BILL_CATEGORIES.map(category => <option key={category}>{category}</option>)}
                 </select>
               </div>
-              {!bill && <>
-                <label className="check-row">
-                  <input type="checkbox" checked={draft.yearly} aria-describedby="bill-yearly-choice-help bill-schedule" onChange={e => set({ yearly: e.target.checked, repeat: !e.target.checked })} />
-                  <span>Yearly</span>
-                </label>
-                <p id="bill-yearly-choice-help" className="field-help">Turn off Yearly to repeat every month.</p>
-              </>}
               {bill && <>
                 <MonthYearField id="bill-start" label="Start month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} years={years}
                   defaultYear={startYear} error={errors.startMonth} help="Existing billing periods are kept when you save details." />
               </>}
-              {(bill || draft.repeat || draft.yearly) && <>
+              {(bill || draft.recurrence !== 'once') && <>
               <MonthYearField id="bill-end" label="End month" value={draft.endMonth} onChange={endMonth => set({ endMonth })} years={years}
                 noneLabel="No end month" defaultYear={startYear} error={errors.endMonth}
                 help={bill && endMonth === draft.startMonth ? 'To repeat it, choose No end month.' : undefined} />

@@ -188,7 +188,7 @@ describe('a change saved in another tab', () => {
     await fire.click(tab('Bills'))
     await fire.click(button('Add Bill'))
     await fire.change(field('Bill name'), { target: { value: 'Rent' } })
-    await fire.change(field(/^Amount/), { target: { value: '1200' } })
+    await fire.change(field('Amount (PLN)'), { target: { value: '1200' } })
     await fire.change(field('Due day'), { target: { value: '10' } })
     await fire.click(button('Save'))
     expect(screen.getByRole('heading', { name: 'Rent' })).toBeTruthy()

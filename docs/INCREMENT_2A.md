@@ -1,199 +1,160 @@
 # Incremento 2A: Bills
 
-Alcance: creación compacta de facturas y edición de detalles. Sin cambios de esquema,
-fórmulas, intereses, Home, navegación global ni relaciones entre préstamos y Bills.
-Base comprobada: 48f6aea44de1c6fb0448d12b5dbe5178cf353fb4.
+Alcance: creación compacta de facturas y edición compatible de detalles. Sin cambios
+de esquema, fórmulas, intereses, Home, navegación global ni relaciones entre préstamos y Bills.
+Base integrada: 48f6aea44de1c6fb0448d12b5dbe5178cf353fb4.
+Base del ajuste de frecuencia: e71781f7f155ec2bb0e0444933f23d4878a93d40.
 Rama: codex/increment-2a-bills.
 
-## Comportamiento
+## Comportamiento vigente
 
-- Add Bill muestra Bill name, Amount, Amount not known yet (justo debajo del importe),
-  Due day y Repeat every month (marcado por defecto). La casilla de importe desconocido
-  está visible desde el inicio y no se duplica en More details.
-- El primer mes es el seleccionado al abrir el formulario, también desde Home y el calendario.
-  No se permite introducir otra fecha inicial al crear: para otro mes se selecciona ese mes antes.
-- Sin repetición: endMonth = startMonth, ambos inclusivos. No hay ocurrencias anteriores ni posteriores.
-- More details empieza cerrado. Conserva Other como categoría interna por defecto;
-  permite categoría, Yearly, último mes cuando hay repetición, nota y vínculo.
-  Yearly y Repeat every month son opciones excluyentes; al quitar Yearly se vuelve a mensual.
-  La elección anual se explica junto a Repeat y en el resumen de More details.
-- Edit Details conserva frecuencia, meses, pausas, importes y payments existentes al guardar
-  otros detalles. Los controles avanzados de fechas y vínculo siguen disponibles.
-  El resumen de recurrencia se recalcula con las fechas del borrador; para volver a repetir
-  una factura de un mes, se elige No end month.
-  Los importes conservan sus acciones separadas por mes o desde un mes explícito.
-- Save crea una factura. El bloqueo de guardado evita duplicados por doble envío.
-  Cancel descarta explícitamente; Back conserva la protección de cambios sin guardar.
-- La cancelación de una suscripción anterior al primer cargo usa el mes inicial como último
-  mes y lo pausa. Así no conserva accidentalmente un cargo por el límite inclusivo.
-  Las fechas omitidas se muestran como Skipped months, tanto para pausas como para
-  esa cancelación: el modelo no guarda qué acción originó cada mes omitido.
-- El error de importe vacío indica la opción visible Amount not known yet. Al marcarla,
-  Amount queda deshabilitado y explica que su valor es desconocido; al desmarcarla se
-  reactiva y recupera el borrador anterior, que se puede modificar. Se guarda null al
-  elegir desconocido, nunca cero ni el valor tecleado previamente.
-  El resumen de recurrencia queda junto
-  a Repeat, antes de More, con aria-live polite. More resume categoría, frecuencia anual,
-  último mes, vínculo y presencia de nota sin abrirlo.
+- Add Bill muestra Bill name, Amount, Amount not known yet justo debajo, Due day
+  y un selector Frequency con Every month, Every year y One month only.
+  Every month es el valor inicial. No existen casillas Repeat every month ni Yearly.
+- El inicio de una factura nueva es el mes seleccionado al abrirla, también desde
+  Home y el calendario. Para otro inicio se selecciona primero ese mes.
+- Every month usa la frecuencia mensual actual; Every year usa yearly. One month only
+  usa una factura mensual con endMonth = startMonth inclusivos. No hay datos nuevos
+  ni migración. No se crean ocurrencias anteriores al mes elegido.
+- El resumen de recurrencia se actualiza con la elección, el día y las fechas.
+  Está junto a Frequency, antes de More, con aria-live polite y atomic. Frequency
+  lo referencia mediante aria-describedby. La región permanece montada.
+- More details empieza cerrado. Tiene Category (Other por defecto), End month cuando
+  se repite, Note y vínculo a card/loan. No contiene Frequency ni una casilla Yearly.
+  Elegir One month only oculta End month y omite Ends del resumen de More.
+  Volver a mensual o anual recupera el fin avanzado del borrador, si se había elegido.
+- More mantiene el nombre accesible More details y su resumen gris como descripción
+  separada. Resume categoría, fin, vínculo y presencia de nota. Al editar puede
+  indicar Yearly como dato de la factura, sin añadir un control para cambiarlo.
+- Edit Details conserva frecuencia original, inicio, fin, pausas, importes y payments
+  al guardar otros detalles, incluso desde otro mes. Incluye facturas antiguas con
+  frecuencia mensual implícita (propiedad ausente), mensual explícita, anual y de un mes.
+  Frequency es un selector de creación; no se añade a la edición ni se convierte
+  automáticamente ninguna factura existente. Start month y End month siguen en More.
+  Para volver a repetir una factura de un mes al editar, se elige No end month.
+  La ayuda de Start month sigue indicando Existing billing periods are kept when you
+  save details. Los importes mantienen sus acciones separadas por mes o desde un mes.
+- Amount not known yet es una casilla única del formulario principal. Sin marcar:
+  ninguna ayuda bajo el importe o la casilla. Marcada: campo vacío y deshabilitado
+  con una sola ayuda, Unknown amount — shown as Unknown, never as 0. Uncheck to enter
+  an amount. Campo y casilla describen la misma ayuda solo mientras existe.
+  Al desmarcar se recupera el importe escrito y se puede editar. Desconocido se guarda
+  como null, nunca como cero. El cero introducido explícitamente sigue siendo válido.
+- Save crea una factura, con bloqueo de doble envío. Cancel descarta explícitamente;
+  Back pregunta antes de perder cambios, incluido cambiar solo Frequency.
+- Las suscripciones mantienen sus acciones separadas. Cancelar antes del primer
+  cargo conserva el límite inclusivo y omite ese cargo mediante pausedMonths existente.
+  Subscription y Details muestran Skipped months sin inventar el origen de esa omisión.
 
 ## Evidencia automática
 
-src/domain/finance/singleMonthBills.test.ts cubre los consumidores compartidos del calendario,
-All Bills (validez), Coming up, suscripciones (proyección, pausa y cancelación), anuales,
-History, PDF y totales mensuales. Comprueba que un payment de 120,00 con fecha 3 de noviembre
-permanece idéntico después de editar una nota, así como su entrada de History y sus totales.
-Añadir una factura ajena conserva las facturas previas, deudas, vínculos, billMonths e History.
-BillsCalendar.test.tsx cubre creación sin categoría explícita, mes único, Yearly, edición,
-regreso al calendario, errores, importe desconocido, guardado doble y Back con solo recurrencia cambiada.
-Los resultados exactos y las limitaciones se registran en WORK_STATUS.md y la entrega.
+BillsCalendar.test.tsx cubre las tres elecciones en el formulario principal y su
+guardado desde December 2026: mensual aparece en January 2027, anual en December 2027,
+de un mes solo en December 2026. Ninguna aparece en November 2026. También comprueba
+End month al alternar opciones, resumen accesible, Back, doble envío, importe desconocido,
+cero explícito, errores y ausencia de las casillas de frecuencia anteriores.
 
-## Prueba manual pendiente: Chrome y Safari/iPhone
+features/bills/BillForm.test.tsx edita desde otro mes cinco variantes existentes:
+mensual implícita, mensual explícita, anual, de un mes y anual limitada a un mes.
+Compara todos los datos salvo la nota que se cambia: frecuencia, fechas, pausas, cambios
+de importe, debts, vínculo y billMonths intactos; History y resúmenes mensuales iguales.
 
-Usar solo datos ficticios y un espacio de prueba. Repetir en Chrome a 390 px y Safari en
-un iPhone real, en modo claro y oscuro. No usar datos personales para capturas o informes.
+domain/finance/singleMonthBills.test.ts conserva la cobertura de Calendar/totales, All Bills,
+Coming up, suscripciones, anuales, History y PDF. Ninguna prueba DOM acredita lectura
+real de VoiceOver o compatibilidad visual en Safari. Los resultados exactos están en
+WORK_STATUS.md y en la entrega fija correspondiente.
 
-1. Seleccionar February 2028 en Bills. Add Bill: campos principales y More details
-   cerrado, con Amount not known yet visible debajo de Amount. Escribir Test repair,
-   75 y día 31; desmarcar Repeat every month.
-   El resumen indica solo February 2028. Save: una factura el 29 de febrero.
-   January y March no la muestran. All Bills conserva su fila y sus fechas.
-2. Seleccionar un mes futuro y crear Test monthly, 20, día 5, sin abrir More details.
-   Aparece desde ese mes y en el siguiente, nunca en el anterior. Category queda Other.
-   Probar también Add Bill desde Home y desde un día del calendario; Cancel vuelve al origen.
-3. Abrir More details: Category, Yearly, End month cuando corresponda, Note y vínculo.
-   Amount not known yet permanece debajo de Amount, sin duplicarse dentro de More.
-   Crear Test yearly: el resumen dice Once a year;
-   aparece en el mes inicial y su aniversario, no en meses intermedios.
-   Probar un último mes y comprobar que no aparece después. Un importe desconocido
-   se muestra como desconocido y nunca como cero.
-4. Cambiar solo Repeat every month y pulsar Back: aparece Leave without saving?.
-   Keep Editing mantiene la elección; Discard and Leave sale. Repetir con nota y nombre.
-   Cancel descarta sin guardar. Hacer doble toque en Save: solo se crea una factura.
-5. En la factura de un mes, registrar un payment ficticio con su fecha y cuenta.
-   Volver a abrir Edit Details desde otro mes: More details cerrado y fechas originales.
-   Cambiar únicamente Note y guardar. El payment, History y los totales del mes original
-   siguen iguales; no se crea otro cargo. Comprobar también una factura anual y una
-   vinculada a préstamo: frecuencia, fechas, vínculo y Remaining Balance conservados.
-6. Para Coming up, usar un espacio ficticio con un cargo de mes único dentro de los
-   próximos siete días del mes siguiente; aparece solo en ese intervalo y separado
-   de Left to Pay. Después del mes de cargo no hay otra ocurrencia.
-7. Categoría Subscriptions: probar simulación, Cancel sin confirmar y pausa confirmada.
-   Cancelar antes del primer cargo: el cargo deja de estar pendiente y no reaparece al
-   mes siguiente. Una suscripción ya pagada conserva su payment e History.
-8. Reports & Backup: PDF del mes de cargo incluye la factura pendiente; los meses
-   anterior y posterior no. Comprobar con y sin importes. Editar el importe habitual
-   desde un mes posterior de una factura mensual: períodos previos siguen iguales.
-9. En iPhone, abrir teclado en Amount y Due day, desplegar More details y acceder a
-   Save/Cancel sin desbordamiento ni controles tapados. Probar gesto de atrás con cambios.
-   Con VoiceOver, verificar etiquetas y collapsed/expanded de More details.
+## Aceptación manual de la versión con Frequency (pendiente)
 
-Estas instrucciones no acreditan ejecución manual. Juan debe confirmar cada recorrido
-realizado; las confirmaciones del Incremento 1 no se extienden al 2A.
+Usar datos ficticios. Chrome a 390 px y Safari/iPhone real, en claro y oscuro. Registrar
+únicamente recorridos efectivamente realizados y su navegador/dispositivo. Las pruebas
+confirmadas antes del nuevo selector se conservan abajo y no se extienden a este control.
 
+1. **Formulario y selector:** Add Bill muestra los campos principales y un solo selector
+   Frequency con Every month, Every year y One month only, en ese orden. More está cerrado.
+   Seleccionar cada opción: el resumen cambia a Monthly, Once a year o One month only.
+   Abrir More: no hay casillas Repeat every month o Yearly, ni otro selector Frequency.
+2. **Mensual y mes único:** seleccionar December 2026, crear Test monthly de 20, día 5.
+   Está en diciembre y enero, nunca en noviembre. Crear Test once de 75, día 31,
+   eligiendo One month only: aparece solo en diciembre. Probar February 2028: día 31
+   vence el 29. All Bills conserva sus fechas. Repetir alta desde Home y día del calendario.
+3. **Anual y fin avanzado:** crear Test yearly con Every year desde December 2026.
+   Aparece en diciembre de 2026 y 2027, no en enero de 2027. Elegir End month avanzado,
+   alternar mensual/anual/mes único y comprobar resumen y fecha recuperada al volver a
+   repetir. Guardar One month only con fin previo en el borrador: dura solo el mes elegido.
+   More no anuncia Ends para el alta de un mes; sí para recurrentes con fin y al editar.
+4. **Importe y O1:** sin marcar Amount not known yet no hay ayuda. Escribir 45, marcar:
+   única ayuda, campo deshabilitado. Desmarcar: vuelve 45 y se puede editar. Guardar con
+   casilla marcada: Unknown, no cero; recargar mantiene ese valor. Sin importe y sin
+   marcar: el error menciona la casilla y enfoca Amount. Guardar 0 explícito: muestra cero.
+5. **Borradores y acciones:** cambiar solo Frequency y pulsar Back: Keep Editing conserva
+   la elección; Discard and Leave sale. Cancel no guarda. Repetir con nota e importe.
+   Doble toque o Enter al guardar: solo una factura. Cancel vuelve al origen de Home/calendario.
+6. **Edición e History:** registrar un payment ficticio con importe, fecha y cuenta.
+   Abrir Edit Details desde otro mes: More cerrado, no hay selector nuevo que cambie
+   frecuencia y se mantienen las fechas. Cambiar solo Note y guardar: payment, History y
+   totales iguales. Repetir con anual y factura vinculada a préstamo: vínculo y Remaining
+   Balance conservados. Start month tiene la ayuda de conservación de períodos.
+   En una factura única, cambiar End month a No end month: resumen coherente y se repite.
+7. **Coming up:** cargo de mes único dentro de los próximos siete días del siguiente mes:
+   aparece solo en ese intervalo, separado de Left to Pay, sin nueva ocurrencia después.
+8. **Suscripciones:** simulación sin confirmar, Cancel, pausa confirmada y cancelación
+   anterior al primer cargo. No vuelve el cargo cancelado; pausas y cancelación muestran
+   Skipped months. Los payments previos se conservan. Mensaje is cancelled from coherente.
+9. **PDF:** informes del mes anterior, del cargo y del posterior, con y sin importes.
+   La factura pendiente de mes único está solo en el del cargo. Cambiar un importe habitual
+   desde un mes posterior no modifica períodos anteriores.
+10. **Teclado, móvil y lector (H7):** Tab: Bill name → Amount → Amount not known yet →
+    Due day → Frequency → More details → Save → Cancel (Back antes del formulario).
+    El campo Amount deshabilitado se omite. Verificar selección nativa con teclado, foco
+    visible, Enter sin duplicados y el orden de campos extra al abrir More. En iPhone,
+    teclado numérico sin tapar Frequency/Save ni desbordamiento; probar gesto de atrás.
+    VoiceOver: Frequency anuncia su opción y el resumen actualizado de manera completa;
+    More conserva nombre estable y resumen como descripción, collapsed/expanded y ayuda
+    de Start month. La casilla desconocida y Amount comparten una sola ayuda al marcar.
 
-## Aceptación adicional tras la revisión H1–H7 (pendiente)
+Este guion actualiza H1–H7, N1–N3 y O1 a la nueva interfaz. La validación previa y la
+aprobación de Claude de e71781f siguen teniendo su alcance original. No se cierra ni
+integra 2A hasta completar la validación acordada y la revisión de este ajuste.
 
-Repetir en Chrome a 390 px y Safari/iPhone real, claro y oscuro. Estos recorridos
-no se consideran confirmados por las pruebas automáticas ni por la revisión de Claude.
+## Trazabilidad de confirmaciones anteriores
 
-1. **H1, actualizado por la mejora manual:** Add Bill con nombre y día, sin importe → Save.
-   El error dice “Enter the amount, or select Amount not known yet.” y el foco sigue en
-   Amount. La casilla está visible inmediatamente debajo. Marcarla sin abrir More:
-   Amount queda deshabilitado con “Unknown amount — shown as Unknown, never as 0.
-   Uncheck to enter an amount.”. Desmarcarla permite escribir; no parece cero ni un fallo.
-2. **H2:** Editar Test repair de un mes → More details. Se explica
-   “To repeat it, choose No end month.”. Cambiar End month a No end month:
-   la frase pasa a mensual y desaparece esa pista. Volver al mes inicial:
-   la frase dice One month only. No hay ayudas de frecuencia contradictorias.
-3. **H3:** Con More abierto, tocar Repeat: la frase queda inmediatamente junto al
-   control y cambia sin tener que buscarla al pie de los campos avanzados. Con VoiceOver,
-   comprobar que se anuncia el cambio completo una vez, con el mes y el día correctos.
-   Verificar también el anuncio al cambiar End month durante la edición.
-4. **H4:** Editar una factura ficticia vinculada a un préstamo y con fecha final.
-   More cerrado muestra Category, Pays y Ends. Cambiar categoría o nota y cerrarlo:
-   el resumen se actualiza sin revelar el texto de la nota. El vínculo sigue intacto.
-5. **H5:** Marcar Yearly y cerrar More: aparecen “Yearly is on (More details).”,
-   Yearly en el resumen de More y la frase anual. Repeat queda desmarcado, pero no
-   se interpreta como un único mes. Al quitar Yearly, Repeat vuelve a mensual;
-   la ayuda de Yearly explica ese efecto. Elegir Repeat también permite volver a mensual.
-6. **H6:** Cancelar una suscripción ficticia de un mes antes del primer cargo.
-   El mensaje dice “is cancelled from …”; Subscription y Details muestran
-   Skipped months con el mes correcto, no Paused ni una afirmación deducida de Cancelled.
-   Una pausa normal usa también Skipped months; sus fechas y próximos cargos siguen iguales.
-7. **H7, teclado de escritorio:** con More cerrado, Tab recorre Bill name → Amount →
-   Amount not known yet → Due day → Repeat → More details → Save → Cancel, además de Back antes del formulario.
-   Espacio cambia casillas; Enter desde un campo crea una sola factura; foco visible
-   en Repeat y More. Con More abierto, los controles adicionales entran en el orden visual.
-8. **H7, móvil y lector:** con teclado numérico en Due day y Amount, valorar si el
-   formulario apilado cabe y permite alcanzar Repeat y Save sin controles tapados ni
-   desbordamiento. No se ha cambiado a dos columnas sin evidencia visual. Verificar
-   collapsed/expanded de More y que el lector puede abrirlo aunque su contenido no está
-   montado al cerrarlo (aria-controls conserva el comportamiento existente). Confirmar
-   que Save resulta inequívoco bajo el título Add Bill. Probar gesto de atrás.
+El registro siguiente se conserva literalmente. Sus referencias al guion anterior
+describen e71781f, no acreditan la nueva versión de Frequency.
 
+## Confirmaciones registradas para el cierre (5 de noviembre de 2026)
 
-## Ajustes N1–N3 de la segunda revisión (aceptación pendiente)
+Pruebas manuales confirmadas expresamente por Juan, con resultado satisfactorio:
 
-- N1: al crear sin repetición, More details no muestra Ends: el único resumen de
-  esa duración es One month only. Al editar o crear Yearly con fin, Ends se conserva.
-- N2: el botón tiene el nombre estable More details. El resumen gris permanece junto
-  a él como elemento separado, enlazado con aria-describedby; aria-expanded y
-  aria-controls conservan su comportamiento. Esta corrección no modifica estilos globales.
-- N3: al editar, Start month muestra Existing billing periods are kept when you save
-  details., asociada como ayuda a los selectores de mes y año. No cambia los períodos guardados.
+- Creación de una factura mensual.
+- Recurrencia de December 2026 a January 2027 en ordenador y teléfono.
+- Creación y edición de una factura de un solo mes.
+- Cambio de una factura única a recurrente.
+- Cancelación de una edición sin guardar cambios.
+- Facturas con importe desconocido.
+- Funcionamiento de la corrección final O1.
 
-Antes de integrar, confirmar en Chrome a 390 px y Safari/iPhone, claro/oscuro:
+Son resultados comunicados por Juan, no recorridos ejecutados por Codex. Solo la
+recurrencia tiene confirmación explícita en ordenador y teléfono. No se atribuyen
+navegadores concretos, anchuras, dispositivos específicos, temas ni lector a ninguna
+prueba porque no se han indicado.
 
-1. Crear una factura nueva con Repeat desmarcado: One month only indica el período,
-   y el resumen gris de More no contiene Ends ni ofrece un End month inexistente.
-2. Seleccionar Yearly y un fin: el resumen sigue mostrando Ends. Abrir Edit Details
-   de una factura con fin: Ends sigue visible aunque More esté cerrado.
-3. Con VoiceOver y teclado, el nombre del botón es solo More details; su descripción
-   contiene categoría, vínculo y demás valores del resumen. Cambiar categoría no cambia
-   el nombre. Verificar que el resumen continúa gris junto al botón, sin desbordamiento,
-   y que collapsed/expanded, foco y apertura conservan su comportamiento.
-4. Edit Details → More: Start month muestra la frase de conservación de períodos.
-   El lector la asocia tanto al selector de mes como al de año. Guardar otra nota
-   conserva fechas, frecuencia y payments.
+Pendientes de confirmación expresa:
 
-Estos pasos complementan H1–H7. No se acredita ejecución manual ni anuncio real del
-lector de pantalla por las pruebas DOM; Juan debe confirmar expresamente el recorrido.
+- Recorrido completo de History y conservación de payments, cuenta, fecha y totales.
+- Suscripciones: simulación, pausa, cancelación anterior al primer cargo y Skipped months.
+- PDF del mes anterior, del mes de cargo y del posterior, con y sin importes.
+- Teclado real: Tab, Espacio, Enter, foco y accesibilidad con teclado numérico móvil.
+- VoiceOver: nombres, descripciones y anuncios de los resúmenes y ayudas.
+- Comprobaciones específicas en ambos temas visuales y cobertura identificada en
+  Chrome a 390 px y Safari/iPhone. Ordenador/teléfono no acreditan esos navegadores.
+- Cualquier otro paso del guion no comprendido expresamente en la lista confirmada,
+  como Coming up, anuales y fines, doble guardado, recarga y vínculos con préstamos.
 
+Codex leyó el informe de Claude en
+review-deliveries/increment-2a-bills/e71781f7f155ec2bb0e0444933f23d4878a93d40/REVISION.md:
+aprobado sin hallazgos nuevos ni correcciones pendientes, por inspección. La aprobación
+no acredita las pruebas manuales pendientes ni una ejecución de pruebas por Claude.
 
-## Mejora manual: importe desconocido visible (pendiente de nueva aceptación)
-
-Juan solicita este cambio durante su validación manual; no se deduce de ello que
-los recorridos anteriores estén aprobados. Sustituye la ubicación anterior en More.
-
-1. Add Bill: una única casilla Amount not known yet justo debajo de Amount, aun con
-   More cerrado. Abrir y cerrar More: la casilla no se duplica ni cambia su estado.
-2. Escribir 120, marcar la casilla: campo vacío y deshabilitado con ayuda explícita
-   de valor desconocido. Desmarcar: vuelve a estar habilitado, conserva el borrador
-   120 y permite cambiarlo a 125.50. Guardar: el importe conocido es 125.50.
-3. Otra factura ficticia: nombre, día y casilla marcada, sin tocar Amount ni More.
-   Guardar: aparece Unknown, no cero. Recargar conserva el valor desconocido.
-4. Cambiar solo la casilla y pulsar Back: Keep Editing mantiene la elección.
-   Sin importe ni casilla seleccionada, Save enfoca Amount y menciona la opción visible.
-5. Chrome a 390 px y Safari/iPhone, claro y oscuro: comprobar disposición, teclado y
-   lectura de la ayuda. Con teclado, la casilla va después de Amount; cuando Amount
-   está deshabilitado, Tab lo omite. No debe añadir otro foco dentro de More.
-
-Estos pasos no acreditan ejecución por Codex. Mantener los recorridos H1–H7 y N1–N3
-restantes, con esta ubicación y los textos nuevos del importe desconocido.
-
-
-## O1: ayuda única del importe desconocido (aceptación pendiente)
-
-- Casilla desmarcada: sin ayuda bajo Amount ni bajo la casilla. El error de importe
-  vacío, si corresponde, mantiene su mensaje y su comportamiento.
-- Casilla marcada: una única ayuda de Amount: “Unknown amount — shown as Unknown,
-  never as 0. Uncheck to enter an amount.”. Campo y casilla referencian esa misma
-  ayuda mientras existe; desaparece al desmarcarla, sin referencias a un id ausente.
-- No cambia la ubicación, el campo deshabilitado, la recuperación del borrador,
-  el guardado null ni los cálculos financieros.
-
-En Chrome a 390 px y Safari/iPhone, claro/oscuro: comprobar que no hay texto de
-ayuda con la casilla desmarcada; escribir 45, marcarla y leer una única ayuda;
-desmarcarla y comprobar que desaparece la ayuda y vuelve 45. Con lector de pantalla,
-verificar las descripciones y el estado deshabilitado. El resto del recorrido
-continúa pendiente de confirmación expresa; las pruebas DOM no acreditan este anuncio.
+Juan indica mantener pendientes los recorridos restantes y continuar la validación
+antes de integrar. El Incremento 2A no se da por cerrado. No se integra ni se hace push.
