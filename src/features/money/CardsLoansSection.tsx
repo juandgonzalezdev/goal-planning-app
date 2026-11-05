@@ -1,3 +1,4 @@
+import { HelpTip } from '../../components/HelpTip'
 import { Icon } from '../../components/Icon'
 import { MonthSwitch } from '../../components/MonthSwitch'
 import { summarizeCards } from '../../domain/finance/debts'
@@ -35,10 +36,7 @@ export function CardsLoansSection({ data, months, month, onMonthChange, onOpenDe
           {summary.missingPaymentCount > 0 && <small>{summary.missingPaymentCount === 1 ? '1 payment not entered' : `${summary.missingPaymentCount} payments not entered`}</small>}
         </div>
       </div>
-      <details className="field-help">
-        <summary>About balances and payments</summary>
-        <p>Remaining Balance is the latest balance you entered, not a forecast. Payments use the month shared with Home and Bills. Linked payments are counted once in Bills. Recording a payment does not update the Remaining Balance.</p>
-      </details>
+      <div className="help-tips"><HelpTip topic="money-payments" label /></div>
 
       {summary.items.length === 0
         ? <div className="empty-state">

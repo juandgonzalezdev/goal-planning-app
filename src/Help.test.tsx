@@ -87,6 +87,42 @@ describe('Help & Guide', () => {
   })
 })
 
+describe('Money contextual help', () => {
+  it.each([
+    ['About income', 'Income'],
+    ['About balances', 'Accounts, Cash and Savings'],
+    ['About balances and payments', 'Cards and Loans'],
+    ['About your data', 'Your Space and the Demo'],
+  ])('opens the matching guide chapter from %s', async (label, title) => {
+    await openAlex()
+    await fire.click(tab('Money'))
+    await fire.click(button('Expand All'))
+    const help = button(label)
+    expect(help.getAttribute('aria-expanded')).toBe('false')
+    await fire.click(help)
+    const note = document.getElementById(help.getAttribute('aria-controls')!)!
+    expect(note.hidden).toBe(false)
+    await fire.click(within(note).getByRole('button', { name: 'Read more in the guide' }))
+    const chapter = button(title)
+    expect(chapter.getAttribute('aria-expanded')).toBe('true')
+    expect(document.activeElement).toBe(chapter)
+    await fire.click(button('Back'))
+    expect(screen.getByRole('heading', { level: 1, name: 'Money' })).toBeTruthy()
+  })
+
+  it('shows local storage information and its guide chapter in the own space', async () => {
+    await createOwnSpace()
+    await fire.click(tab('Money'))
+    const help = button('About your data')
+    await fire.click(help)
+    const note = document.getElementById(help.getAttribute('aria-controls')!)!
+    expect(text(note)).toContain('Your data is saved on this device only. No bank is connected.')
+    expect(text(note)).not.toContain('Alex')
+    await fire.click(within(note).getByRole('button', { name: 'Read more in the guide' }))
+    expect(button('Where Your Information Is Kept').getAttribute('aria-expanded')).toBe('true')
+  })
+})
+
 describe('Getting Started', () => {
   it('follows the order, skips, comes back on this device for this space, and is hidden or shown again', async () => {
     const storage = await createOwnSpace()

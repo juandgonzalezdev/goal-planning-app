@@ -1,3 +1,4 @@
+import { HelpTip } from '../../components/HelpTip'
 import { useState } from 'react'
 import type { YearMonth } from '../../domain/calendar'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
@@ -54,10 +55,7 @@ export function MoneyScreen(props: MoneyScreenProps) {
           <button type="button" className="button-small" onClick={() => onViewChange(setAllBlocksOpen(view, false))}>Collapse All</button>
         </span>
       </div>
-      <details className="field-help">
-        <summary>About your data</summary>
-        <p>{isDemo ? 'Alex’s data is invented. Demo changes are not saved and do not affect your own space.' : 'Your data is saved on this device only. No bank is connected.'}</p>
-      </details>
+      <div className="help-tips"><HelpTip topic={isDemo ? 'money-demo-data' : 'money-own-data'} label /></div>
       <p className="muted-note" role="status">{message}</p>
       <MoneyBlocksContext.Provider value={{ view, onViewChange }}>
         <div className="data-blocks">

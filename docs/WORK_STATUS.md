@@ -778,3 +778,56 @@ estaba vacío. Archivos ajenos sin seguimiento y review-deliveries quedan fuera.
 La entrega fija usa la base 07223f24a1958fef09e98af9fb5a14060e9010a1 y el
 commit final, con copias obtenidas de Git y ruta exclusiva REVISION.md de Claude.
 Siguen pendientes Chrome y Safari/iPhone; no se inicia Incremento 2.
+
+## Incremento 1: correcciones tras revisión de Claude (5 de noviembre de 2026)
+
+Codex leyó directamente el informe fijo
+review-deliveries/mobile-increment-1/0c2f76fbd7635a8030d27f9391c33773047824ea/REVISION.md.
+La inspección y estimaciones del revisor no son pruebas de navegador ni de Juan.
+Git propio al empezar: codex/mobile-increment-1-money, HEAD 0c2f76f, índice
+vacío y sin cambios versionados; archivos ajenos sin seguimiento preservados.
+Juan elige expresamente reutilizar la ayuda ? existente para H1.
+
+- H1: cuatro ayudas de Money usan HelpTip, con Close y enlace al capítulo
+  correspondiente de Help & Guide. Se añaden temas, sin cambiar el componente
+  compartido ni la navegación global. Datos propios y demo conservan textos
+  y destinos separados (storage / space). Se conserva ? Savings.
+- H2: se eliminan los signos +/- generados por CSS al retirar los details.
+- H3: se retiran summary y su CSS; la hipótesis de doble indicador nativo
+  deja de aplicar a estas ayudas. No equivale a verificación en Safari.
+- H4: resumen de Income sin datos: No income yet, coherente con el vacío.
+- H5: Open a source to choose the year of its payments, sin there ambiguo.
+- H6/R1: ruta de Reports sin uso conservada; posible reutilización en un
+  incremento futuro, sin autorizar su implementación. Settings sigue siendo
+  el acceso a Reports & Backup. R2: orientación del espacio nuevo pendiente
+  de prueba manual. R3: CANDIDATE.md identifica una candidata histórica de
+  otra rama/base; se conserva ese registro, no se usa como manual vigente.
+
+Cambios de pruebas: ayudas, Close, enlaces de los cuatro controles al capítulo
+correcto y regreso a Money, datos propios frente a demo, estado vacío cerrado.
+Documentación de Money ajustada al patrón ?. Sin cambios financieros, de
+almacenamiento ni dependencias. Sin nuevo commit, merge, push ni despliegue.
+El commit autorizado anterior ya está guardado; las correcciones quedan sin
+preparar hasta nueva autorización. La entrega e informe anteriores no cambian.
+
+Comprobaciones propias de Codex: 82/82 en cuatro suites afectadas (45,38 s),
+lint general, ESLint de pruebas finales, build y git diff --check correctos.
+Primer intento 76/77 por expectativa de texto aún no abierto, corregida.
+Build gzip 197,36 kB, aviso conocido >500 kB. No se repiten suite completa
+ni audit por cambios de ayudas/texto sin dependencias. Las 198 pruebas
+anteriores no se atribuyen a este código. Logs, resolución de cada hallazgo y
+recorrido manual pendiente en review-deliveries/mobile-increment-1/review-fixes/
+CORRECCIONES.md. No se ejecutó navegador ni lector de pantalla.
+
+## Incremento 1: commit de correcciones autorizado (5 de noviembre de 2026)
+
+Juan autoriza guardar las correcciones y preparar otra entrega fija para
+Claude. Sustituye el pendiente de autorización anterior; no autoriza merge,
+push ni despliegue ni acredita pruebas manuales. Codex comprobó que el diff
+coincide con el guardado en review-fixes antes de añadir esta anotación.
+Se reutilizan las 82 pruebas, lint y build del mismo contenido funcional;
+solo se añade este registro documental. Se guardan los 12 archivos propios,
+sin archivos ajenos ni review-deliveries. Base de la nueva entrega fija:
+0c2f76fbd7635a8030d27f9391c33773047824ea. Las entregas e informes anteriores
+quedan intactos. Chrome, Safari/iPhone y lector de pantalla siguen pendientes.
+No se inicia Incremento 2.

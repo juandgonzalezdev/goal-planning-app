@@ -115,6 +115,7 @@ describe('Money: the month and the blocks', () => {
     await openMoneyBlock('Accounts & Savings')
     expect(within(regionOf('Income')).queryByRole('combobox', { name: 'Month' })).toBeNull()
     expect(within(regionOf('Accounts & Savings')).queryByRole('combobox', { name: 'Month' })).toBeNull()
+    await fire.click(within(regionOf('Income')).getByRole('button', { name: 'About income' }))
     expect(text(regionOf('Income'))).toContain('Income does not use the Cards & Loans month.')
     const income = text(regionOf('Income'))
     const accounts = text(regionOf('Accounts & Savings'))

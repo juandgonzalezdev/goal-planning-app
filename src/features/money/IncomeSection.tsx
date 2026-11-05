@@ -1,3 +1,4 @@
+import { HelpTip } from '../../components/HelpTip'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
@@ -163,16 +164,13 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
     </div>
   )
 
-  const summary = sourceCount === 0 ? 'No income entered yet'
+  const summary = sourceCount === 0 ? 'No income yet'
     : [`${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`, `${counts.active} active`, ...(counts.upcoming > 0 ? [`${counts.upcoming} upcoming`] : [])].join(' · ')
 
   return (
     <MoneyBlockFrame block="income" summary={summary}
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Income</button>}>
-      <details className="field-help">
-        <summary>About income</summary>
-        <p>Expected income is a plan, not money received. Record what arrived in each source. Choose its payment year there; Income does not use the Cards &amp; Loans month.</p>
-      </details>
+      <div className="help-tips"><HelpTip topic="money-income" label /></div>
       {context}
       {editing?.id === null && form}
       {sourceCount === 0 && !editing && (

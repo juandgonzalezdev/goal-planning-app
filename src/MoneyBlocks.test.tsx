@@ -359,13 +359,19 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))
+    expect(summaryOf('Income')).toBe('No income yet')
     await fire.click(button('Expand All'))
     for (const [section, label] of [['Income', 'Add Income'], ['Accounts & Savings', 'Add Account'], ['Cards & Loans', 'Add Card or Loan']]) {
       expect(within(regionOf(section)).getAllByRole('button', { name: label })).toHaveLength(1)
-      const help = regionOf(section).querySelector('details')!
-      expect(help.open).toBe(false)
-      await fire.click(help.querySelector('summary')!)
-      expect(help.open).toBe(true)
+      const helpName = section === 'Income' ? 'About income' : section === 'Accounts & Savings' ? 'About balances' : 'About balances and payments'
+      const help = within(regionOf(section)).getByRole('button', { name: helpName })
+      expect(help.getAttribute('aria-expanded')).toBe('false')
+      await fire.click(help)
+      expect(help.getAttribute('aria-expanded')).toBe('true')
+      const note = document.getElementById(help.getAttribute('aria-controls')!)!
+      expect(within(note).getByRole('button', { name: 'Read more in the guide' })).toBeTruthy()
+      await fire.click(within(note).getByRole('button', { name: 'Close' }))
+      expect(help.getAttribute('aria-expanded')).toBe('false')
     }
     expect(screen.queryByRole('heading', { name: 'Reports & Backup' })).toBeNull()
     await fire.click(button('Add Income'))

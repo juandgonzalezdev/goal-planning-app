@@ -147,10 +147,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
   return (
     <MoneyBlockFrame block="accounts" summary={summary}
       actions={<button id={`${accountListId}-add-first`} type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
-      <details className="field-help">
-        <summary>About balances</summary>
-        <p>Enter balances from your bank or cash count, with their date. Previous balances stay in History.</p>
-      </details>
+      <div className="help-tips"><HelpTip topic="money-balances" label /></div>
       <div className="help-tips"><HelpTip topic="savings" label /></div>
       {form?.id === null && formBox}
       {items.length === 0 && !form && (

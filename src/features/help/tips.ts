@@ -7,6 +7,36 @@ import type { GuideChapter } from './guideContent'
  * Help & Guide that says more. Simple English, as in the rest of the app.
  */
 export const TIPS = {
+  'money-income': {
+    name: 'income',
+    text: ['Expected income is a plan, not money received. Record what arrived in each source.', 'Open a source to choose the year of its payments. Income does not use the Cards & Loans month.'],
+    example: null,
+    chapter: 'income',
+  },
+  'money-balances': {
+    name: 'balances',
+    text: ['Enter balances from your bank or cash count, with their date. Previous balances stay in History.'],
+    example: null,
+    chapter: 'accounts',
+  },
+  'money-payments': {
+    name: 'balances and payments',
+    text: ['Remaining Balance is the latest balance you entered, not a forecast. Payments use the month shared with Home and Bills.', 'Linked payments are counted once in Bills. Recording a payment does not update the Remaining Balance.'],
+    example: null,
+    chapter: 'cards',
+  },
+  'money-own-data': {
+    name: 'your data',
+    text: ['Your data is saved on this device only. No bank is connected.'],
+    example: null,
+    chapter: 'storage',
+  },
+  'money-demo-data': {
+    name: 'your data',
+    text: ['Alex’s data is invented. Demo changes are not saved and do not affect your own space.'],
+    example: null,
+    chapter: 'space',
+  },
   result: {
     name: 'Result',
     text: ['Income received minus what you spent. It is not money saved: your balances show what you really have.'],
