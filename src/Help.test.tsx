@@ -89,10 +89,10 @@ describe('Help & Guide', () => {
 
 describe('Money contextual help', () => {
   it.each([
-    ['About income', 'Income'],
-    ['About balances', 'Accounts, Cash and Savings'],
-    ['About balances and payments', 'Cards and Loans'],
-    ['About your data', 'Your Space and the Demo'],
+    ['About Income', 'Income'],
+    ['About Balances', 'Accounts, Cash and Savings'],
+    ['About Balances and payments', 'Cards and Loans'],
+    ['About Your data', 'Your Space and the Demo'],
   ])('opens the matching guide chapter from %s', async (label, title) => {
     await openAlex()
     await fire.click(tab('Money'))
@@ -113,7 +113,7 @@ describe('Money contextual help', () => {
   it('shows local storage information and its guide chapter in the own space', async () => {
     await createOwnSpace()
     await fire.click(tab('Money'))
-    const help = button('About your data')
+    const help = button('About Your data')
     await fire.click(help)
     const note = document.getElementById(help.getAttribute('aria-controls')!)!
     expect(text(note)).toContain('Your data is saved on this device only. No bank is connected.')

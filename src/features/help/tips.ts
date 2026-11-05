@@ -8,31 +8,31 @@ import type { GuideChapter } from './guideContent'
  */
 export const TIPS = {
   'money-income': {
-    name: 'income',
+    name: 'Income',
     text: ['Expected income is a plan, not money received. Record what arrived in each source.', 'Open a source to choose the year of its payments. Income does not use the Cards & Loans month.'],
     example: null,
     chapter: 'income',
   },
   'money-balances': {
-    name: 'balances',
+    name: 'Balances',
     text: ['Enter balances from your bank or cash count, with their date. Previous balances stay in History.'],
     example: null,
     chapter: 'accounts',
   },
   'money-payments': {
-    name: 'balances and payments',
+    name: 'Balances and payments',
     text: ['Remaining Balance is the latest balance you entered, not a forecast. Payments use the month shared with Home and Bills.', 'Linked payments are counted once in Bills. Recording a payment does not update the Remaining Balance.'],
     example: null,
     chapter: 'cards',
   },
   'money-own-data': {
-    name: 'your data',
+    name: 'Your data',
     text: ['Your data is saved on this device only. No bank is connected.'],
     example: null,
     chapter: 'storage',
   },
   'money-demo-data': {
-    name: 'your data',
+    name: 'Your data',
     text: ['Alex’s data is invented. Demo changes are not saved and do not affect your own space.'],
     example: null,
     chapter: 'space',

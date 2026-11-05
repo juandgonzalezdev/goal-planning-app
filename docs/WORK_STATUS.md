@@ -831,3 +831,34 @@ sin archivos ajenos ni review-deliveries. Base de la nueva entrega fija:
 0c2f76fbd7635a8030d27f9391c33773047824ea. Las entregas e informes anteriores
 quedan intactos. Chrome, Safari/iPhone y lector de pantalla siguen pendientes.
 No se inicia Incremento 2.
+
+## Incremento 1: observaciones O1–O3 (5 de noviembre de 2026)
+
+Juan autoriza corregir O1–O3 ahora y preparar nueva entrega fija por commit,
+sin merge, push ni despliegue y sin iniciar Incremento 2. Codex leyó directamente
+el informe review-deliveries/mobile-increment-1/7f699b87a569464d857521479f65925eb5cf9c93/REVISION.md.
+La aprobación de Claude es por inspección; no acredita navegador ni lector real.
+Git comprobado al empezar: codex/mobile-increment-1-money, HEAD/base
+7f699b87a569464d857521479f65925eb5cf9c93; índice vacío, sin cambios versionados.
+Se preservan los archivos ajenos sin seguimiento y las entregas e informes.
+
+- O1: temas nuevos con Income, Balances, Balances and payments y Your data
+  (espacio propio y demo). Pruebas de nombres About actualizadas.
+- O2: money-balances y savings comparten un único contenedor help-tips para
+  aprovechar la distribución flexible existente, sin cambiar CSS ni HelpTip.
+- O3: manual con frase solicitada y About Your data conforme a O1.
+
+Solo se guardan los seis archivos afectados y este registro. Sin cambios
+financieros, de almacenamiento, datos, preferencias ni navegación. Se prueban
+las tres suites afectadas y se ejecutan lint y build; no se repiten suite
+completa ni audit por cambios menores de texto y agrupación sin dependencias.
+El recorrido manual en Chrome, Safari/iPhone y VoiceOver sigue pendiente.
+
+Resultados propios de Codex: npm test -- src/Help.test.tsx
+src/MoneyBlocks.test.tsx src/MoneyHub.test.tsx --maxWorkers=2: 59/59,
+3 archivos, 37,90 s; npm run lint y npm run build: salida 0. Build mantiene
+aviso >500 kB (JS 706,98 kB, gzip 197,36 kB). git diff --check correcto.
+Solo se añade este resultado documental después de las comprobaciones.
+La nueva entrega fija contendrá diff base..final, copias del commit, sumas
+SHA-256, logs y resoluciones O1–O3. Claude escribirá solo REVISION.md en
+la nueva carpeta tras aviso de Juan. No hay confirmaciones manuales nuevas.

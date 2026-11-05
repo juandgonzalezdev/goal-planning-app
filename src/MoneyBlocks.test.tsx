@@ -363,7 +363,7 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     await fire.click(button('Expand All'))
     for (const [section, label] of [['Income', 'Add Income'], ['Accounts & Savings', 'Add Account'], ['Cards & Loans', 'Add Card or Loan']]) {
       expect(within(regionOf(section)).getAllByRole('button', { name: label })).toHaveLength(1)
-      const helpName = section === 'Income' ? 'About income' : section === 'Accounts & Savings' ? 'About balances' : 'About balances and payments'
+      const helpName = section === 'Income' ? 'About Income' : section === 'Accounts & Savings' ? 'About Balances' : 'About Balances and payments'
       const help = within(regionOf(section)).getByRole('button', { name: helpName })
       expect(help.getAttribute('aria-expanded')).toBe('false')
       await fire.click(help)

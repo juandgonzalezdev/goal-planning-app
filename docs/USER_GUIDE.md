@@ -159,7 +159,7 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - **Home**: your month at a glance.
 - **Bills**: the bills of the month (Calendar or List), and **All Bills** at the end, with every bill whatever the month.
 - **Goals**: the **Emergency Fund** and your goals.
-- **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three. One Add action stays in each section header; The labelled ? buttons open contextual help and link to Help & Guide. The your data help explains local storage or demo behavior.
+- **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three. One Add action stays in each section header. The labelled **?** buttons open contextual help and link to Help & Guide; **About Your data** explains local storage or the demo.
 - **History**: everything you recorded.
 - The logo at the top takes you to Home.
 - The gear opens Settings, where **Help & Guide** and **Reports & Backup** are.
