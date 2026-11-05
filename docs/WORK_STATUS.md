@@ -1128,3 +1128,45 @@ generará otra entrega fija por hash desde la base e493ed8, conservando las ante
 Logs propios en review-deliveries/increment-2a-bills/visible-unknown-amount/.
 No se ejecutó navegador, Safari/iPhone ni VoiceOver; nueva aceptación pendiente.
 Sin merge, push, despliegue, 2B ni otros incrementos.
+
+
+## Incremento 2A: O1, ayuda única del importe desconocido (5 de noviembre de 2026)
+
+Juan autoriza O1 de la cuarta revisión y una nueva entrega fija por commit, solo
+en BillForm.tsx, sus pruebas y documentación de 2A. Codex leyó directamente
+review-deliveries/increment-2a-bills/e6260064e0924de68c1dbdc88ced819fd702ff21/REVISION.md.
+Claude aprueba el movimiento de la casilla por inspección y propone O1 como mejora
+menor de compacidad. Esta aprobación no acredita navegador ni validación manual.
+Git comprobado al iniciar: codex/increment-2a-bills, HEAD/base
+e6260064e0924de68c1dbdc88ced819fd702ff21, índice vacío y sin cambios versionados.
+Se conservan archivos ajenos sin seguimiento y todas las entregas e informes.
+
+O1: eliminado el párrafo fijo bajo la casilla. Desmarcada: sin ayuda. Marcada:
+una sola ayuda de Amount, Unknown amount — shown as Unknown, never as 0. Uncheck
+to enter an amount. Amount la referencia mediante Field y la casilla mediante
+aria-describedby condicional a bill-amount-help. Al desmarcar, la ayuda y sus
+referencias desaparecen y vuelve el valor tecleado. Sin cambiar nada de ubicación,
+campo deshabilitado, error de importe vacío, guardado null, cero explícito ni
+lógica financiera. Manual y USER_GUIDE.md actualizados.
+
+Comprobaciones propias de Codex:
+- Antes: prueba O1 fallida, 48 omitidas por selección (49 en BillsCalendar), 5,74 s.
+- Después: npm test -- src/BillsCalendar.test.tsx src/AlexDemo.test.tsx
+  src/domain/finance/singleMonthBills.test.ts src/features/bills/billsView.test.ts
+  --maxWorkers=2: 94/94 en cuatro archivos, 39,35 s. Caso O1 verifica ausencia,
+  ayuda única, descripción de campo y casilla, retirada de referencias y recuperación
+  de 45. Se conservan las pruebas de null, cero, error y protección de borrador.
+- npm run lint y npm run build: salida 0. JS 708,99 kB, gzip 197,88 kB; aviso
+  conocido >500 kB. Avisos conocidos de jsdom, sin fallos finales.
+- git diff --check correcto. Sin cambios de dominio, esquema, cálculos, payments,
+  vínculos ni dependencias. No se repiten suite completa ni audit por ayuda/texto
+  localizados; se reutiliza audit anterior (10 vulnerabilidades moderadas de
+  herramientas), sin presentar resultados históricos como nuevas ejecuciones.
+
+Se guardan solo cinco archivos propios: BillForm.tsx, BillsCalendar.test.tsx,
+INCREMENT_2A.md, USER_GUIDE.md y WORK_STATUS.md. Se comprobará la lista preparada
+y git diff --cached --check antes del commit. La nueva carpeta por hash registra
+base e626006, extremo completo, diff, copias y evidencias de O1. Logs propios en
+review-deliveries/increment-2a-bills/o1-help/. Sin navegador, VoiceOver ni recorrido
+manual ejecutados por Codex. Aceptación manual pendiente; sin merge, push,
+despliegue, 2B ni otros incrementos.

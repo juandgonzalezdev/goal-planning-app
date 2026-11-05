@@ -168,12 +168,11 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
             <div className="bill-amount-group">
               <Field id="bill-amount" label={`Amount (${currency})`} inputMode="decimal" value={draft.amountUnknown ? '' : draft.amount}
                 disabled={draft.amountUnknown} onChange={amount => set({ amount })} error={errors.amount}
-                help={draft.amountUnknown ? 'Amount is unknown. Uncheck Amount not known yet to enter an amount.' : undefined} />
+                help={draft.amountUnknown ? 'Unknown amount — shown as Unknown, never as 0. Uncheck to enter an amount.' : undefined} />
               <label className="check-row">
-                <input type="checkbox" checked={draft.amountUnknown} aria-describedby="bill-amount-unknown-help" onChange={e => set({ amountUnknown: e.target.checked })} />
+                <input type="checkbox" checked={draft.amountUnknown} aria-describedby={draft.amountUnknown ? 'bill-amount-help' : undefined} onChange={e => set({ amountUnknown: e.target.checked })} />
                 <span>Amount not known yet</span>
               </label>
-              <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
             </div>
           )}
           <Field id="bill-due" label="Due day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Shorter months use their last day." />

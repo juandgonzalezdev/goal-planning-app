@@ -99,8 +99,8 @@ no se consideran confirmados por las pruebas automáticas ni por la revisión de
 1. **H1, actualizado por la mejora manual:** Add Bill con nombre y día, sin importe → Save.
    El error dice “Enter the amount, or select Amount not known yet.” y el foco sigue en
    Amount. La casilla está visible inmediatamente debajo. Marcarla sin abrir More:
-   Amount queda deshabilitado con “Amount is unknown. Uncheck Amount not known yet to
-   enter an amount.”. Desmarcarla permite escribir; no parece cero ni un fallo.
+   Amount queda deshabilitado con “Unknown amount — shown as Unknown, never as 0.
+   Uncheck to enter an amount.”. Desmarcarla permite escribir; no parece cero ni un fallo.
 2. **H2:** Editar Test repair de un mes → More details. Se explica
    “To repeat it, choose No end month.”. Cambiar End month a No end month:
    la frase pasa a mensual y desaparece esa pista. Volver al mes inicial:
@@ -180,3 +180,20 @@ los recorridos anteriores estén aprobados. Sustituye la ubicación anterior en 
 
 Estos pasos no acreditan ejecución por Codex. Mantener los recorridos H1–H7 y N1–N3
 restantes, con esta ubicación y los textos nuevos del importe desconocido.
+
+
+## O1: ayuda única del importe desconocido (aceptación pendiente)
+
+- Casilla desmarcada: sin ayuda bajo Amount ni bajo la casilla. El error de importe
+  vacío, si corresponde, mantiene su mensaje y su comportamiento.
+- Casilla marcada: una única ayuda de Amount: “Unknown amount — shown as Unknown,
+  never as 0. Uncheck to enter an amount.”. Campo y casilla referencian esa misma
+  ayuda mientras existe; desaparece al desmarcarla, sin referencias a un id ausente.
+- No cambia la ubicación, el campo deshabilitado, la recuperación del borrador,
+  el guardado null ni los cálculos financieros.
+
+En Chrome a 390 px y Safari/iPhone, claro/oscuro: comprobar que no hay texto de
+ayuda con la casilla desmarcada; escribir 45, marcarla y leer una única ayuda;
+desmarcarla y comprobar que desaparece la ayuda y vuelve 45. Con lector de pantalla,
+verificar las descripciones y el estado deshabilitado. El resto del recorrido
+continúa pendiente de confirmación expresa; las pruebas DOM no acreditan este anuncio.
