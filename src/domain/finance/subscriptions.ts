@@ -110,6 +110,12 @@ export function applyCancel(data: FinanceData, simulation: Simulation): FinanceD
     bills: data.bills.map(bill => {
       if (bill.id !== simulation.billId) return bill
       const last = addMonthsToYearMonth(next.month, -1)
+      // Inclusive date ranges cannot end before they start. Cancel the first
+      // charge with the existing pause representation instead of leaving it due.
+      if (last < bill.startMonth) return {
+        ...bill, endMonth: bill.startMonth,
+        pausedMonths: [...new Set([...(bill.pausedMonths ?? []), bill.startMonth])].sort(),
+      }
       return { ...bill, endMonth: last < bill.startMonth ? bill.startMonth : last }
     }),
   }

@@ -394,7 +394,8 @@ The **Bills** tab shows the bills of the chosen month.
   - **Details** opens the bill.
 - The **All / Pending / Paid** filter changes the list only. The month's totals stay the same.
 - **All Bills**, at the end of Bills, lists every bill with its usual amount, whatever the month above. Its filter shows **Active**, **Upcoming**, **Ended** or **All** bills. Tap a bill to open it; Back returns to the same place.
-- **Add Bill**: name, category, amount and due day. **More options** has yearly billing, paused months, the first and last month, and the card or loan it pays.
+- **Add Bill**: Bill name, Amount, Due day and Repeat every month. The bill starts in the selected month. Uncheck Repeat every month for a bill due only in that month. **More details** starts closed and has Category (Other by default), Yearly, an optional end month, Note, Amount not known yet and the card or loan it pays. Save adds one bill; Cancel drops the draft and Back asks before leaving changes.
+- **Edit Details** keeps the existing first and last month, yearly billing, pauses, amounts and payments when you save other details. More details contains the existing date and linking controls. Change Usual Amount still asks which month the change starts from; earlier amounts stay as recorded. Subscription pause and cancellation actions remain in the bill detail.
 
 In a bill's own screen:
 

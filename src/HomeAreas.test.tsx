@@ -289,7 +289,7 @@ describe('+ Add', () => {
     expect(document.activeElement).toBe(addButton())
     await addFromHome('Add Bill')
     await type('Bill name', 'Bike Repair')
-    await type('Usual amount (PLN)', '80')
+    await type('Amount (PLN)', '80')
     await type('Due day', '15')
     act(() => { fireEvent.submit(document.querySelector('.bill-form')!) })
     await waitFor(() => expect(heading('Bike Repair')).toBeTruthy())

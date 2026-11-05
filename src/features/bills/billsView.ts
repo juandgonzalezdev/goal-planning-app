@@ -65,6 +65,7 @@ export const readDueDay = (text: string) => (/^\d{1,2}$/.test(text.trim()) ? Num
 export function scheduleSentence(draft: { dueDay: string; startMonth: string; endMonth: string }, yearly = false): string | null {
   const day = readDueDay(draft.dueDay)
   if (!(day >= 1 && day <= 31) || !isYearMonth(draft.startMonth)) return null
+  if (draft.endMonth === draft.startMonth) return `One month only: ${formatYearMonth(draft.startMonth)}, on day ${day}.`
   const repeat = yearly ? `Once a year in ${monthName(draft.startMonth)}, on day ${day}` : `Monthly on day ${day}`
   // An end month before the start is an error shown on its field: the sentence then says nothing about the end.
   const end = draft.endMonth === '' ? '. No end date.'

@@ -908,3 +908,74 @@ No se presentan como una suite completa de la candidata. Solo cambia
 documentación tras bef715b; no se repiten pruebas, lint ni build por integrar
 el mismo contenido. Build conserva aviso >500 kB, gzip 197,36 kB. Resultado
 exacto del push y publicación se comunicará después de comprobarlo.
+
+
+## Incremento 2A: simplificación de Bills (5 de noviembre de 2026)
+
+Juan autoriza exclusivamente implementar 2A. Codex comprobó directamente main y HEAD en
+48f6aea44de1c6fb0448d12b5dbe5178cf353fb4, sin cambios versionados ni índice preparado
+al comenzar. Rama creada: codex/increment-2a-bills. Se conservan todos los archivos
+ajenos sin seguimiento y las entregas e informes anteriores. Juan confirma en su
+mensaje los seis puntos manuales de Money en móvil del Incremento 1; esta confirmación
+es recibida, no ejecutada por Codex, y no se extiende a Chrome, VoiceOver ni a 2A.
+
+Implementado: Add Bill compacto (Bill name, Amount, Due day, Repeat every month),
+More details cerrado, Other por defecto, recurrencia mensual desde el mes seleccionado
+o una sola ocurrencia con endMonth = startMonth. Yearly y fechas finales opcionales,
+importe desconocido, notas y vínculos siguen accesibles. La edición conserva su
+frecuencia y fechas al abrir y guardar otros detalles; no aplica el mes seleccionado
+a registros existentes. Se mantienen las acciones por mes de importes y payments.
+No cambia el esquema financiero, fórmulas, préstamos ni vínculos; sin 2B ni Incremento 3.
+
+Investigación: Calendar, totales, Coming up, History y PDF consumen billsForMonth;
+All Bills usa fechas inclusivas en validityOn; suscripciones usan isBillDueIn.
+Se confirmó un fallo de cancelación antes del primer cargo (prueba nueva fallida):
+clamp del último mes al inicial dejaba el primer cargo pendiente. La corrección
+usa pausedMonths existente para ese cargo y mantiene el límite inclusivo válido.
+Prueba posterior aprobada. No se cambian registros de payments ni saldos.
+
+Comprobaciones propias de Codex, ejecutadas el 5 de noviembre:
+- Suite completa: npm test -- --maxWorkers=2, 859/859 en 62 archivos, 231,11 s.
+  Corresponde a la revisión previa a la prueba de Back con solo recurrencia y
+  a la corrección final de cancelación. No se atribuye al contenido final completo.
+- Tras esos ajustes: npm test -- src/BillsCalendar.test.tsx
+  src/domain/finance/singleMonthBills.test.ts src/domain/finance/alexDemo.test.ts
+  --maxWorkers=2: 67/67 en 3 archivos, 28,68 s. Se cubren las áreas cambiadas;
+  no se repite toda la suite por esas correcciones localizadas.
+- npm run lint y npm run build finales: salida 0. Build conserva el aviso >500 kB;
+  JS 708,10 kB, gzip 197,63 kB. No se cambió el límite.
+- npm audit: primer intento sin red (ENOTFOUND); segundo con acceso al registro
+  completado: 10 vulnerabilidades moderadas en minimatch y herramientas dependientes
+  de ESLint/TypeScript. package.json y package-lock.json no cambian: son dependencias
+  preexistentes. No se ejecutó audit fix ni se ampliaron dependencias fuera de alcance.
+- git diff --check: correcto. Avisos conocidos de jsdom: scrollTo/navegación.
+- Intentos iniciales: tres expectativas antiguas de interfaz fallaron y se adaptaron;
+  una prueba nueva usaba erróneamente la respuesta de markBillPaid como resultado con
+  status, se corrigió a FinanceData; otra buscaba dialog en vez de alertdialog.
+  Los resultados finales anteriores sustituyen esos intentos; no son fallos pendientes.
+
+Evidencia histórica: prueba de payment de 120,00 el 3 de noviembre, edición de nota,
+comparación exacta de billMonths, History y resumen mensual. La creación de una factura
+nueva conserva facturas, deudas, vínculos y registros previos. Cobertura de mes único
+antes/durante/después, anual con y sin fin, Coming up, validez, pausa, cancelación y PDF.
+Datos de pruebas exclusivamente ficticios. No se ejecutó navegador, Safari/iPhone ni
+lector de pantalla. Guion manual y decisiones en docs/INCREMENT_2A.md.
+
+Trabajo sin preparar y sin commit. Pendiente autorización para guardar el commit y
+producir la entrega fija de Claude en review-deliveries/increment-2a-bills/<hash-completo>/,
+según WORKFLOW.md. Borrador verificable y logs en review-deliveries/increment-2a-bills/work-in-progress/;
+no es entrega fija por commit y Claude no debe tratarla como tal. Sin merge, push ni despliegue.
+
+
+### Incremento 2A: commit y entrega fija autorizados
+
+Juan autoriza guardar exclusivamente los 12 archivos de 2A en la rama
+codex/increment-2a-bills y generar la entrega fija para Claude. Esta autorización
+sustituye el pendiente de commit anterior; no autoriza merge, push, despliegue
+ni otros incrementos. Codex comprobó que los 12 archivos coincidían exactamente
+con las copias del borrador antes de añadir esta anotación documental; no había
+cambios versionados ajenos y el índice estaba vacío. Se reutilizan las pruebas,
+lint y build registrados arriba porque no cambia el código ni su entorno.
+Se comprobarán la lista exacta preparada y git diff --cached --check antes del
+commit; el hash completo y los resultados finales de Git constarán en GIT_STATUS.md
+de la nueva entrega. El borrador y las entregas anteriores quedan intactos.

@@ -300,11 +300,11 @@ function withoutDebtPayment(data: FinanceData, debtId: Id | null): FinanceData {
 export type BillResult = { status: 'ok'; data: FinanceData } | { status: 'invalid'; errors: BillFieldError[] }
 
 /** Adds a bill with its usual amount (null if not known yet). */
-export function addBill(data: FinanceData, id: Id, fields: BillFields, amount: MoneyAmount | null): BillResult {
+export function addBill(data: FinanceData, id: Id, fields: BillFields, amount: MoneyAmount | null, frequency: RecurringBill['frequency'] = 'monthly'): BillResult {
   const errors = validateBillFields(data, fields, null)
   if (amount !== null && (!isMinorAmount(amount) || amount < 0)) return { status: 'invalid', errors }
   if (errors.length > 0) return { status: 'invalid', errors }
-  const bill = applyFields({ id, name: '', category: 'Other', owner: fields.owner, amount, currency: data.space.currency, dueDay: 1, startMonth: fields.startMonth, endMonth: null }, fields)
+  const bill = applyFields({ frequency, id, name: '', category: 'Other', owner: fields.owner, amount, currency: data.space.currency, dueDay: 1, startMonth: fields.startMonth, endMonth: null }, fields)
   return { status: 'ok', data: withoutDebtPayment({ ...data, bills: [...data.bills, bill] }, fields.debtId) }
 }
 

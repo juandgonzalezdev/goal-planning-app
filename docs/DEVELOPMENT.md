@@ -121,7 +121,7 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
     barra se queda bajo la cabecera mientras se ve el calendario y nunca tapa
     el panel. View day details lleva al panel con la fecha visible y el foco
     en ella; Back to calendar devuelve el foco al día. + Add Bill del panel
-    abre el formulario con Due day 30 y Start month December 2026; Cancel
+    abre el formulario con Due day 30 y un resumen que comienza en December 2026; Cancel
     vuelve al mismo sitio; al guardar vuelve al día con «Bill added.». Con el
     filtro Paid, el aviso dice que el filtro la oculta y ofrece Show All. Abre
     una factura y vuelve: mismo mes, vista, filtro, día, posición y foco.

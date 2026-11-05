@@ -31,9 +31,9 @@ type Props = {
 
 interface BillDraft {
   name: string; category: string; amount: string; amountUnknown: boolean; dueDay: string
-  startMonth: string; endMonth: string; debtId: string; note: string
+  startMonth: string; endMonth: string; debtId: string; note: string; repeat: boolean; yearly: boolean
 }
-type DraftField = Exclude<keyof BillDraft, 'amountUnknown'>
+type DraftField = Exclude<keyof BillDraft, 'amountUnknown' | 'repeat' | 'yearly'>
 type DraftErrors = Partial<Record<DraftField, string>>
 
 const FIELD_ERRORS: Record<BillFieldError, [DraftField, string]> = {
@@ -52,14 +52,15 @@ const FIELD_ERRORS: Record<BillFieldError, [DraftField, string]> = {
 
 /** Where each field is on the screen, top to bottom: the first one with an error gets the focus. */
 const FIELD_IDS: Record<DraftField, string> = {
-  name: 'bill-name', category: 'bill-category', amount: 'bill-amount', dueDay: 'bill-due',
+  name: 'bill-name', amount: 'bill-amount', dueDay: 'bill-due', category: 'bill-category',
   startMonth: 'bill-start', endMonth: 'bill-end', debtId: 'bill-debt', note: 'bill-note',
 }
 const FIELD_ORDER = Object.keys(FIELD_IDS) as DraftField[]
-/** The fields inside More options. */
-const MORE_FIELDS: readonly DraftField[] = ['endMonth', 'debtId', 'note']
+/** The fields inside More details. */
+const MORE_FIELDS: readonly DraftField[] = ['category', 'startMonth', 'endMonth', 'debtId', 'note']
 
 const draftOf = (bill: RecurringBill | null, month: YearMonth, dueDay?: number): BillDraft => ({
+  repeat: bill ? bill.startMonth !== bill.endMonth && bill.frequency !== 'yearly' : true, yearly: bill?.frequency === 'yearly',
   name: bill?.name ?? '', category: bill?.category ?? 'Other', amount: '', amountUnknown: false, dueDay: bill ? String(bill.dueDay) : dueDay ? String(dueDay) : '',
   startMonth: bill?.startMonth ?? month, endMonth: bill?.endMonth ?? '', debtId: bill?.debtId ?? '', note: bill?.note ?? '',
 })
@@ -73,14 +74,14 @@ function readDraft(draft: BillDraft, owner: Owner): BillFields {
 
 /**
  * Add Bill (and Edit Details of a bill): the main fields first, the rest in
- * More options. An unknown amount is chosen explicitly and saved as
+ * More details. An unknown amount is chosen explicitly and saved as
  * unknown, never as 0. Saving once creates one bill.
  */
 export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCancel, onChange, onCreated, onSaved }: Props) {
   const currency = data.space.currency
   const [draft, setDraft] = useState<BillDraft>(() => draftOf(bill, month, dueDay))
   const [errors, setErrors] = useState<DraftErrors>({})
-  const [moreOpen, setMoreOpen] = useState(() => !!(bill?.endMonth || bill?.debtId || bill?.note))
+  const [moreOpen, setMoreOpen] = useState(false)
   // A save in progress: a second tap (or Enter) before the screen changes must not add a second bill.
   const saving = useRef(false)
   const base = useEditBase()
@@ -88,13 +89,14 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   useUnsavedChanges(bill ? 'Edit Bill Details' : 'Add Bill', {
     'Name': draft.name, 'Category': draft.category, 'Usual amount': bill ? undefined : draft.amountUnknown ? 'Not known yet' : draft.amount,
     'Due day': draft.dueDay, 'Start month': draft.startMonth, 'End month': draft.endMonth,
+    'Repeat every month': draft.repeat, 'Yearly': draft.yearly,
     'Pays a card or loan': data.debts.find(debt => debt.id === draft.debtId)?.name, 'Note': draft.note,
   })
   const focusField = useRef<DraftField | null>(null)
   const years = yearsAround(Number(today.slice(0, 4)))
   const startYear = isYearMonth(draft.startMonth) ? Number(draft.startMonth.slice(0, 4)) : Number(yearMonthOf(today).slice(0, 4))
   const availableDebts = data.debts.filter(debt => !data.bills.some(b => b.debtId === debt.id && b.id !== bill?.id))
-  const sentence = scheduleSentence(draft, bill?.frequency === 'yearly')
+  const sentence = scheduleSentence({ ...draft, endMonth: !bill && !draft.repeat && !draft.yearly ? draft.startMonth : draft.endMonth }, draft.yearly)
 
   useEffect(() => {
     if (!focusField.current) return
@@ -113,14 +115,14 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     setErrors(found)
     const first = FIELD_ORDER.find(field => found[field])
     if (!first) return
-    // An error inside More options opens it, so it is never hidden; the focus goes to the first error on the screen.
+    // An error inside More details opens it, so it is never hidden; the focus goes to the first error on the screen.
     if (MORE_FIELDS.some(field => found[field])) setMoreOpen(true)
     focusField.current = first
   }
 
   const save = async () => {
     if (saving.current) return
-    const fields = readDraft(draft, bill?.owner ?? owner)
+    const fields = readDraft(!bill && !draft.repeat && !draft.yearly ? { ...draft, endMonth: draft.startMonth } : draft, bill?.owner ?? owner)
     const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
     let amount: number | null = null
     if (!bill && !draft.amountUnknown) {
@@ -133,7 +135,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     if (Object.keys(found).length > 0) { showErrors(found); return }
 
     const id = bill?.id ?? newId()
-    const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount))
+    const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount, draft.yearly ? 'yearly' : 'monthly'))
     const checked = apply(data)
     if (checked.status !== 'ok') { showErrors(Object.fromEntries(checked.errors.map(problem => FIELD_ERRORS[problem]))); return }
     saving.current = true
@@ -153,34 +155,49 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
       <section className="block">
         <div className="form-stack">
           <Field id="bill-name" label="Bill name" value={draft.name} onChange={name => set({ name })} error={errors.name} maxLength={60} />
-          <div className="form-field">
-            <label htmlFor="bill-category">Category</label>
-            <select id="bill-category" value={draft.category} onChange={e => set({ category: e.target.value })}>
-              {BILL_CATEGORIES.map(category => <option key={category}>{category}</option>)}
-            </select>
-          </div>
           {!bill && (
             <div className="bill-amount-group">
-              <Field id="bill-amount" label={`Usual amount (${currency})`} inputMode="decimal" value={draft.amountUnknown ? '' : draft.amount}
+              <Field id="bill-amount" label={`Amount (${currency})`} inputMode="decimal" value={draft.amountUnknown ? '' : draft.amount}
                 disabled={draft.amountUnknown} onChange={amount => set({ amount })} error={errors.amount} />
-              <label className="check-row">
-                <input type="checkbox" checked={draft.amountUnknown} aria-describedby="bill-amount-unknown-help" onChange={e => set({ amountUnknown: e.target.checked })} />
-                <span>Amount not known yet</span>
-              </label>
-              <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
             </div>
           )}
           <Field id="bill-due" label="Due day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Shorter months use their last day." />
-          <MonthYearField id="bill-start" label="Start month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} years={years}
-            defaultYear={startYear} error={errors.startMonth} />
+          {!bill && <label className="check-row">
+            <input type="checkbox" checked={draft.repeat} onChange={e => set({ repeat: e.target.checked, yearly: false })} />
+            <span>Repeat every month</span>
+          </label>}
 
           <button type="button" className="more-toggle" aria-expanded={moreOpen} aria-controls="bill-more" onClick={() => setMoreOpen(!moreOpen)}>
-            More options <span className="muted-note">End month, card or loan, note</span>
+            More details
           </button>
           {moreOpen && (
             <div id="bill-more" className="form-stack more-options">
+              <div className="form-field">
+                <label htmlFor="bill-category">Category</label>
+                <select id="bill-category" value={draft.category} onChange={e => set({ category: e.target.value })}>
+                  {BILL_CATEGORIES.map(category => <option key={category}>{category}</option>)}
+                </select>
+              </div>
+              {!bill && <>
+                <label className="check-row">
+                  <input type="checkbox" checked={draft.amountUnknown} aria-describedby="bill-amount-unknown-help" onChange={e => set({ amountUnknown: e.target.checked })} />
+                  <span>Amount not known yet</span>
+                </label>
+                <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
+                <label className="check-row">
+                  <input type="checkbox" checked={draft.yearly} onChange={e => set({ yearly: e.target.checked, repeat: !e.target.checked })} />
+                  <span>Yearly</span>
+                </label>
+              </>}
+              {bill && <>
+                <MonthYearField id="bill-start" label="Start month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} years={years}
+                  defaultYear={startYear} error={errors.startMonth} />
+                <p className="field-help">{draft.yearly ? 'Repeats yearly.' : draft.repeat ? 'Repeats monthly.' : 'One month only.'} Existing billing periods are kept when you save details.</p>
+              </>}
+              {(bill || draft.repeat || draft.yearly) && <>
               <MonthYearField id="bill-end" label="End month" value={draft.endMonth} onChange={endMonth => set({ endMonth })} years={years}
                 noneLabel="No end month" defaultYear={startYear} error={errors.endMonth} />
+              </>}
               <div className="form-field">
                 <label htmlFor="bill-debt">Pays a card or loan</label>
                 <select id="bill-debt" value={draft.debtId} onChange={e => set({ debtId: e.target.value })}
@@ -200,7 +217,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
       {sentence && <p className="bill-schedule">{sentence}</p>}
       {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
       <div className="inline-actions">
-        <button type="submit" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined}>{saver.sending ? 'Saving…' : bill ? 'Save Changes' : 'Add Bill'}</button>
+        <button type="submit" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined}>{saver.sending ? 'Saving…' : bill ? 'Save Changes' : 'Save'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </form>
