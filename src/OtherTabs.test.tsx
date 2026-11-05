@@ -342,7 +342,7 @@ describe('Download Both Copies', () => {
     const store: SpaceStore = { ...inner, load: async () => ({ status: 'read-only', space: { data: robin(), revision: 0 }, mayBeOutdated: true }) }
     await openTab(store)
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     expect(button('Download Backup')).toBeTruthy()
     expect(button('Download Both Copies')).toBeTruthy()
     expect(screen.getByText(/It is a recovery file with your information not encrypted, not a backup/)).toBeTruthy()

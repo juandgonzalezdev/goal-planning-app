@@ -314,19 +314,19 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     expect(screen.queryByRole('button', { name: /^Balance updateShoebox/ })).toBeNull()
   })
 
-  it('focuses Add Your First Account after deleting the last account', async () => {
+  it('focuses Add Account after deleting the last account', async () => {
     render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))
     await openBlock('Accounts & Savings')
-    await fire.click(button(/Add Your First Account/))
+    await fire.click(button(/Add Account/))
     await fire.change(screen.getByLabelText('Account Name'), { target: { value: 'Only account' } })
     await fire.click(button('Save Account'))
     await fire.click(button(/^Only account/))
     await fire.click(button('Delete: Only account'))
     await fire.click(button('Delete Account and Balances'))
-    expect(document.activeElement).toBe(button(/Add Your First Account/))
+    expect(document.activeElement).toBe(button(/Add Account/))
   })
 
   it('can remove an account created by mistake with an initial balance', async () => {
@@ -354,16 +354,24 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     expect(text(regionOf('Emergency Fund'))).toContain('is not added to Saved in Goals')
   })
 
-  it('shows an empty state with a first action in a new space', async () => {
+  it('keeps one working Add action per empty Money section and contextual help', async () => {
     render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))
     await fire.click(button('Expand All'))
-    expect(button(/Add Your First Income/)).toBeTruthy()
-    expect(button(/Add Your First Account/)).toBeTruthy()
-    expect(button(/Add Your First Card or Loan/)).toBeTruthy()
-    expect(text(regionOf('Income'))).toContain('No income entered yet.')
+    for (const [section, label] of [['Income', 'Add Income'], ['Accounts & Savings', 'Add Account'], ['Cards & Loans', 'Add Card or Loan']]) {
+      expect(within(regionOf(section)).getAllByRole('button', { name: label })).toHaveLength(1)
+      const help = regionOf(section).querySelector('details')!
+      expect(help.open).toBe(false)
+      await fire.click(help.querySelector('summary')!)
+      expect(help.open).toBe(true)
+    }
+    expect(screen.queryByRole('heading', { name: 'Reports & Backup' })).toBeNull()
+    await fire.click(button('Add Income'))
+    expect(screen.getByLabelText('Name')).toBeTruthy()
+    await fire.click(button('Cancel'))
+    expect(text(regionOf('Income'))).toContain('No income yet.')
     await fire.click(tab('Bills'))
     await openBlock('All Bills')
     expect(button(/Add Your First Bill/)).toBeTruthy()

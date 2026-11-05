@@ -86,12 +86,11 @@ describe('Tabs and where every former Data and Cards function is now', () => {
     await fire.click(tab('Goals'))
     expect(within(regionOf('Emergency Fund')).getByRole('button', { name: /^Emergency Fund/ })).toBeTruthy()
     expect(button(/Add Goal/)).toBeTruthy()
-    // Reports & Backup: from Money's link, Settings with the focus on that section; Back returns to Money.
+    // Reports & Backup remain in Settings; Back returns to Money.
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     expect(heading('Settings')).toBeTruthy()
     const reports = document.getElementById('settings-reports')!
-    expect(document.activeElement).toBe(reports)
     for (const name of ['Download PDF', 'Download Backup']) expect(within(reports).getByRole('button', { name })).toBeTruthy()
     await fire.click(button('Back'))
     expect(heading('Money')).toBeTruthy()
@@ -103,7 +102,7 @@ describe('Tabs and where every former Data and Cards function is now', () => {
   it('offers Restore Backup in the own space’s Settings', async () => {
     await createOwnSpace()
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     expect(screen.getByLabelText(/Choose a backup file/)).toBeTruthy()
   })
 })
@@ -116,7 +115,7 @@ describe('Money: the month and the blocks', () => {
     await openMoneyBlock('Accounts & Savings')
     expect(within(regionOf('Income')).queryByRole('combobox', { name: 'Month' })).toBeNull()
     expect(within(regionOf('Accounts & Savings')).queryByRole('combobox', { name: 'Month' })).toBeNull()
-    expect(text(regionOf('Income'))).toContain('Income does not use the month chosen in Cards & Loans.')
+    expect(text(regionOf('Income'))).toContain('Income does not use the Cards & Loans month.')
     const income = text(regionOf('Income'))
     const accounts = text(regionOf('Accounts & Savings'))
     await openMoneyBlock('Cards & Loans')

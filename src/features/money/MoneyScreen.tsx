@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Icon } from '../../components/Icon'
 import type { YearMonth } from '../../domain/calendar'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -39,8 +38,7 @@ export type MoneyScreenProps = {
  * Money: income, accounts and savings, cards and loans, to look at and
  * change in one place, in three blocks that open and close, always in the
  * same order. Home and History open these same records, so a change made
- * anywhere shows everywhere. Reports & Backup are in Settings, linked at
- * the end.
+ * anywhere shows everywhere. Reports & Backup are in Settings.
  */
 export function MoneyScreen(props: MoneyScreenProps) {
   const { isDemo, view, onViewChange } = props
@@ -48,7 +46,7 @@ export function MoneyScreen(props: MoneyScreenProps) {
   const say = (done: string, outcome: SaveOutcome) => setMessage(outcomeText(done, outcome))
   const sectionProps = { ...props, say, tell: setMessage }
   return (
-    <div className="tab-screen">
+    <div className="tab-screen money-screen">
       <div className="data-head">
         <h1 className="tab-title">Money</h1>
         <span className="inline-actions">
@@ -56,11 +54,10 @@ export function MoneyScreen(props: MoneyScreenProps) {
           <button type="button" className="button-small" onClick={() => onViewChange(setAllBlocksOpen(view, false))}>Collapse All</button>
         </span>
       </div>
-      <p className="muted-note">
-        {isDemo
-          ? 'Demo: Alex is invented. Change anything to try it out; nothing here is saved, and your own space is never touched.'
-          : 'Everything you enter is saved on this device only. No bank is connected.'}
-      </p>
+      <details className="field-help">
+        <summary>About your data</summary>
+        <p>{isDemo ? 'Alex’s data is invented. Demo changes are not saved and do not affect your own space.' : 'Your data is saved on this device only. No bank is connected.'}</p>
+      </details>
       <p className="muted-note" role="status">{message}</p>
       <MoneyBlocksContext.Provider value={{ view, onViewChange }}>
         <div className="data-blocks">
@@ -69,11 +66,6 @@ export function MoneyScreen(props: MoneyScreenProps) {
           <CardsLoansSection {...sectionProps} />
         </div>
       </MoneyBlocksContext.Provider>
-      <section className="block" aria-labelledby="money-reports">
-        <h2 id="money-reports" className="section-title">Reports &amp; Backup</h2>
-        <p className="field-help">{isDemo ? 'The PDF report and the backup file are in Settings.' : 'The PDF report, the backup file and Restore Backup are in Settings.'}</p>
-        <button type="button" className="button-small align-start" onClick={props.onOpenReports}>Open Reports &amp; Backup <Icon name="arrowRight" size={16} /></button>
-      </section>
     </div>
   )
 }

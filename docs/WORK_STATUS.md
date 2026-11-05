@@ -730,3 +730,51 @@ La autorización de publicar no acredita una prueba manual de Juan. Se conservan
 los pendientes registrados de animaciones/contador, teléfono real, Safari/iPhone,
 tacto, teclado móvil, lector de pantalla y movimiento reducido real. Los hashes
 y el resultado exacto del push y de la publicación se comunicarán tras verificar.
+
+## Rediseño móvil — Incremento 1: Money y textos (5 de noviembre de 2026)
+
+Juan autoriza exclusivamente simplificar Money y sus textos, sin cambios de
+modelos, cálculos, esquema, almacenamiento, preferencias, Home, Bills,
+Getting Started ni navegación global. No autoriza commit, merge, push ni
+despliegue. No se comienza el Incremento 2.
+
+Git comprobado por Codex: base main y HEAD
+07223f24a1958fef09e98af9fb5a14060e9010a1, índice vacío, sin cambios
+versionados y con archivos ajenos sin seguimiento preservados. Rama creada:
+codex/mobile-increment-1-money. Los cambios quedan sin preparar.
+
+Money conserva Income, Accounts & Savings y Cards & Loans. Explicaciones
+permanentes pasan a ayudas desplegables nativas con foco visible y área de
+44 px; estados vacíos más breves y un Add por encabezado. Se conserva el
+destino de foco de Add Account tras borrar la última cuenta. Reports & Backup
+se elimina de Money y permanece en Settings sin alterar su implementación.
+El CSS está limitado a .money-screen. Manual, mapa y recorrido de desarrollo
+actualizados. Las pruebas que usaban el enlace retirado acceden por Settings.
+
+Entrega de trabajo y recorrido manual propuesto para Chrome y Safari/iPhone:
+review-deliveries/mobile-increment-1/WORKING.md. No es entrega fija por commit;
+falta autorización de Juan para guardarlo y generar las copias por hash para
+Claude según WORKFLOW.md. No se contactó con Claude. No se verificó navegador
+ni se atribuye ninguna prueba manual a Juan.
+
+Comprobaciones propias de Codex: 198/198 en 7 suites afectadas (102,07 s),
+lint, build y git diff --check correctos. Ejecución final sobre código y
+pruebas estabilizados; antes se corrigió una expectativa del texto vacío.
+Build: JS 706,78 kB, gzip 197,19 kB; aviso conocido >500 kB. No se repiten
+suite completa ni audit: sin cambios financieros ni dependencias. Logs y
+detalle en VALIDATION.md junto al resumen de trabajo. Pruebas visuales y
+manuales pendientes; resultados no atribuidos a Juan.
+
+## Incremento 1: commit y entrega fija autorizados (5 de noviembre de 2026)
+
+Juan autoriza guardar el incremento y preparar la entrega fija para Claude.
+Esta autorización sustituye únicamente el pendiente de commit del apartado
+anterior. No autoriza merge, push ni despliegue, ni confirma pruebas manuales.
+Codex comprobó que el diff coincide con el de la entrega de trabajo antes de
+esta anotación. Se reutilizan las 198 pruebas afectadas, lint y build del
+mismo código; solo se añade este registro documental. Se guardan únicamente
+los 14 archivos propios de implementación, pruebas y documentación. El índice
+estaba vacío. Archivos ajenos sin seguimiento y review-deliveries quedan fuera.
+La entrega fija usa la base 07223f24a1958fef09e98af9fb5a14060e9010a1 y el
+commit final, con copias obtenidas de Git y ruta exclusiva REVISION.md de Claude.
+Siguen pendientes Chrome y Safari/iPhone; no se inicia Incremento 2.

@@ -93,7 +93,7 @@ Hazlo en el móvil o con el navegador a 390 px de ancho, en modo claro y oscuro.
    «Type: Spending ×»; Clear Filters conserva el periodo. Year Overview → July
    muestra sus categorías. Abre un pago de Credit Card Payment y vuelve: mismo
    periodo, búsqueda, meses y posición. Añade un gasto y una transferencia.
-9. **Settings › Reports & Backup** (también Money → Open Reports & Backup).
+9. **Settings › Reports & Backup**.
    Export Report → One Month / Whole Year → Download PDF, con y sin importes.
    Data Backup → Download Backup.
 10. **Reset Demo** desde la franja o Settings: vuelve todo el año y

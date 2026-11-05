@@ -258,7 +258,7 @@ describe('Demo', () => {
   it('does not allow importing into the demo', async () => {
     await openDemo()
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     expect(screen.getByText(/Exit the demo to import your own data/)).toBeTruthy()
     expect(screen.queryByLabelText('Choose a JSON file')).toBeNull()
   })
@@ -1128,7 +1128,7 @@ describe('Reports & Backup (Settings)', () => {
     const current = (await saved())!
     const other = { ...current, space: { ...current.space, name: 'Imported', members: [{ id: 'member-1', name: 'Imported', color: '#3B82F6' }] } }
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     await upload(JSON.stringify(other))
     expect(screen.getByRole('alert').textContent).toContain('Replace everything in this space with “Imported”')
     expect((await saved()).space.name).toBe('Robin')
@@ -1142,7 +1142,7 @@ describe('Reports & Backup (Settings)', () => {
     const current = (await saved())!
     const other = { ...current, space: { ...current.space, name: 'Imported' } }
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     await upload(JSON.stringify(other))
     // The browser's database refuses the write.
     refuseWrites()
@@ -1160,7 +1160,7 @@ describe('Reports & Backup (Settings)', () => {
   it('refuses a broken file and changes nothing', async () => {
     await createIndividualSpace()
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     await upload('{ "schemaVersion": 1 }')
     expect(screen.getByRole('alert').textContent).toContain('This file cannot be used. Nothing was changed.')
     expect((await saved()).space.name).toBe('Robin')

@@ -169,14 +169,15 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   return (
     <MoneyBlockFrame block="income" summary={summary}
       actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Income</button>}>
-      <p className="field-help">Expected income is a plan. Home shows it as expected until you record what arrived.</p>
-      <p className="field-help">Income does not use the month chosen in Cards &amp; Loans. Open a source to choose the year of its payments.</p>
+      <details className="field-help">
+        <summary>About income</summary>
+        <p>Expected income is a plan, not money received. Record what arrived in each source. Choose its payment year there; Income does not use the Cards &amp; Loans month.</p>
+      </details>
       {context}
       {editing?.id === null && form}
       {sourceCount === 0 && !editing && (
         <div className="empty-state">
-          <p className="muted-note">No income entered yet. Add what you usually receive each month, such as a salary.</p>
-          <button type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Income</button>
+          <p className="muted-note">No income yet.</p>
         </div>
       )}
       {sourceCount > 0 && <>

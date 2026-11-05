@@ -25,7 +25,6 @@ export function CardsLoansSection({ data, months, month, onMonthChange, onOpenDe
     <MoneyBlockFrame block="debts" summary={closedSummary}
       actions={<button type="button" className="button-small" onClick={() => onOpenDebt(null)}><Icon name="plus" size={16} /> Add Card or Loan</button>}>
       <MonthSwitch months={months} value={month} onChange={onMonthChange} />
-      <p className="field-help">The month chooses the payments shown here. It is the same month as on Home and in Bills.</p>
       <div className="stat-grid" role="group" aria-label="Cards and loans summary">
         <div className="stat">
           <small>Remaining Balance</small><b>{money(summary.totalBalance)}</b>
@@ -36,12 +35,14 @@ export function CardsLoansSection({ data, months, month, onMonthChange, onOpenDe
           {summary.missingPaymentCount > 0 && <small>{summary.missingPaymentCount === 1 ? '1 payment not entered' : `${summary.missingPaymentCount} payments not entered`}</small>}
         </div>
       </div>
-      <p className="field-help">Remaining Balance is what you still owe, from the latest balance you entered (not a forecast for the month). The payments are those of {formatYearMonth(month)}, the same amounts as in Monthly Bills, each counted once.</p>
+      <details className="field-help">
+        <summary>About balances and payments</summary>
+        <p>Remaining Balance is the latest balance you entered, not a forecast. Payments use the month shared with Home and Bills. Linked payments are counted once in Bills. Recording a payment does not update the Remaining Balance.</p>
+      </details>
 
       {summary.items.length === 0
         ? <div className="empty-state">
-          <p className="muted-note">No cards or loans yet. Add one to keep its Remaining Balance and payments together.</p>
-          <button type="button" className="button-small align-start" onClick={() => onOpenDebt(null)}><Icon name="plus" size={16} /> Add Your First Card or Loan</button>
+          <p className="muted-note">No cards or loans yet.</p>
         </div>
         : <ul className="goal-cards" aria-label="Cards and loans">
           {summary.items.map(({ debt, balance, asOf, payment }) => (

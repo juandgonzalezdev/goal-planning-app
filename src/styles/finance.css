@@ -1046,3 +1046,10 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .skeleton-bar.is-short { width: 60%; }
 .skeleton-card { height: 120px; }
 .skeleton-card.is-low { height: 72px; }
+
+/* Money: compact contextual help with touch and keyboard access. */
+.money-screen details.field-help > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; }
+.money-screen details.field-help > summary::before { content: "+"; }
+.money-screen details.field-help[open] > summary::before { content: "−"; }
+.money-screen details.field-help > summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.money-screen details.field-help > p { margin: 0 0 8px; }

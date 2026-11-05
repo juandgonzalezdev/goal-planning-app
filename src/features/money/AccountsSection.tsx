@@ -146,14 +146,16 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
 
   return (
     <MoneyBlockFrame block="accounts" summary={summary}
-      actions={<button type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
-      <p className="field-help">Balances you read in your bank or count yourself, with their date. A new balance keeps the old one in History.</p>
+      actions={<button id={`${accountListId}-add-first`} type="button" className="button-small" onClick={startNew}><Icon name="plus" size={16} /> Add Account</button>}>
+      <details className="field-help">
+        <summary>About balances</summary>
+        <p>Enter balances from your bank or cash count, with their date. Previous balances stay in History.</p>
+      </details>
       <div className="help-tips"><HelpTip topic="savings" label /></div>
       {form?.id === null && formBox}
       {items.length === 0 && !form && (
         <div className="empty-state">
-          <p className="muted-note">No accounts yet. Add the account you spend from, and any savings or investments.</p>
-          <button id={`${accountListId}-add-first`} type="button" className="button-small align-start" onClick={startNew}><Icon name="plus" size={16} /> Add Your First Account</button>
+          <p className="muted-note">No accounts yet.</p>
         </div>
       )}
       <ul id={accountListId} tabIndex={-1} aria-label="Accounts" className="line-list compact-list">

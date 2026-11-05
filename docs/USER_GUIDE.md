@@ -81,7 +81,7 @@ In a Duo space, Home's third area is called **Our Money & Goals** instead of Mon
 - **Account & Workspace**: your space, its type and its members.
 - **Preferences**: appearance (System, Light or Dark) and language. Currency is shown but can't be changed.
 - **Privacy & Security**: **Erase All Data on This Device**. This can't be undone. Download a Backup first.
-- **Reports & Backup**: the PDF report, **Download Backup** and **Restore Backup**. See [Reports and Backups](#17-reports-and-backups). Money has a link to it too.
+- **Reports & Backup**: the PDF report, **Download Backup** and **Restore Backup**. See [Reports and Backups](#17-reports-and-backups).
 - **Explore the Demo**: see [The Demo](#4-the-demo).
 
 ## 4. The Demo
@@ -159,10 +159,10 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - **Home**: your month at a glance.
 - **Bills**: the bills of the month (Calendar or List), and **All Bills** at the end, with every bill whatever the month.
 - **Goals**: the **Emergency Fund** and your goals.
-- **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three.
+- **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three. One Add action stays in each section header; About income, About balances and About balances and payments open contextual help. About your data explains local storage or demo behavior.
 - **History**: everything you recorded.
 - The logo at the top takes you to Home.
-- The gear opens Settings, where **Help & Guide** and **Reports & Backup** are. Money has a link to it at the end (**Open Reports & Backup**).
+- The gear opens Settings, where **Help & Guide** and **Reports & Backup** are.
 
 **Help & Guide**
 
@@ -600,7 +600,7 @@ These are screen preferences for this device. They don't change any amount, and 
 
 ## 17. Reports and Backups
 
-These are in **Settings › Reports & Backup**. In Money, **Open Reports & Backup** takes you there.
+These are in **Settings › Reports & Backup**.
 
 | | **Export Report** | **Download Backup** | **Download Both Copies** |
 | --- | --- | --- | --- |

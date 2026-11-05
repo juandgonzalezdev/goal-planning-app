@@ -383,7 +383,7 @@ describe('Alex demo: report and backup (12, 13)', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download) })
     await openAlex()
     await fire.click(tab('Money'))
-    await fire.click(button('Open Reports & Backup'))
+    await fire.click(button('Settings'))
     expect(heading('Export Report')).toBeTruthy()
     expect(heading('Data Backup')).toBeTruthy()
     await fire.click(button('Download PDF'))
