@@ -2,7 +2,7 @@ import { addMonthsToYearMonth, dateInMonth, yearMonthOf, type YearMonth } from '
 import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
 import { sumMinor } from '../money'
-import { isBillDueIn, usualAmountFor } from './bills'
+import { isBillDueIn, newlyExcludedPaidMonths, usualAmountFor } from './bills'
 import { monthResult, monthSpending } from './spending'
 import type { FinanceData, Id, RecurringBill, SpendingCategory, SubscriptionRating } from './types'
 
@@ -90,12 +90,7 @@ export function simulateSubscription(data: Pick<FinanceData, 'bills' | 'billMont
 
 /** Applies a confirmed pause: those future months are not due. Paid months never change. */
 export function applyPause(data: FinanceData, simulation: Simulation): FinanceData {
-  const months = simulation.charges.map(charge => charge.month)
-  return {
-    ...data,
-    bills: data.bills.map(bill => (bill.id !== simulation.billId ? bill
-      : { ...bill, pausedMonths: [...new Set([...(bill.pausedMonths ?? []), ...months])].sort() })),
-  }
+  return applySubscriptionPlan(data, { ...simulation, kind: 'pause' })
 }
 
 /**
@@ -103,21 +98,39 @@ export function applyPause(data: FinanceData, simulation: Simulation): FinanceDa
  * before the next charge. Months already paid stay as they were.
  */
 export function applyCancel(data: FinanceData, simulation: Simulation): FinanceData {
+  return applySubscriptionPlan(data, { ...simulation, kind: 'cancel' })
+}
+
+/** Builds the candidate once for both validation and application. */
+function subscriptionPlan(data: Pick<FinanceData, 'bills'>, simulation: Simulation): RecurringBill | null {
+  const bill = data.bills.find(b => b.id === simulation.billId)
+  if (!bill) return null
+  if (simulation.kind === 'pause') return {
+    ...bill, pausedMonths: [...new Set([...(bill.pausedMonths ?? []), ...simulation.charges.map(c => c.month)])].sort(),
+  }
   const next = simulation.charges[0]
-  if (!next) return data
+  if (!next) return bill
+  const last = addMonthsToYearMonth(next.month, -1)
+  // Inclusive ranges cannot end before they start: skip the first charge.
+  return last < bill.startMonth ? {
+    ...bill, endMonth: bill.startMonth,
+    pausedMonths: [...new Set([...(bill.pausedMonths ?? []), bill.startMonth])].sort(),
+  } : { ...bill, endMonth: last }
+}
+
+/** Rechecked against current records, even when the simulation is old. */
+export function subscriptionPaymentConflicts(data: Pick<FinanceData, 'bills' | 'billMonths'>, simulation: Simulation): YearMonth[] {
+  const candidate = subscriptionPlan(data, simulation)
+  const current = data.bills.find(b => b.id === simulation.billId)
+  return candidate && current ? newlyExcludedPaidMonths(data, current, candidate) : []
+}
+
+function applySubscriptionPlan(data: FinanceData, simulation: Simulation): FinanceData {
+  const candidate = subscriptionPlan(data, simulation)
+  if (!candidate || simulation.charges.length === 0 || subscriptionPaymentConflicts(data, simulation).length > 0) return data
   return {
     ...data,
-    bills: data.bills.map(bill => {
-      if (bill.id !== simulation.billId) return bill
-      const last = addMonthsToYearMonth(next.month, -1)
-      // Inclusive date ranges cannot end before they start. Cancel the first
-      // charge with the existing pause representation instead of leaving it due.
-      if (last < bill.startMonth) return {
-        ...bill, endMonth: bill.startMonth,
-        pausedMonths: [...new Set([...(bill.pausedMonths ?? []), bill.startMonth])].sort(),
-      }
-      return { ...bill, endMonth: last < bill.startMonth ? bill.startMonth : last }
-    }),
+    bills: data.bills.map(bill => bill.id === candidate.id ? candidate : bill),
   }
 }
 

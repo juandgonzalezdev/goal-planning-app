@@ -71,6 +71,26 @@ personal.
 
 ## 5. Facturas y recurrencia
 
+- **Integridad de payments (2A):** `billsForMonth` incluye cada factura prevista
+  o con un payment registrado en ese mes, una sola vez. Un payment restaurado
+  fuera de las fechas, aniversario o pausas sigue en History, Spent, Money out,
+  flujos e informes. También cuenta en Planned Bills (total inclusivo de facturas
+  pagadas o no); nunca se convierte en pendiente ni crea cargos en meses vecinos.
+- Cambiar Start month, End month, cancelar o pausar se rechaza solo si deja fuera
+  meses pagados adicionales: `excluded(candidate) − excluded(current)`. Una
+  inconsistencia heredada no bloquea cambios seguros e independientes. Los registros
+  siguen intactos, visibles y contabilizados una vez. Cada extremo de fechas se
+  comprueba por separado para asociar el error a su campo y al mes que lo bloquea.
+- **Mark as Not Paid fuera del calendario:** Dirección aprobó bloquearlo, con
+  explicación, conservando el payment. El dominio también rechaza desmarcarlo;
+  no crea un registro inaccesible ni un pendiente oculto. En meses previstos sigue
+  la confirmación habitual. Editar los datos de un payment que sigue pagado fuera
+  del calendario está permitido por `validatePayment`, con las validaciones normales.
+- Delete Bill es una eliminación explícita de la factura y sus registros mensuales,
+  guardada en una sola transacción. La confirmación cuenta todos los payments,
+  incluidos los que están fuera del plan; conserva la revisión de apertura para
+  no borrar sobre cambios de otra pestaña. La tarjeta/préstamo y sus saldos quedan.
+
 - Una factura se repite cada mes entre su primer y su último mes, con un día de
   pago (los meses cortos usan su último día).
 - **Cambiar el importe de un mes** ("Change amount" en Home o en la factura)

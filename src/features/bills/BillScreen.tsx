@@ -7,7 +7,7 @@ import { MonthSwitch } from '../../components/MonthSwitch'
 import { yearsAround, type YearMonth } from '../../domain/calendar'
 import { MonthYearField } from '../../components/MonthYearField'
 import { BillForm } from './BillForm'
-import { billsForMonth, deleteBill, markBillNotPaid, setBillMonthAmount, setUsualAmountFrom, usualAmountFor } from '../../domain/finance/bills'
+import { billsForMonth, deleteBill, isBillDueIn, markBillNotPaid, setBillMonthAmount, setUsualAmountFrom, usualAmountFor } from '../../domain/finance/bills'
 import { ConfirmNotPaid, MarkPaidForm } from './MarkPaid'
 import { paidText } from './payment'
 import type { FinanceData, Id, Owner } from '../../domain/finance/types'
@@ -69,6 +69,7 @@ export function BillScreen(props: Props) {
   const [sending, setSending] = useState<'month' | 'usual' | 'paid' | 'delete' | null>(null)
   const [monthBase, setMonthBase] = useState(revision)
   const [usualBase, setUsualBase] = useState(revision)
+  const [deleteBase, setDeleteBase] = useState(revision)
   const amountForm = useUnsavedChanges(`Amount for one month: ${bill?.name ?? ''}`, monthText === null ? null : { 'Month': monthDraft?.month, 'Amount': monthText }, { month: monthDraft?.month })
   const guard = useLeaveGuard()
   const paymentTag = `bill-payment:${billId}`
@@ -111,6 +112,7 @@ export function BillScreen(props: Props) {
   const debt = bill.debtId ? data.debts.find(d => d.id === bill.debtId) ?? null : null
   const monthLabel = formatYearMonth(month)
   const record = data.billMonths.find(item => item.billId === bill.id && item.month === month)
+  const paymentCount = data.billMonths.filter(r => r.billId === bill.id && r.paid).length
 
   const saveMonthAmount = async (value: number | null | undefined, done: string) => {
     const outcome = await save('month', done, current => setBillMonthAmount(current, bill.id, month, value), monthBase)
@@ -138,6 +140,7 @@ export function BillScreen(props: Props) {
 
       <section className="block" aria-labelledby="bill-month">
         <h2 id="bill-month" className="section-title">{monthLabel}</h2>
+        {occurrence?.paid && !isBillDueIn(bill, month) && <p className="field-help">This bill isn't planned for {monthLabel}, but this payment was recorded. It still counts in History and reports.</p>}
         {!occurrence
           ? <p className="muted-note">This bill is not due in {monthLabel}.</p>
           : <>
@@ -222,14 +225,14 @@ export function BillScreen(props: Props) {
         </dl>
         <div className="inline-actions">
           <button type="button" className="button-small" onClick={() => { setEditing(true); setMessage('') }}>Edit Details</button>
-          {!confirmDelete && <button type="button" className="button-small" onClick={() => setConfirmDelete(true)}>Delete Bill</button>}
+          {!confirmDelete && <button type="button" className="button-small" onClick={() => { setDeleteBase(revision); setConfirmDelete(true) }}>Delete Bill</button>}
         </div>
         {confirmDelete && (
           <div className="callout callout-warning" role="alert">
-            <p>Delete “{bill.name}” and what was recorded for it each month? This cannot be undone.{debt ? ` “${debt.name}” stays in Money, under Cards & Loans, without a monthly payment.` : ''}</p>
+            <p>Delete “{bill.name}”? {paymentCount > 0 && <>{paymentCount} recorded {paymentCount === 1 ? 'payment will' : 'payments will'} also be removed from History and reports. </>}This cannot be undone.{debt ? ` “${debt.name}” stays in Money, under Cards & Loans, without a monthly payment.` : ''}</p>
             <div className="inline-actions">
               <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined}
-                onClick={async () => { if (isKept(await save('delete', '', current => deleteBill(current, bill.id)))) props.onDeleted() }}>{sending === 'delete' ? 'Saving…' : 'Delete Bill'}</button>
+                onClick={async () => { if (sending) return; if (isKept(await save('delete', '', current => deleteBill(current, bill.id), deleteBase))) props.onDeleted() }}>{sending === 'delete' ? 'Saving…' : 'Delete Bill'}</button>
               <button type="button" className="button-small" onClick={() => setConfirmDelete(false)}>Cancel</button>
             </div>
           </div>

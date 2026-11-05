@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { Field } from '../../components/Field'
-import { markBillPaid, validatePayment, type BillOccurrence, type PaymentError } from '../../domain/finance/bills'
+import { isBillDueIn, markBillPaid, validatePayment, type BillOccurrence, type PaymentError } from '../../domain/finance/bills'
 import type { FinanceData } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { formatDate, formatYearMonth } from '../../ui/format'
@@ -129,6 +129,14 @@ export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange
 /** Mark as Not Paid asks first: it removes the date, the account and the interest of that month. */
 export function ConfirmNotPaid({ occurrence, sending, onConfirm, onCancel }: { occurrence: BillOccurrence; sending: boolean; onConfirm: () => void; onCancel: () => void }) {
   const monthLabel = formatYearMonth(occurrence.month)
+  if (!isBillDueIn(occurrence.bill, occurrence.month)) return (
+    <div className="callout callout-warning" role="group" aria-label="Payment kept">
+      {occurrence.bill.pausedMonths?.includes(occurrence.month)
+        ? <p>{monthLabel} is a skipped month for this bill, so it can't be marked as not paid. The payment stays in History and reports.</p>
+        : <p>{monthLabel} is outside this bill's scheduled months, so it can't be marked as not paid. The payment stays in History and reports. To change it, first include {monthLabel} in the bill's dates in Edit Details.</p>}
+      <button type="button" className="button-small" onClick={onCancel}>Keep as Paid</button>
+    </div>
+  )
   return (
     <div className="callout callout-warning" role="group" aria-label="Mark as not paid?">
       <p><b>Mark {occurrence.bill.name} as not paid for {monthLabel}?</b></p>

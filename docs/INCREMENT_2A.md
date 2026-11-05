@@ -6,6 +6,78 @@ Base integrada: 48f6aea44de1c6fb0448d12b5dbe5178cf353fb4.
 Base del ajuste de frecuencia: e71781f7f155ec2bb0e0444933f23d4878a93d40.
 Rama: codex/increment-2a-bills.
 
+## Aceptación vigente para preparar el cierre (5 de noviembre de 2026)
+
+Dirección confirma la validación manual de los recorridos principales y autoriza
+preparar el cierre exclusivo de Bills 2A. Esta sección sustituye los estados de
+pendiente de las secciones históricas inferiores; sus guiones siguen siendo una
+referencia de cobertura, no una declaración de que se haya ejecutado cada subpaso.
+
+Resultados satisfactorios comunicados expresamente por Dirección, no ejecutados
+por Codex:
+
+- Creación y edición de facturas mensuales, anuales y de un solo mes.
+- Manejo de importes desconocidos.
+- Registro de payments y visualización en History.
+- Paid → Pending → Paid sin duplicados.
+- Protección de payments históricos al modificar fechas.
+- Cancelación de suscripciones conservando payments anteriores, sin obligaciones
+  nuevas después de cancelar.
+- Advertencia de Delete Bill y conservación de datos al cancelar la eliminación.
+- Exportación y revisión de informes PDF mensuales y anuales.
+- Navegación móvil en Safari/iPhone y visualización en modo oscuro.
+- Navegación mediante teclado y lectura/activación de controles con VoiceOver.
+
+No se extiende esta confirmación a Chrome a 390 px, a todos los temas por recorrido,
+a concurrencia real entre pestañas, al Delete confirmado ni a cada detalle del guion
+anterior. Esos casos conservan su cobertura automática donde exista; no se declaran
+manualmente aprobados. Dirección considera suficiente la validación principal para
+preparar el cierre. El texto nuevo O1 tiene validación automática, no manual nueva.
+
+Claude: Approved with observations, sin bloqueantes, según
+`review-deliveries/bills-2a-payment-integrity/REVISION-FOLLOWUP.md`, leído por Codex.
+O1 corregida; O2/O3 y dirección futura de producto quedan registradas en
+[BILLS_2A_CLOSURE.md](BILLS_2A_CLOSURE.md). Recomendación: **Ready to merge**,
+aprobado por Dirección para commit, merge y push el 5 de noviembre de 2026.
+El resultado de integración se registra en la entrega fija bills-2a-closure;
+la publicación automática requiere comprobación separada del push.
+
+## Corrección de integridad histórica autorizada (5 de noviembre de 2026)
+
+Dirección amplía 2A exclusivamente para corregir la omisión de payments por fechas,
+pausas y cancelación con anticipos. Base: `4ba3c0a991500d6f7f586bd3567916cd0632f4fb`.
+`billsForMonth` une previsión y payments registrados sin duplicar; History, cálculos,
+flujos y PDF conservan registros heredados fuera del plan. Planned Bills sigue
+siendo inclusivo (pagadas o no). No se cambian esquema, almacenamiento ni fórmulas.
+Editar fechas o aplicar pausa/cancelación incompatible se rechaza con explicación.
+Delete conserva su acción separada y ahora informa el número de payments y usa
+la revisión de apertura de su confirmación. No se inicia Manage Subscription,
+Pause/Resume completo ni navegación. Detalle y evidencia:
+[PAYMENT_INTEGRITY_FIX.md](audits/PAYMENT_INTEGRITY_FIX.md).
+
+Validación manual nueva pendiente (datos ficticios):
+
+1. Registrar por adelantado un payment de abril, con fecha de hoy. Intentar End month
+   anterior y cancelación antes del próximo cargo: error claro, sin guardar cambios;
+   History, importe, fecha, cuenta e informes se conservan. Fin compatible sí guarda.
+2. Restaurar una copia ficticia con ese payment después del fin o dentro de pausedMonths:
+   aparece una sola vez en History y detalle, con aviso; Spent/PDF conservan el importe,
+   sin convertirlo en Left to Pay. Probar con importes visibles y ocultos.
+3. Delete Bill muestra el número de payments, incluidos los fuera del plan. Cancel
+   conserva todo; confirmar elimina únicamente esa factura y sus registros. Con
+   otra pestaña guardando antes, no borra la versión nueva.
+4. Datos restaurados con abril pagado y pausado: cambiar el fin a diciembre guarda
+   correctamente; abril sigue una sola vez en History/totales/PDF. Si junio también
+   está pagado y no pausado, un fin en mayo se bloquea por junio, no por abril.
+5. Mark as Not Paid en ese payment fuera del calendario, desde detalle y lista:
+   muestra explicación y Keep as Paid, sin ejecutar la operación. El payment y sus
+   datos siguen accesibles. En un mes previsto, la confirmación habitual funciona.
+6. Cambiar inicio y fin juntos con un fin anterior al payment: error/foco en End
+   month y mensaje con mes pagado. Delete sin payments no dice “0 payments”.
+
+Estas pruebas no están confirmadas por Juan. Se mantienen todos los pendientes
+del guion general y la revisión de Claude antes del cierre.
+
 ## Comportamiento vigente
 
 - Add Bill muestra Bill name, Amount, Amount not known yet justo debajo, Due day

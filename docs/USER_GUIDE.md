@@ -404,6 +404,21 @@ In a bill's own screen:
 - **Mark as Paid** or **Mark as Not Paid** for the chosen month (see below). A paid month shows **Paid on [date] · [account]** and, for a loan, the interest you entered.
 - **Edit Details** and **Delete Bill**.
 
+Changing the first or last month, cancellation or a pause cannot leave out any
+additional recorded payments, including advance payments. An old inconsistency
+does not block an unrelated safe change. The app does not remove or move payments
+to make the change fit. A date error names the paid month and the date to choose.
+
+Payments restored from an older backup stay in History, totals and reports even
+if their month is outside the bill's dates or pause. The bill detail explains this.
+They count once in Planned Bills (paid or not) and never become unpaid charges.
+
+**Delete Bill** is separate: when payments exist, its confirmation says how many
+will be removed from History and reports. Cancel keeps them. A confirmed deletion
+removes the bill and its monthly records together; its linked card or loan and
+Remaining Balance stay. If another tab changes the data, reopen the confirmation
+on the latest version before deleting.
+
 **Mark as Paid**
 
 **Mark as Paid** opens the same short form on Home (Left to Pay), in the Bills list and on the bill. Nothing is marked with a single tap.
@@ -416,6 +431,13 @@ In a bill's own screen:
 | **Interest in this payment** | Empty. Shown only for a loan. | Optional, from your statement. Without it, the interest isn't counted in Spent: the app never guesses it. It can't be more than the amount. |
 
 **Save as Paid** saves the amount and the payment together, as one change. Paying never changes a card's or loan's **Remaining Balance**: update it from your statement. There are no partial payments, and no Undo. To correct a payment, use **Mark as Not Paid** and mark it again.
+
+If the payment's month is no longer scheduled for that bill, **Mark as Not Paid**
+shows an explanation and keeps the payment. Removing its paid status would make
+it inaccessible. To change that status, the month must first be included in the
+bill's dates and not skipped. This does not create an unpaid bill automatically.
+The payment still counts once in History and reports. Its recorded details can
+still be edited while it remains paid.
 
 **Mark as Not Paid** asks first. It removes the date, the account and the interest saved for that month; the month's amount stays.
 

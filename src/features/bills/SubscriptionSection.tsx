@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
-  applyCancel, applyPause, rateSubscription, setSubscriptionOptions, simulateSubscription, upcomingCharges, type Simulation, type SimulationKind,
+  applyCancel, applyPause, rateSubscription, setSubscriptionOptions, simulateSubscription, subscriptionPaymentConflicts, upcomingCharges, type Simulation, type SimulationKind,
 } from '../../domain/finance/subscriptions'
 import { SUBSCRIPTION_RATINGS, type FinanceData, type RecurringBill, type SubscriptionRating } from '../../domain/finance/types'
 import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
@@ -36,6 +36,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   const next = upcomingCharges(data, bill, today, 3)
   const ended = bill.endMonth !== null && bill.endMonth < today.slice(0, 7)
   const periodName = bill.frequency === 'yearly' ? 'yearly' : 'monthly'
+  const paymentConflicts = simulation ? subscriptionPaymentConflicts(data, simulation) : []
 
   const simulate = (kind: SimulationKind) => { setBase(revision); setSimulation(simulateSubscription(data, bill.id, kind, today, 3)) }
   const save = async (done: string, change: (data: FinanceData) => FinanceData, from?: number): Promise<SaveOutcome> => {
@@ -46,7 +47,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   }
   // The simulation closes only once the change is kept; otherwise it stays, with the reason.
   const confirm = async () => {
-    if (!simulation) return
+    if (!simulation || sending || paymentConflicts.length > 0) return
     const sim = simulation
     const outcome = await save(sim.kind === 'pause'
       ? `${bill.name} is paused for ${sim.charges.map(c => formatYearMonth(c.month)).join(', ')}. Payments already made stay.`
@@ -110,9 +111,12 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
           {simulation.allowed === false && <p>You noted that it {simulation.kind === 'pause' ? 'cannot be paused' : 'cannot be cancelled'}.</p>}
           {simulation.allowed === null && <p>Check first that the service lets you {simulation.kind === 'pause' ? 'pause' : 'cancel'} it.</p>}
           <p className="field-help">Payments already made never change. Money not spent is not added to Savings by itself: record it as savings if you set it aside.</p>
+          {paymentConflicts.length > 0 && <p role="alert">{paymentConflicts.map(formatYearMonth).join(', ')} {paymentConflicts.length === 1 ? 'is' : 'are'} already paid. {simulation.kind === 'pause'
+            ? 'These charges cannot be paused. Nothing has changed.'
+            : `Nothing has changed. To keep every payment, open Edit Details and choose ${formatYearMonth(paymentConflicts[paymentConflicts.length - 1])} or later as the last month.`}</p>}
           <div className="inline-actions">
             {simulation.charges.length > 0 && simulation.allowed !== false && (
-              <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void confirm()}>{sending ? 'Saving…' : `Confirm ${simulation.kind === 'pause' ? 'Pause' : 'Cancellation'}`}</button>
+              <button type="button" className="button-small button-small-primary" aria-disabled={blocked || paymentConflicts.length > 0 || undefined} onClick={() => void confirm()}>{sending ? 'Saving…' : `Confirm ${simulation.kind === 'pause' ? 'Pause' : 'Cancellation'}`}</button>
             )}
             <button type="button" className="button-small" onClick={() => setSimulation(null)}>Cancel</button>
           </div>

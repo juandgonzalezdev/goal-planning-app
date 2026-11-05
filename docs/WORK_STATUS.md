@@ -1,5 +1,130 @@
 # Estado de trabajo y coordinación
 
+## Cierre e integración autorizados de Bills 2A (5 de noviembre de 2026)
+
+Dirección aprobó commit, entrega fija, merge a main y push exclusivamente con los
+16 archivos de BILLS_2A_CLOSURE.md. Codex ejecutará integración fast-forward tras
+verificar el índice y el remoto. El resultado final y los hashes se registran en
+review-deliveries/bills-2a-closure/<commit-final-completo>/GIT_STATUS.md y DELIVERY.md,
+fuera del commit de la app. O2/O3 y los avisos conocidos siguen documentados sin
+declararlos resueltos. No se amplía el alcance ni se repiten pruebas del mismo
+código por el commit documental. Los archivos ajenos y temporales se excluyen.
+El despliegue automático se activa con el push; publicación pendiente de comprobar.
+
+## Preparación final de cierre Bills 2A (5 de noviembre de 2026)
+
+Estado vigente: **Ready to merge**, pendiente de aprobación final de Dirección
+para commit, merge y push. Este apartado sustituye los pendientes de revisión y
+aceptación principal de los registros históricos inferiores; no amplía ninguna
+confirmación manual más allá de la lista expresa de Dirección en INCREMENT_2A.md.
+
+Codex leyó REVISION.md y REVISION-FOLLOWUP.md de bills-2a-payment-integrity:
+Approved with observations, sin bloqueantes tras M1/M2/L1–L4. Dirección confirma
+los recorridos principales, incluidos Safari/iPhone, oscuro, teclado y VoiceOver;
+no son pruebas ejecutadas por Codex. O1 corregida mínimamente en ConfirmNotPaid,
+sin consejo imposible para meses pausados. O2/O3 documentadas y diferidas; no se
+encontró consecuencia de integridad de la hipótesis O2 por inspección de guardas
+y persistencia, sin afirmar reproducción entre pestañas.
+
+Git propio: codex/increment-2a-bills, HEAD 4ba3c0a991500d6f7f586bd3567916cd0632f4fb;
+índice vacío. Main/local origin/main y consulta remota directa coinciden en
+48f6aea44de1c6fb0448d12b5dbe5178cf353fb4, antecesor de HEAD. Sin commit, merge,
+push ni despliegue. Todos los archivos ajenos conservados y excluidos.
+
+Comprobaciones finales propias: 39/39 dirigidas de integridad en tres archivos
+(4,92 s), lint/build correctos, JS 711,44 kB/gzip 198,57 kB, diff sin errores.
+Suite completa 920/920 previa a O1 reutilizada por ser cambio de texto localizado,
+no nueva ejecución completa. Audit previo no completado por red; aviso conocido
+de bundle grande conservado. No se ejecutó nueva prueba manual ni navegador.
+
+Entrega local, manifiesto de los 16 archivos pendientes de commit, plan concreto
+de integración, riesgos residuales y nueve mejoras UX futuras sin implementar:
+[BILLS_2A_CLOSURE.md](BILLS_2A_CLOSURE.md). No es entrega fija por commit.
+
+## Seguimiento M1/M2 y UX de integridad 2A (5 de noviembre de 2026)
+
+Juan comunicó Approved with observations de Claude; Codex leyó
+review-deliveries/bills-2a-payment-integrity/REVISION.md sin modificarlo. Dirección
+autorizó M1/M2 y L1–L4. Tras presentar alternativas para M2, Juan eligió bloquear
+Mark as Not Paid fuera del calendario y conservar el payment.
+
+M1: se comparan exclusiones adicionales, no las inconsistencias heredadas, tanto
+en Edit Details como en Pause/Cancel. Cada extremo se valida por separado. M2:
+explicación sin confirmación destructiva en lista/detalle y guarda en el dominio;
+payment intacto y accesible. Mensajes con mes pagado, Delete sin “0 payments” y
+explicación natural del payment fuera del calendario. No cambian modelo,
+almacenamiento, fórmulas, migraciones ni otros incrementos.
+
+Comprobaciones propias de Codex: ocho nuevas regresiones de dominio fallaron antes
+de corregir; dirigida 37/37 en tres archivos; suite completa 920/920 en 66 archivos,
+223,22 s. Lint y build finales correctos; build JS 711,37 kB, gzip 198,59 kB, aviso
+conocido >500 kB. La fixture nueva de BillsView se completó tras errores de tipos;
+10/10 pruebas de interfaz repetidas sobre la fixture final. Diff revisado y
+git diff --check correcto. No se repitió audit sin cambios de dependencias; continúa
+la limitación anterior de ENOTFOUND. No se ejecutó navegador ni prueba manual.
+
+Base/rama comprobadas: codex/increment-2a-bills,
+4ba3c0a991500d6f7f586bd3567916cd0632f4fb. Se conservan los cambios anteriores de
+integridad y todos los archivos ajenos. Índice vacío, sin preparar ni commit,
+push, merge o despliegue. Entrega local, no fija por commit.
+
+Documentación para la siguiente revisión:
+[PAYMENT_INTEGRITY_FOLLOWUP.md](audits/PAYMENT_INTEGRITY_FOLLOWUP.md).
+Informe siguiente propuesto: review-deliveries/bills-2a-payment-integrity/REVISION-FOLLOWUP.md,
+sin sobrescribir el anterior. Siguen pendientes revisión de Claude y validación
+manual antes del cierre 2A; INCREMENT_2A.md incorpora los recorridos M1/M2/L1–L4.
+
+## Corrección de integridad de payments dentro de 2A (5 de noviembre de 2026)
+
+Dirección autorizó implementar la corrección P1 descrita en la auditoría siguiente,
+incluyendo Delete Bill separado con cantidad explícita. Codex implementó y comprobó
+la unión de previsión y payments en billsForMonth, guardas de fechas, pausa y cancelación
+con anticipos, lectura tolerante de datos restaurados y confirmación de Delete ligada
+a la revisión de apertura. No se cambió esquema, dependencias, formato de backup,
+transacciones ni sincronización. No se inició Manage Subscription, Pause/Resume ni navegación.
+
+Base comprobada: codex/increment-2a-bills,
+4ba3c0a991500d6f7f586bd3567916cd0632f4fb. Las 19 líneas previas de auditoría en este
+archivo y todos los archivos ajenos sin seguimiento se conservaron. Índice vacío;
+cambios sin preparar, sin commit, push, merge ni despliegue.
+
+Resultados propios de Codex: 12 fallos de 17 regresiones de dominio antes de corregir;
+25/25 nuevas pruebas dirigidas finales (tres archivos); suite completa 908/908 en
+66 archivos, 220,65 s. Lint y build finales correctos. Primeros builds detectaron
+campos/tipo de la nueva fixture de préstamo, corregidos; reejecución final específica
+del dominio 17/17. Build: 710,10 kB JS, gzip 198,26 kB, aviso conocido >500 kB.
+git diff --check correcto. npm audit --omit=optional no pudo completarse por
+ENOTFOUND registry.npmjs.org; sin audit fix ni cambios de dependencias.
+
+Propuesta de Claude trasladada íntegra a
+review-deliveries/subscription-management-ux/REVISION.md, con huella SHA-256 idéntica;
+docs/ux/SUBSCRIPTION_MANAGEMENT_PROPOSAL.md conserva una referencia clara.
+Entrega, archivos, casos, límites y guion:
+[PAYMENT_INTEGRITY_FIX.md](audits/PAYMENT_INTEGRITY_FIX.md) y
+[INCREMENT_2A.md](INCREMENT_2A.md). No hay nueva confirmación manual ni navegador.
+Recomendación: revisión de Claude y validación pendiente de Juan antes del cierre
+2A; no se anuncia entrega fija hasta autorizar commit. Se mantienen los pendientes
+previos de Frequency, History/PDF, móvil, temas y VoiceOver con su alcance original.
+
+## Auditoría Subscription Management (5 de noviembre de 2026)
+
+Juan autoriza únicamente auditoría y planificación. Análisis propio de Codex:
+[SUBSCRIPTION_MANAGEMENT_TECHNICAL_AUDIT.md](audits/SUBSCRIPTION_MANAGEMENT_TECHNICAL_AUDIT.md).
+Base comprobada: `codex/increment-2a-bills`,
+`4ba3c0a991500d6f7f586bd3567916cd0632f4fb`. Defecto P1 confirmado: editar fin
+o cancelar con un payment adelantado posterior puede ocultarlo en History,
+cálculos y PDF aunque billMonths permanezca intacto. Pausa incompatible restaurada
+también lo oculta; pausa con simulación vigente conserva payments. Cancelar antes
+del primer cargo no deja cargo, pero validityOn conserva Active en el mes inicial.
+Pruebas propias dirigidas: 16/16 en dos archivos; siete de caracterización nuevas
+y nueve existentes, sin suite completa ni navegador. Evidencia temporal archivada
+fuera de src, junto al análisis. No se modificó producto ni pruebas permanentes.
+Recomendación: autorizar corrección de integridad antes del cierre 2A; 2A.1 acotado
+después y navegación flotante/selector 360° sin esperar Pause/Resume completos.
+No se implementa, cierra ni integra nada en esta fase; sin preparar ni commit.
+La propuesta de Claude se conserva sin cambios; su excepción de ruta requiere
+ratificación o acordar ubicación en review-deliveries, según el análisis.
+
 Actualizado: 4 de noviembre de 2026.
 
 Este registro describe la integración actual de Rumbo. `STATUS.md` conserva

@@ -4,7 +4,7 @@ import { Field } from '../../components/Field'
 import { MonthYearField } from '../../components/MonthYearField'
 import { isYearMonth, yearMonthOf, yearsAround, type YearMonth } from '../../domain/calendar'
 import { readDueDay, scheduleSentence } from './billsView'
-import { addBill, updateBill, validateBillFields, type BillFieldError, type BillFields } from '../../domain/finance/bills'
+import { addBill, billDatePaymentConflicts, updateBill, validateBillFields, type BillFieldError, type BillFields } from '../../domain/finance/bills'
 import { BILL_CATEGORIES, type FinanceData, type Id, type Owner, type RecurringBill } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { parseMoneyInput } from '../../ui/moneyInput'
@@ -54,6 +54,8 @@ const FIELD_ERRORS: Record<BillFieldError, [DraftField, string]> = {
   'unknown-debt': ['debtId', 'Choose a card or loan from the list.'],
   'debt-already-paid': ['debtId', 'Another bill already pays this card or loan.'],
   'starts-after-change': ['startMonth', 'The start month must be before the first change of the usual amount.'],
+  'start-excludes-payment': ['startMonth', 'These dates would exclude a recorded payment. Choose dates that keep all paid months. Payments have not changed.'],
+  'end-excludes-payment': ['endMonth', 'These dates would exclude a recorded payment. Choose dates that keep all paid months. Payments have not changed.'],
 }
 
 /** Where each field is on the screen, top to bottom: the first one with an error gets the focus. */
@@ -138,7 +140,24 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   const save = async () => {
     if (saving.current) return
     const fields = readDraft({ ...draft, endMonth }, bill?.owner ?? owner)
-    const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
+    const fieldErrors = (problems: BillFieldError[]): DraftErrors => {
+      const found: DraftErrors = Object.fromEntries(problems.map(problem => FIELD_ERRORS[problem]))
+      if (bill) {
+        const conflicts = billDatePaymentConflicts(data, bill, fields)
+        if (problems.includes('end-excludes-payment')) {
+          const last = formatYearMonth(conflicts.end[conflicts.end.length - 1])
+          found.endMonth = `${last} is already paid. Choose ${last} or later as the last month.`
+        }
+        if (problems.includes('start-excludes-payment')) {
+          const first = formatYearMonth(conflicts.start[0])
+          found.startMonth = bill.frequency === 'yearly'
+            ? `${first} is already paid. Keep the same yearly billing month and choose a first month no later than ${first}.`
+            : `${first} is already paid. Choose ${first} or earlier as the first month.`
+        }
+      }
+      return found
+    }
+    const found = fieldErrors(validateBillFields(data, fields, bill?.id ?? null))
     let amount: number | null = null
     if (!bill && !draft.amountUnknown) {
       if (draft.amount.trim() === '') found.amount = 'Enter the amount, or select Amount not known yet.'
@@ -152,7 +171,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     const id = bill?.id ?? newId()
     const apply = (current: FinanceData) => (bill ? updateBill(current, id, fields) : addBill(current, id, fields, amount, yearly ? 'yearly' : 'monthly'))
     const checked = apply(data)
-    if (checked.status !== 'ok') { showErrors(Object.fromEntries(checked.errors.map(problem => FIELD_ERRORS[problem]))); return }
+    if (checked.status !== 'ok') { showErrors(fieldErrors(checked.errors)); return }
     saving.current = true
     const outcome = await saver.save(() => onChange(current => {
       const result = apply(current)

@@ -43,10 +43,34 @@ export function usualAmountFor(bill: RecurringBill, month: YearMonth): MoneyAmou
 const findBillMonth = (billMonths: readonly BillMonth[], billId: Id, month: YearMonth) =>
   billMonths.find(record => record.billId === billId && record.month === month)
 
-/** The bills due in a month, in date order (then by name). */
+/** Paid records that a proposed plan would exclude. Never discard or move these records. */
+export function paidMonthsOutsidePlan(data: Pick<FinanceData, 'billMonths'>, bill: RecurringBill): YearMonth[] {
+  return data.billMonths.filter(record => record.billId === bill.id && record.paid && !isBillDueIn(bill, record.month))
+    .map(record => record.month).sort()
+}
+
+/** Existing inconsistencies stay readable; only additional exclusions block a change. */
+export function newlyExcludedPaidMonths(data: Pick<FinanceData, 'billMonths'>, current: RecurringBill, candidate: RecurringBill): YearMonth[] {
+  const existing = new Set(paidMonthsOutsidePlan(data, current))
+  return paidMonthsOutsidePlan(data, candidate).filter(month => !existing.has(month))
+}
+
+/** Check each date independently so the error belongs to the field that caused it. */
+export function billDatePaymentConflicts(data: Pick<FinanceData, 'billMonths'>, current: RecurringBill, fields: Pick<BillFields, 'startMonth' | 'endMonth'>) {
+  return {
+    start: newlyExcludedPaidMonths(data, current, { ...current, startMonth: fields.startMonth }),
+    end: newlyExcludedPaidMonths(data, current, { ...current, endMonth: fields.endMonth }),
+  }
+}
+
+/**
+ * Planned bills plus payments actually recorded in the month, each bill once.
+ * A restored payment can outlive its plan: dates/pauses must not hide a fact.
+ * Paid exceptions count in the inclusive "paid or not" totals, never as pending.
+ */
 export function billsForMonth(data: Pick<FinanceData, 'bills' | 'billMonths'>, month: YearMonth): BillOccurrence[] {
   return data.bills
-    .filter(bill => isBillDueIn(bill, month))
+    .filter(bill => isBillDueIn(bill, month) || findBillMonth(data.billMonths, bill.id, month)?.paid)
     .map(bill => {
       const record = findBillMonth(data.billMonths, bill.id, month)
       const changed = record !== undefined && record.amount !== undefined
@@ -146,7 +170,7 @@ export type PaymentError = 'not-due' | 'invalid-amount' | 'invalid-date' | 'date
 export function validatePayment(data: FinanceData, billId: Id, month: YearMonth, fields: PaymentFields, today: CalendarDate): PaymentError[] {
   const errors: PaymentError[] = []
   const bill = data.bills.find(item => item.id === billId)
-  if (!bill || !isBillDueIn(bill, month)) return ['not-due']
+  if (!bill || (!isBillDueIn(bill, month) && !findBillMonth(data.billMonths, billId, month)?.paid)) return ['not-due']
   if (!isMinorAmount(fields.amount) || fields.amount < 0) errors.push('invalid-amount')
   if (!isCalendarDate(fields.paidOn)) errors.push('invalid-date')
   else if (fields.paidOn > today) errors.push('date-after-today')
@@ -186,8 +210,10 @@ export function markBillPaid(data: FinanceData, billId: Id, month: YearMonth, fi
 }
 
 /** Mark as Not Paid: the month is not paid again, without its date, account or interest. Its amount stays. */
-export const markBillNotPaid = (data: FinanceData, billId: Id, month: YearMonth) =>
-  withBillMonth(data, billId, month, record => {
+export function markBillNotPaid(data: FinanceData, billId: Id, month: YearMonth): FinanceData {
+  const bill = data.bills.find(item => item.id === billId)
+  if (!bill || !isBillDueIn(bill, month)) return data
+  return withBillMonth(data, billId, month, record => {
     const next: BillMonth = { ...record, paid: false }
     delete next.paidOn
     delete next.paidFrom
@@ -195,6 +221,7 @@ export const markBillNotPaid = (data: FinanceData, billId: Id, month: YearMonth)
     delete next.recordedAt
     return next
   })
+}
 
 /**
  * Sets this month's amount of a bill: a number, null for "not known", or
@@ -248,6 +275,7 @@ export interface BillFields {
 
 export type BillFieldError = 'name-required' | 'name-too-long' | 'unknown-category' | 'invalid-due-day' | 'invalid-start'
   | 'invalid-end' | 'ends-before-start' | 'note-too-long' | 'unknown-debt' | 'debt-already-paid' | 'starts-after-change'
+  | 'start-excludes-payment' | 'end-excludes-payment'
 
 export function validateBillFields(data: FinanceData, fields: BillFields, billId: Id | null): BillFieldError[] {
   const errors: BillFieldError[] = []
@@ -267,6 +295,11 @@ export function validateBillFields(data: FinanceData, fields: BillFields, billId
   const current = data.bills.find(bill => bill.id === billId)
   const firstChange = current?.amountChanges?.[0]?.from
   if (firstChange && fields.startMonth >= firstChange) errors.push('starts-after-change')
+  if (current) {
+    const conflicts = billDatePaymentConflicts(data, current, fields)
+    if (conflicts.start.length > 0) errors.push('start-excludes-payment')
+    if (conflicts.end.length > 0) errors.push('end-excludes-payment')
+  }
   return errors
 }
 
