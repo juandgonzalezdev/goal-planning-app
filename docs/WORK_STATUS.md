@@ -1572,3 +1572,46 @@ ENOTFOUND; no acredita una verificación satisfactoria. Permanecen pendientes
 la revisión independiente de Claude y los recorridos manuales de Dirección,
 incluidos Safari/iPhone, teclado virtual, lector y comprobación visual real.
 No se autoriza merge, push ni despliegue.
+
+
+## UX-01 A — correcciones tras Claude (estado vigente, 2026-11-05)
+
+Base 4c670e5f56ac631062e90beca3af2f8ca935561b, codex/ux-01-navigation.
+M1 corregido: Settings/Help sin pestaña actual; rail con botón propio actual.
+M2/D1: barra oculta e inert con teclado usando detección existente; reserva
+constante, sin sumar teclado ni offsetTop; sin listener de scroll. L1/L2/L4/L5
+ajustados. L3 investigado: recarga vuelve a Home, cubierto con cinco regresiones;
+no se añade persistencia. Financias, End Subscription y guardas conservados.
+
+Pruebas propias de correcciones: 160/160, siete archivos, 61,04 s; lint/build y
+diff correctos. Suite dirigida por alcance localizado; 955/955 es del commit
+anterior y no se atribuye a estas correcciones. JS 717,43 kB/gzip 200,50, aviso
+>500 kB vigente. Audit reintentado: ENOTFOUND, no completado ni satisfactorio.
+
+Sin prueba real de Safari/iPhone, teclado, geometría ni lector. Pendientes
+recorridos prioritarios, revisión dirigida y aceptación manual de Dirección.
+Detalle y guion: UX_01_A.md. Entrega local no fija por commit:
+review-deliveries/ux-01-a/corrections-2026-11-05/DELIVERY.md.
+Correcciones sin preparar ni commit nuevo; sin merge/push; main intacto.
+
+
+## UX-01 A — cierre técnico para aprobación de integración (2026-11-05)
+
+Dirección confirma diez comprobaciones manuales en Chrome y Safari/iPhone,
+incluida identificación visual Settings/Help en escritorio. Atribución y tabla
+en UX_01_A.md; sin pruebas adicionales atribuidas a Dirección ni ejecutadas
+por Codex en navegador. Claude: Approved with observations, sin bloqueantes.
+O1 protegido con gap > max(120 px, 15 % de altura); ocho regresiones nuevas.
+O2: estado visual explícito con tokens existentes y forced-colors. Son ajustes
+posteriores a la aceptación, no se afirma nueva revisión/manual sobre ellos.
+
+Comprobaciones propias nuevas: 26/26 FloatingNavigation/Layout, 18,13 s; lint,
+build y diff correctos. Regresiones anteriores 160/160 conservadas para alcance
+no alterado, sin presentarlas como ejecución nueva. Audit previo ENOTFOUND no
+completado; bundle >500 kB. Residuales: O3 precaución de primer frame entre
+motores; heurística de teclado/ausencia de VisualViewport. Sin bloqueantes.
+
+Commit final autorizado de siete correcciones, entrega fija con conjunto UX-01 A
+de once archivos; hash/estado final en DELIVERY.md y GIT_STATUS.md por hash.
+Pendiente aprobación expresa de integración; sin merge/push. Siguiente prioridad:
+UX-01 B, All Bills y búsqueda, aún sin iniciar. Archivos ajenos excluidos.

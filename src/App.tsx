@@ -878,8 +878,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [navContext, setNavContext] = useState<{ tab: Tab; entries: Record<string, Tab> }>({ tab: 'home', entries: {} })
   const step = navigation.current()
   const contextKey = step.chain + ':' + step.idx
-  const currentTab = isTab(screen) ? screen : navContext.entries[contextKey] ?? navContext.tab
-  if (showNav && (navContext.tab !== currentTab || navContext.entries[contextKey] !== currentTab)) {
+  const currentTab = screen === 'settings' || screen === 'help' ? null
+    : isTab(screen) ? screen : navContext.entries[contextKey] ?? navContext.tab
+  if (showNav && currentTab !== null && (navContext.tab !== currentTab || navContext.entries[contextKey] !== currentTab)) {
     setNavContext({ tab: currentTab, entries: { ...navContext.entries, [contextKey]: currentTab } })
   }
   // Wide screens: the tabs become a sidebar, with the logo on top and Settings at the end (not in the header too).
@@ -890,9 +891,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
     </button>
   )
-  const helpButton = <button type="button" className="nav-settings" onClick={() => openGuide()}><Icon name="help" size={18} /> Help</button>
+  const helpButton = <button type="button" className="nav-settings" aria-current={screen === 'help' ? 'page' : undefined} onClick={() => openGuide()}><Icon name="help" size={18} /> Help</button>
   const settingsButton = sidebar
-    ? <button type="button" className="nav-settings" onClick={() => go('settings')}><Icon name="settings" size={18} /> Settings</button>
+    ? <button type="button" className="nav-settings" aria-current={screen === 'settings' ? 'page' : undefined} onClick={() => go('settings')}><Icon name="settings" size={18} /> Settings</button>
     : <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
 
   return (
@@ -953,6 +954,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       <UnsavedChangesContext.Provider value={unsaved.registry}>
       <LeaveGuardContext.Provider value={leaveGuard}>
       <GuideContext.Provider value={open ? openGuide : null}>
+      {sidebar && <BottomNav current={currentTab} onSelect={selectTab} rail top={brand} bottom={<>{helpButton}{settingsButton}</>} />}
       <main id="main-content" tabIndex={-1} className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
@@ -1082,7 +1084,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       </LeaveGuardContext.Provider>
       </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>
-      {showNav && <BottomNav current={currentTab} onSelect={selectTab} rail={sidebar} top={sidebar ? brand : undefined} bottom={sidebar ? <>{helpButton}{settingsButton}</> : undefined} />}
+      {showNav && !sidebar && <BottomNav current={currentTab} onSelect={selectTab} />}
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'
           : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved · No account, no bank connection'

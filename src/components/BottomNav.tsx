@@ -45,41 +45,53 @@ export function BottomNav({ current, onSelect, top, bottom, rail = false }: {
   }, [current, rail])
 
   useEffect(() => {
-    const root = document.documentElement
-    const previous = root.style.getPropertyValue('--nav-viewport-bottom')
     const viewport = window.visualViewport
     let frame = 0
+    // Height is independent of viewport panning: scrolling must not toggle the keyboard.
+    // Retain detection across blur until viewport recovery: Save must not move before click.
+    let keyboardOpen = false
     const update = () => {
       const active = document.activeElement
       const editing = active instanceof HTMLElement && active.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, [contenteditable="true"]')
       // Use the visible viewport, not focus alone. Pinch zoom must not be mistaken for a keyboard.
-      const gap = !rail && editing && viewport && Math.abs(viewport.scale - 1) < 0.01
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
-      root.style.setProperty('--nav-viewport-bottom', `${gap}px`)
+      const gap = !rail && (editing || keyboardOpen) && viewport && Math.abs(viewport.scale - 1) < 0.01
+        ? Math.max(0, window.innerHeight - viewport.height) : 0
+      // Ignore fractional rounding and browser chrome; a keyboard must substantially reduce height.
+      keyboardOpen = gap > Math.max(120, window.innerHeight * 0.15)
+      if (nav.current) {
+        nav.current.dataset.keyboard = String(keyboardOpen)
+        nav.current.inert = keyboardOpen
+        if (keyboardOpen) nav.current.setAttribute('aria-hidden', 'true')
+        else nav.current.removeAttribute('aria-hidden')
+      }
       cancelAnimationFrame(frame)
-      if (gap > 0 && active instanceof HTMLElement && viewport) frame = requestAnimationFrame(() => {
+      if (keyboardOpen && editing && active instanceof HTMLElement && viewport) frame = requestAnimationFrame(() => {
         if (document.activeElement !== active) return
         const rect = active.getBoundingClientRect()
-        const visibleBottom = viewport.offsetTop + viewport.height - (nav.current?.offsetHeight ?? 72) - 24
+        const visibleBottom = viewport.offsetTop + viewport.height - 24
         if (rect.bottom > visibleBottom || rect.top < viewport.offsetTop) active.scrollIntoView?.({ block: 'center', behavior: 'auto' })
       })
     }
     update()
     viewport?.addEventListener('resize', update)
-    viewport?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
     document.addEventListener('focusin', update)
     document.addEventListener('focusout', update)
     return () => {
       cancelAnimationFrame(frame)
       viewport?.removeEventListener('resize', update)
-      viewport?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
       document.removeEventListener('focusin', update)
       document.removeEventListener('focusout', update)
-      if (previous) root.style.setProperty('--nav-viewport-bottom', previous)
-      else root.style.removeProperty('--nav-viewport-bottom')
     }
+  }, [rail])
+
+  // First measure (and each layout change) must paint before transitions start.
+  useLayoutEffect(() => {
+    const group = destinations.current
+    group?.removeAttribute('data-ready')
+    const frame = requestAnimationFrame(() => group?.setAttribute('data-ready', 'true'))
+    return () => cancelAnimationFrame(frame)
   }, [rail])
 
   return (

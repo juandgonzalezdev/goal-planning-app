@@ -38,7 +38,7 @@
 /* Floating main navigation. A single measured float reserves space for all page content. */
 .bottom-nav {
   position: fixed; z-index: 20; left: 50%; right: auto;
-  bottom: calc(10px + var(--safe-bottom) + var(--nav-viewport-bottom, 0px));
+  bottom: calc(10px + var(--safe-bottom));
   transform: translateX(-50%); box-sizing: border-box;
   width: min(560px, calc(100% - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
   padding: 6px; border: 1px solid var(--color-border-strong); border-radius: 22px;
@@ -57,8 +57,10 @@
 }
 .nav-label { max-width: 100%; overflow-wrap: anywhere; }
 .nav-icon { display: inline-flex; transform-origin: center 75%; transition: transform 150ms var(--motion-ease); }
-.bottom-nav .nav-tab:hover .nav-icon { transform: translateY(-1px) rotateX(-8deg); }
-.bottom-nav .nav-tab:active .nav-icon { transform: translateY(1px) rotateX(8deg); }
+@media (hover: hover) and (pointer: fine) {
+  .bottom-nav .nav-tab:hover .nav-icon { transform: translateY(-1px) rotateX(-8deg); }
+  .bottom-nav .nav-tab:active .nav-icon { transform: translateY(1px) rotateX(8deg); }
+}
 .bottom-nav .nav-tab.is-selected { color: var(--color-selected-text); background: transparent; font-weight: 750; }
 .nav-tab.is-selected .nav-icon { animation: nav-tilt 260ms var(--motion-ease); }
 .nav-indicator {
@@ -67,16 +69,19 @@
   transform: translate(var(--indicator-x, 0px), var(--indicator-y, 0px));
   background: var(--color-selected); border-radius: 16px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .18);
+}
+.bottom-nav[data-keyboard="true"] { visibility: hidden; pointer-events: none; }
+.nav-destinations[data-ready="true"] .nav-indicator {
   transition: transform 220ms var(--motion-ease), width 220ms var(--motion-ease), height 220ms var(--motion-ease);
 }
 @keyframes nav-tilt { 0% { transform: none; } 45% { transform: rotateX(-14deg) translateY(-2px); } 100% { transform: none; } }
 .bottom-nav .nav-tab:focus-visible { outline: 3px solid var(--color-focus); outline-offset: -3px; }
-.shell.has-nav { padding-bottom: calc(var(--floating-nav-height, 70px) + var(--safe-bottom) + var(--nav-viewport-bottom, 0px) + 24px); }
+.shell.has-nav { padding-bottom: calc(var(--floating-nav-height, 70px) + var(--safe-bottom) + 24px); }
 .shell.has-nav .shell-footer { padding-bottom: 20px; }
 .skip-link { position: fixed; z-index: 100; top: 12px; left: 12px; padding: 12px 16px; border-radius: 10px; background: var(--color-surface); color: var(--color-text); transform: translateY(-200%); }
 .skip-link:focus { transform: none; outline: 3px solid var(--color-focus); }
 @media (prefers-reduced-motion: reduce) {
-  .nav-indicator, .nav-icon { transition: none; }
+  .nav-destinations[data-ready="true"] .nav-indicator, .nav-icon { transition: none; }
   .nav-tab.is-selected .nav-icon { animation: none; }
   .bottom-nav .nav-tab:hover .nav-icon, .bottom-nav .nav-tab:active .nav-icon { transform: none; }
 }
@@ -452,7 +457,7 @@ p.explain { margin: 0; padding: 10px 12px; border-radius: 11px; background: var(
  * scroll-padding keeps a focused field from ending up behind it.
  */
 html { scroll-padding-top: calc(var(--sticky-top, 64px) + var(--sticky-bar, 0px) + 12px); }
-html { scroll-padding-bottom: calc(var(--floating-nav-height, 70px) + var(--safe-bottom) + var(--nav-viewport-bottom, 0px) + 24px); }
+html { scroll-padding-bottom: calc(var(--floating-nav-height, 70px) + var(--safe-bottom) + 24px); }
 @media (min-width: 1024px) { html { scroll-padding-bottom: 24px; } }
 .home-month-bar {
   position: sticky; top: var(--sticky-top, 64px); z-index: 5;
@@ -1083,4 +1088,12 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
   .bottom-nav, .skip-link { display: none !important; }
   .shell.has-nav, .shell.has-sidebar { padding: 0 !important; }
   html { scroll-padding: 0; }
+}
+
+/* Settings and Help identify their own current page without selecting a main tab. */
+.shell.has-sidebar .nav-settings[aria-current="page"] {
+  background: var(--color-selected); color: var(--color-selected-text); font-weight: 750;
+}
+@media (forced-colors: active) {
+  .shell.has-sidebar .nav-settings[aria-current="page"] { outline: 2px solid Highlight; outline-offset: -4px; }
 }

@@ -47,6 +47,7 @@ describe('Sidebar on wide screens', () => {
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Go to Home' })).toHaveLength(1)
     expect(header().getByRole('button', { name: 'Add' })).toBeTruthy()
+    expect(screen.getByRole('navigation').compareDocumentPosition(screen.getByRole('main')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Reading order in the sidebar: the logo, the five tabs, then Help and Settings.
     expect(nav().getAllByRole('button').map(item => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim()))
       .toEqual(['Go to Home', 'Home', 'Bills', 'Goals', 'Money', 'History', 'Help', 'Settings'])
@@ -62,6 +63,12 @@ describe('Sidebar on wide screens', () => {
     expect(nav().getByRole('button', { name: 'Settings' })).toBeTruthy()
     await fire.click(nav().getByRole('button', { name: 'Settings' }))
     expect(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeTruthy()
+    expect(screen.getByRole('navigation').querySelector('.nav-destinations [aria-current]')).toBeNull()
+    expect(nav().getByRole('button', { name: 'Settings' }).getAttribute('aria-current')).toBe('page')
+    await fire.click(nav().getByRole('button', { name: 'Help' }))
+    expect(screen.getByRole('navigation').querySelector('.nav-destinations [aria-current]')).toBeNull()
+    expect(nav().getByRole('button', { name: 'Help' }).getAttribute('aria-current')).toBe('page')
+    expect(nav().getByRole('button', { name: 'Settings' }).hasAttribute('aria-current')).toBe(false)
     expect(screen.getAllByRole('navigation', { name: 'Main navigation' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'Go to Home' })).toHaveLength(1)
 

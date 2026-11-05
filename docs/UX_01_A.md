@@ -1,6 +1,7 @@
 # UX-01 A — Floating Navigation
 
-Fecha: 5 de noviembre de 2026. Editor: Codex. Revisor pendiente: Claude.
+Fecha: 5 de noviembre de 2026. Editor: Codex.
+Estado vigente: cierre técnico y aceptación manual comunicada por Dirección; véase el apartado final.
 Alcance exclusivo A: navegación flotante/persistente. No incluye B/C, All Bills
 arriba/búsqueda, edición rápida, rueda de meses, gráficos, Pay rápido, Undo o cuentas.
 
@@ -15,7 +16,8 @@ Referencias leídas: AGENTS.md, docs/WORKFLOW.md, UX_01_TECHNICAL_EVALUATION.md,
 UX_01_IMPLEMENTATION.md, PROPUESTA.md y prototype.html compartidos.
 
 La autorización cubre implementación y documentación; no integración en main.
-Sin commit, push, merge ni despliegue de UX-01 A.
+Entrega inicial guardada en 4c670e5f56ac631062e90beca3af2f8ca935561b.
+Correcciones actuales sin commit nuevo; sin push, merge ni despliegue.
 
 ## Resultado implementado
 
@@ -38,15 +40,13 @@ Sin commit, push, merge ni despliegue de UX-01 A.
   destino. No se amplía history.state ni se guarda en FinanceData.
 - Clic en ese destino desde un detalle vuelve a su raíz mediante selectTab y
   confirmLeave existentes. No se evitan guardas ni se pierde borrador silenciosamente.
-- Nav después de main en DOM; enlace Skip to content y main enfocable. Botones
+- Nav antes de main en escritorio y después en móvil; Skip to content y main enfocable. Botones
   nativos, aria-current=page, iconos aria-hidden, foco visible y modo forced-colors.
 - Medida real de altura reserva espacio al final del shell, incluido pie/mensajes.
   Scroll-padding evita enfocar detrás de la barra. La reserva se retira al imprimir.
-- VisualViewport ajusta la posición sobre su borde visible mientras hay campo
-  editable y escala 1; no oculta por foco solo ni confunde pinch zoom con teclado.
-  Si hace falta, desplaza el campo al área visible. Sin VisualViewport conserva
-  float/reserva y scroll normales. Se liberan observadores, listeners y variables
-  al desmontar/cambiar disposición.
+- VisualViewport/foco ocultan la barra con teclado y escala 1; no por foco solo
+  ni por pinch zoom. Reserva medida constante, sin sumar teclado/offsetTop.
+  Se liberan observadores, listeners y variables al desmontar/cambiar disposición.
 - End Subscription y sus controles de 2A.1 permanecen en Bill Details.
 - Navegación, guardas de datos, cálculos financieros y almacenamiento conservan
   sus implementaciones. No se editan archivos del dominio financiero.
@@ -125,7 +125,7 @@ La entrega local incluirá copies/diff/evidencia y manifiesto; no es fija por co
 hasta que Dirección autorice guardarlo según WORKFLOW. No escribir sobre informes
 anteriores ni preparar el índice como parte de una revisión.
 
-## Recorridos manuales de Dirección (pendientes, datos ficticios)
+## Recorridos manuales de Dirección (checklist original; aceptación registrada al final)
 
 1. Ordenador ancho: entrar a demo; comprobar cinco etiquetas/iconos en riel,
    logo/Help/Settings una sola vez y contenido sin tapar. Recorrer todos los destinos.
@@ -152,7 +152,7 @@ anteriores ni preparar el índice como parte de una revisión.
 No se marca ninguno confirmado por una prueba automática. Dirección comunica
 resultado y dispositivo/navegador de lo que pruebe.
 
-## Resultado final propio de Codex
+## Resultado original propio de Codex (anterior a las correcciones)
 
 - Suite final: npm test -- --maxWorkers=2, **955/955 en 68 archivos**, 231,28 s,
   una sola ejecución sobre el producto final. Incluye nueve pruebas nuevas de
@@ -183,3 +183,145 @@ ENOTFOUND; no acredita una verificación satisfactoria. Permanecen pendientes
 la revisión independiente de Claude y los recorridos manuales de Dirección,
 incluidos Safari/iPhone, teclado virtual, lector y comprobación visual real.
 No se autoriza merge, push ni despliegue.
+
+
+## Correcciones tras Claude — 2026-11-05 (estado vigente)
+
+Referencia leída: review-deliveries/ux-01-a/4c670e5f56ac631062e90beca3af2f8ca935561b/REVISION.md.
+Veredicto comunicado por Claude: Approved with observations. Dirección autoriza
+M1, M2/D1 y ajustes L1–L5; no integración en main. Base actual de correcciones:
+4c670e5f56ac631062e90beca3af2f8ca935561b, rama codex/ux-01-navigation.
+
+- M1: Settings y Help no seleccionan ni anuncian ninguna de las cinco pestañas.
+  Los botones propios de Settings/Help en el rail anuncian su página actual.
+- M2/D1: la detección existente de VisualViewport/foco oculta la barra mientras
+  hay teclado (visibility, inert y aria-hidden); reaparece al recuperar altura.
+  No se añade otro detector ni listeners. Se retira el listener de scroll: la
+  detección usa la diferencia de alturas con escala 1, independiente de offsetTop.
+  Foco solo y pinch zoom no bastan para ocultarla. Tras blur se conserva la
+  ocultación hasta recuperar viewport, sin cambios de altura antes de Save/click.
+  La reserva mantiene solo la altura medida de la barra, safe area y margen:
+  no incorpora altura de teclado ni offsetTop. Mantener ese pequeño espacio
+  constante evita alterar la longitud del documento al ocultar/reaparecer.
+- L1: hover/active inclinan iconos solo con ratón fino que admite hover; la
+  animación breve de selección vuelve a posición neutra también en táctil.
+- L2: rail antes de main en DOM; móvil después. Sigue habiendo un solo nav y
+  Skip to content para saltar al contenido. Guardas de formularios intactas.
+- L3: investigado, no reproducido como detalle incorrecto tras recarga. El arranque
+  real de navegación sustituye el paso por Home; no restaura el detalle ni su id.
+  Cinco regresiones confirman Home visible y Home actual al arrancar desde pasos
+  bill/debt/goal/emergency/new-goal. No se introduce persistencia ni se afirma
+  que se restaure el detalle; el contexto en sesión y Back/Forward se conservan.
+- L4: indicador sin transición hasta la primera medida/frame de montaje o cambio
+  de disposición; después conserva animación de selección y reduced motion.
+- L5: Back/Forward esperan el encabezado correcto mediante waitFor, sin sleep fijo.
+
+Archivos de esta corrección (7): src/App.tsx, src/components/BottomNav.tsx,
+src/styles/finance.css, src/FloatingNavigation.test.tsx, src/Layout.test.tsx,
+docs/UX_01_A.md y docs/WORK_STATUS.md. Sin lógica financiera, pagos históricos,
+B/C ni UX-02. End Subscription y confirmLeave conservados.
+
+Comprobaciones propias finales: 160/160 en siete archivos, 61,04 s:
+FloatingNavigation, Layout, App, LeaveForms, Help, LinksReturn y SubscriptionReview.
+Se elige regresión dirigida por el alcance localizado, según WORKFLOW y la
+recomendación de Claude; no se repite ni se atribuye 955/955 al contenido corregido.
+La suite anterior de 955 pertenece al commit original. Lint y build finales:
+salida 0. JS 717,43 kB / gzip 200,50; CSS 77,37 kB / gzip 14,50; persiste aviso
+>500 kB. Diff --check correcto. Audit intentado otra vez con --fetch-retries=0:
+ENOTFOUND registry.npmjs.org, salida 1; no completado, no acredita seguridad.
+Primeras pruebas revelaron expectativas obsoletas de CSS y un nombre incorrecto
+del botón Help; las pruebas de recarga inicialmente suponían una restauración
+que el arranque no realiza. Se investigó y corrigió la prueba; no la navegación.
+
+Pendientes reales (no confirmados por automatización):
+1. Safari/iPhone: Edit Details, último campo, scroll con teclado abierto; barra
+   oculta, sin saltos, errores y Save/Cancel alcanzables. Tocar Save directamente,
+   sin cerrar teclado: un solo guardado, sin desplazamiento bajo el dedo.
+2. Repetir con Cancel y cambios sin guardar; cerrar teclado con Done, cambiar
+   campo, rotar y comprobar reaparición. Pinch zoom con campo enfocado, barra
+   no ocultada por el zoom; tras cerrar teclado, cinco destinos operativos.
+3. iPhone: tocar pestañas y comprobar inclinación vuelve a neutro, End Subscription
+   visible, luz/oscuro, VoiceOver y navegación ausente del foco mientras oculta.
+4. Escritorio: Tab desde Skip to content, rail antes de main; Enter en enlace
+   salta a main. Settings/Help sin pestaña principal actual; botón propio actual.
+   Redimensionar a móvil y volver: una barra, indicador sin vuelo desde esquina,
+   reduced motion, Back/Forward y confirmación de borradores.
+5. Recargar desde un detalle: Home visible y anunciado, sin afirmar restauración
+   de detalle. Verificar comportamiento en ambos temas y con lector real.
+
+No se ejecutó navegador real en esta fase; se conserva la limitación anterior
+(timeout de acceso local), sin atribuirle nueva comprobación. jsdom no acredita
+geometría real, Safari/iPhone, teclado virtual, VoiceOver ni ausencia de saltos.
+Sin VisualViewport, no se detecta el teclado: queda la barra normal; requiere
+validación en los navegadores objetivo. La heurística de altura requiere también
+comprobación frente a barras de Safari, orientación y teclado físico.
+
+Entrega local revisable: review-deliveries/ux-01-a/corrections-2026-11-05/DELIVERY.md.
+No es entrega fija por commit. Correcciones sin preparar; nuevo commit no
+solicitado en esta autorización. Pendientes revisión dirigida de Claude,
+validación manual de Dirección y autorización posterior de integración.
+
+
+## Cierre técnico y aceptación comunicada por Dirección — 2026-11-05
+
+Este apartado sustituye los estados pendientes históricos anteriores. Dirección
+confirma que las diez comprobaciones del checklist fueron superadas en Chrome
+y Safari/iPhone. Es aceptación comunicada por Dirección, no ejecución manual de
+Codex. No se aportaron versiones ni un desglose por navegador para cada paso;
+no se atribuyen pruebas adicionales a esa confirmación.
+
+| # | Comprobación del checklist | Resultado comunicado |
+| --- | --- | --- |
+| 1 | Ordenador: cinco destinos, rail, controles únicos y contenido accesible | Confirmada por Dirección |
+| 2 | Móvil/tablet: barra inferior, scroll y último contenido accesible | Confirmada por Dirección |
+| 3 | Temas, movimiento/transparencia reducidos, zoom y ventana baja | Confirmada por Dirección |
+| 4 | Bill Details, End Subscription y cambio directo de sección | Confirmada por Dirección |
+| 5 | Contexto de origen y Back/Forward | Confirmada por Dirección |
+| 6 | Formulario editado, Keep Editing/Escape y descarte confirmado | Confirmada por Dirección |
+| 7 | Accesibilidad de teclado, salto al contenido y nombres según checklist | Confirmada por Dirección |
+| 8 | Safari/iPhone: teclado, cierre/rotación, Save/Cancel, diálogo y navegación | Confirmada por Dirección |
+| 9 | Entrada/salida de demo y navegación única al cambiar tamaño | Confirmada por Dirección |
+| 10 | Impresión sin barra ni hueco adicional | Confirmada por Dirección |
+
+Última revisión leída: corrections-2026-11-05/REVISION.md, Claude:
+Approved with observations, sin bloqueantes. Sus 160/160 y comprobaciones
+Chromium son resultados declarados por Claude, distintos de los de Codex.
+
+O1: se añade protección mínima en la detección existente:
+keyboardOpen solo si gap > max(120 px, 15 % de innerHeight), con editable o
+retención del estado y escala 1 como antes. El scroll correctivo también depende
+de keyboardOpen. Sin listeners nuevos ni cambios de reserva. Ocho casos nuevos
+cubren 0,5 px, 80 px, límites de 120/240 px, huecos reales de 300 px, altura
+proporcional, blur y recuperación con residuo fraccionario. Así no queda oculta
+por redondeo residual. Heurística, no identificación universal de teclados.
+
+O2: Dirección confirma expresamente la identificación visual de Settings y Help
+en escritorio. Se conserva aria-current y ninguna pestaña principal seleccionada.
+Se incorpora además estilo explícito de página actual con los tokens selected /
+selected-text existentes y contorno en forced-colors; no se cambia la paleta.
+Esta pequeña modificación y el umbral O1 son posteriores a la aceptación manual:
+no se afirma una nueva ejecución de Dirección sobre ellos ni una nueva revisión
+independiente de Claude sobre el commit final.
+
+Verificación propia nueva: FloatingNavigation + Layout, 26/26, 18,13 s; lint y
+build correctos, diff --check correcto. Se reutilizan las otras regresiones
+previas de alcance no alterado (160/160 en siete archivos de Codex), sin sumar
+los resultados ni atribuir 160 o 955 como nueva suite completa. Se ejecuta la
+regresión dirigida que recomendó Claude para O1/O2. Dependencias y colores no
+cambian: audit previo ENOTFOUND sigue no completado; contraste previo vigente
+para tokens reutilizados, no una nueva medición de navegador.
+
+Observaciones residuales: O3 (primer frame del indicador) queda como precaución
+baja dependiente de motor; no se introduce doble rAF preventivo ni se declara
+una prueba adicional específica. Sin VisualViewport no se detecta teclado;
+teclados flotantes o muy pequeños pueden no superar el umbral. No se certifican
+navegadores/dispositivos/versiones no comunicados ni audit satisfactorio. Persiste
+el aviso de bundle >500 kB. No hay bloqueantes técnicos identificados.
+
+Dirección autoriza commit final y entrega fija, no merge ni push. Se conservan
+los siete archivos de corrección dentro del manifiesto original de once; los
+ajenos siguen excluidos. Hash final, ruta fija y comprobación byte a byte se
+registran en DELIVERY.md/GIT_STATUS.md para evitar autorreferencia del commit.
+Estado: preparado para aprobación de integración en main; aún no integrado.
+Siguiente entrega acordada UX-01 B — All Bills y búsqueda, según
+UX_01_IMPLEMENTATION.md, sin implementarla ni cambiar prioridades en este cierre.
