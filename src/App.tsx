@@ -873,7 +873,15 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   )
 
   const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
-  const showNav = !!open && isTab(screen)
+  const showNav = !!open && isSpaceScreen(screen)
+  // A detail keeps the main destination it was opened from; clicking it returns to that root.
+  const [navContext, setNavContext] = useState<{ tab: Tab; entries: Record<string, Tab> }>({ tab: 'home', entries: {} })
+  const step = navigation.current()
+  const contextKey = step.chain + ':' + step.idx
+  const currentTab = isTab(screen) ? screen : navContext.entries[contextKey] ?? navContext.tab
+  if (showNav && (navContext.tab !== currentTab || navContext.entries[contextKey] !== currentTab)) {
+    setNavContext({ tab: currentTab, entries: { ...navContext.entries, [contextKey]: currentTab } })
+  }
   // Wide screens: the tabs become a sidebar, with the logo on top and Settings at the end (not in the header too).
   const sidebar = useMediaQuery(SIDEBAR_QUERY) && showNav
   const brand = (
@@ -889,9 +897,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
 
   return (
     <div className={`shell${showNav ? ' has-nav' : ''}${sidebar ? ' has-sidebar' : ''}`} data-direction={direction} ref={shellRef}>
+      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus() }}>Skip to content</a>
       <header className="shell-header">
         {!sidebar && brand}
-        {open && showNav && <div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div>}
+        {open && isTab(screen) && <div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div>}
         {open && screen !== 'settings' && !sidebar && settingsButton}
       </header>
       {open?.kind === 'demo' && (
@@ -939,13 +948,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         </div>
       )}
       {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
-      {showNav && <BottomNav current={isTab(screen) ? screen : null} onSelect={selectTab} top={sidebar ? brand : undefined} bottom={sidebar ? <>{helpButton}{settingsButton}</> : undefined} />}
       {leaveQuestion}
       <WriteStatusContext.Provider value={writeStatus}>
       <UnsavedChangesContext.Provider value={unsaved.registry}>
       <LeaveGuardContext.Provider value={leaveGuard}>
       <GuideContext.Provider value={open ? openGuide : null}>
-      <main className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
+      <main id="main-content" tabIndex={-1} className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
           <Opening onRetry={() => void space.reload()} />
@@ -1074,6 +1082,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       </LeaveGuardContext.Provider>
       </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>
+      {showNav && <BottomNav current={currentTab} onSelect={selectTab} rail={sidebar} top={sidebar ? brand : undefined} bottom={sidebar ? <>{helpButton}{settingsButton}</> : undefined} />}
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'
           : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved · No account, no bank connection'

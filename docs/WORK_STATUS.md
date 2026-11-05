@@ -1524,3 +1524,51 @@ sin incluir entregas ni UX-01 en el commit de cierre. Archivos ajenos preservado
 El push activa despliegue automático, pero no acredita publicación del sitio.
 Siguiente prioridad autorizada: UX-01 A, rama independiente basada en el nuevo main;
 sin Pay rápido, Undo ni cambios bancarios.
+
+## UX-01 A — navegación flotante implementada (5 de noviembre de 2026)
+
+Dirección autoriza solo A, después de integrar 2A.1. Base y main comprobados:
+00bae6c8407fed2aeaf5da9471eaf2d0c7833ed9; rama codex/ux-01-navigation.
+Índice inicialmente vacío, sin cambios seguidos; 809 archivos ajenos sin seguimiento
+identificados y conservados. Evaluación/plan previos y material de Claude excluidos.
+
+Una navegación con cinco iconos/etiquetas visibles, float móvil/tablet y riel compacto
+desde 1024 px, superficie translúcida y fallback opaco. Indicador animado y 3D solo
+decorativo; reduced motion, transparencia reducida, foco y forced-colors.
+Nav en detalles/formularios/Settings/Help; mantiene selectTab/confirmLeave, contexto
+de origen por paso de historial y Back/Forward. Skip to content, reserva de altura
+medida, safe areas, impresión y ajuste de VisualViewport sin confundir pinch zoom.
+End Subscription visible. Sin B/C, cambio de payment/cuentas, Undo, modelos o cálculos.
+
+Pruebas propias finales: 955/955 en 68 archivos, 231,28 s; dirigida final 9/9 incluida.
+Lint/build correctos: JS 717,25 kB/gzip 200,40 kB, CSS 77,27 kB/gzip 14,45 kB.
+Aviso conocido JS >500 kB. Audit intentado: ENOTFOUND, no se acredita limpio.
+Contraste numérico de nav: etiquetas mínimas 6,12 light y 8,18 dark, foco mínimo
+3,46; estados activos 8,54/8,61. Diff sin errores. Primeras pruebas detectaron
+expectativas antiguas de nav oculto y una regresión de contexto al volver por Back,
+corregidas y cubiertas por la suite final. No se atribuyen resultados anteriores.
+
+Servidor local arrancado; herramienta de navegador devolvió timeout al abrir
+http://127.0.0.1:5178/. No se acreditan capturas, layout real, Safari/iPhone,
+teclado virtual real ni lector. No hay aceptación manual nueva de Dirección.
+
+Manifiesto de once archivos y guion de diez recorridos:
+[UX_01_A.md](UX_01_A.md).
+Preparación local: review-deliveries/ux-01-a/working-2026-11-05/DELIVERY.md.
+Sin preparar ni commit nuevo, sin integración/main/push/despliegue.
+Pendientes autorización de commit para entrega fija, revisión de Claude y
+validación manual de Dirección; UX-01 A no se anuncia como aprobada.
+
+
+## Autorización de commit local — 2026-11-05
+
+Dirección autoriza guardar exclusivamente los once archivos del manifiesto en
+`codex/ux-01-navigation` y generar una entrega fija por hash. Este registro
+sustituye el estado anterior de autorización pendiente; el hash y el estado
+posterior se registran en DELIVERY.md y GIT_STATUS.md de esa entrega.
+No se modifica el producto ni las pruebas: se reutilizan los resultados finales
+955/955, lint, build y contraste correctos. Audit sigue sin completarse por
+ENOTFOUND; no acredita una verificación satisfactoria. Permanecen pendientes
+la revisión independiente de Claude y los recorridos manuales de Dirección,
+incluidos Safari/iPhone, teclado virtual, lector y comprobación visual real.
+No se autoriza merge, push ni despliegue.

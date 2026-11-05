@@ -8,6 +8,9 @@
 :root {
   color-scheme: light;
   --color-bg: #f4f5f9;
+  --color-nav-surface: rgb(255 255 255 / .96);
+  --color-nav-text: #5a5b6b;
+  --shadow-nav: 0 10px 30px -8px rgb(36 35 50 / .24), 0 2px 6px rgb(36 35 50 / .10);
   --color-surface: #ffffff;
   --color-surface-muted: #f4f4f8;
   --color-surface-hover: #f5f3ff;
@@ -16,7 +19,7 @@
   --color-text: #242332;
   --color-text-strong: #1a1926;
   /* v5.9 uses #7b7d8e; slightly darker here so small text meets WCAG AA contrast. */
-  --color-text-muted: #6f7080;
+  --color-text-muted: #6a6b7b;
   --color-progress: #7952b5;
   --color-progress-new: #b79cf0;
   --color-ring-band: #e4dfed;
@@ -67,6 +70,9 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --color-bg: #16151f;
+  --color-nav-surface: rgb(32 30 43 / .96);
+  --color-nav-text: #c3bfd3;
+  --shadow-nav: 0 12px 34px -6px rgb(0 0 0 / .60), 0 2px 6px rgb(0 0 0 / .30);
   --color-surface: #201e2b;
   --color-surface-muted: #2c2939;
   --color-surface-hover: #332f44;
@@ -99,6 +105,9 @@
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
     --color-bg: #16151f;
+  --color-nav-surface: rgb(32 30 43 / .96);
+  --color-nav-text: #c3bfd3;
+  --shadow-nav: 0 12px 34px -6px rgb(0 0 0 / .60), 0 2px 6px rgb(0 0 0 / .30);
     --color-surface: #201e2b;
     --color-surface-muted: #2c2939;
     --color-surface-hover: #332f44;

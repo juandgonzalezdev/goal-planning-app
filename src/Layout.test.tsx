@@ -52,14 +52,19 @@ describe('Sidebar on wide screens', () => {
       .toEqual(['Go to Home', 'Home', 'Bills', 'Goals', 'Money', 'History', 'Help', 'Settings'])
   })
 
-  it('a detail screen and Settings keep the header with the logo and the gear', async () => {
+  it('keeps the single floating rail and its controls in details and Settings', async () => {
     screenWidth(true)
     await openAlex()
     await fire.click(nav().getByRole('button', { name: 'Goals' }))
     await fire.click(button(/^Trip to Japan/))
-    expect(document.querySelector('.shell')!.classList.contains('has-sidebar')).toBe(false)
-    expect(header().getByRole('button', { name: 'Go to Home' })).toBeTruthy()
-    expect(header().getByRole('button', { name: 'Settings' })).toBeTruthy()
+    expect(document.querySelector('.shell')!.classList.contains('has-sidebar')).toBe(true)
+    expect(nav().getByRole('button', { name: 'Go to Home' })).toBeTruthy()
+    expect(nav().getByRole('button', { name: 'Settings' })).toBeTruthy()
+    await fire.click(nav().getByRole('button', { name: 'Settings' }))
+    expect(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeTruthy()
+    expect(screen.getAllByRole('navigation', { name: 'Main navigation' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Go to Home' })).toHaveLength(1)
+
   })
 
   it('moves the controls when the window changes width, without doubling them', async () => {

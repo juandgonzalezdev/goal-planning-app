@@ -710,16 +710,16 @@ describe('Tab bar', () => {
     expect(tab('Home').getAttribute('aria-current')).toBeNull()
   })
 
-  it('is hidden in Settings and in the emergency fund draft', async () => {
+  it('stays available in Settings and in the emergency fund draft', async () => {
     await openDemo()
     await fire.click(button('Settings'))
     expect(heading('Settings')).toBeTruthy()
-    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy()
     await fire.click(button('Back'))
     await waitFor(() => expect(tab('Home')).toBeTruthy())
     await fire.click(button('Review My Emergency Fund'))
     expect(heading('Start an Emergency Fund')).toBeTruthy()
-    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy()
   })
 })
 
@@ -1017,7 +1017,7 @@ describe('Logo (Go to Home)', () => {
     await fire.click(button('Hide amounts in Our Money & Goals'))
     await openCardsAndLoans()
     await fire.click(document.querySelector<HTMLButtonElement>('[data-screen="money"] .goal-card')!)
-    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeTruthy()
     const steps = window.history.length
     await fire.click(button('Go to Home'))
     expect(tab('Home').getAttribute('aria-current')).toBe('page')

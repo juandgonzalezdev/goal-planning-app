@@ -142,18 +142,19 @@ Add things in this order, and skip anything that doesn't apply to you. You can c
 
 ## 6. Moving Around
 
-The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Each tab shows its name. You can also reach them with the keyboard (Tab, then Enter or Space).
+The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Each destination has an icon and a visible name. The floating navigation stays available while you scroll, including in details, editing, Settings and Help. Use Tab, then Enter or Space; Skip to content moves focus to the page.
 
 | Screen width | Where things are |
 | --- | --- |
-| Phone (narrower than 740 px) | The tabs are at the bottom of the screen. The header has the logo, **+ Add** and the gear. Home is one column. |
-| Tablet (740 to 1023 px) | The tabs are at the top. The header is the same as on a phone. Home is one column. |
-| Computer (1024 px or wider) | The tabs are in a **sidebar** on the left: the logo at the top, the five tabs, and **Help** and **Settings** at the end. The header keeps only **+ Add**. Home is one column up to 1199 px. |
+| Phone (narrower than 740 px) | The navigation floats at the bottom. The header has the logo and gear, with **+ Add** on the main screens. Home is one column. |
+| Tablet (740 to 1023 px) | The navigation floats at the bottom, with icons beside the labels. The header is the same as on a phone. Home is one column. |
+| Computer (1024 px or wider) | The navigation is a compact **floating rail** on the left: logo, five destinations, **Help** and **Settings**. These controls stay in the rail in details too. Home is one column up to 1199 px. |
 | Wide computer (1200 px or wider) | As above, and Home shows its areas in **two columns**. |
 
 - In two columns, Home's areas follow the order you chose in **Customize Home**: left to right, then the next row. The keyboard and a screen reader follow the same order. If the number of areas is odd, the last one takes the whole row.
 - While **Customize Home** is open, Home goes back to one column, so the list you reorder is the order you read.
-- A bill, goal, card or loan opened on its own screen, and Settings, have no sidebar: they keep the header with the logo, **Back** and the gear, whatever the width.
+- Bill, goal, card and loan details keep **Back** and the main navigation. The highlighted destination is the one you opened the detail from; Back and Forward restore that context. Leaving a changed form still asks before dropping what you typed.
+- Motion is decorative. With reduced motion, the active indicator changes instantly. Focus remains visible and labels remain shown.
 - Each control is shown once. When the window changes width, the logo and Settings move between the header and the sidebar; they are never in both.
 
 - **Home**: your month at a glance.
@@ -208,7 +209,7 @@ At the top of Home there is a month bar: the arrows go to the month before or af
 
 **Back to Goals and History** works the same way: the same filter (and in History the same period, search, filters, open months and records shown), the same place on the page, and the keyboard on the goal, the Emergency Fund card, **Add Goal** or the record you opened.
 
-History also restores the place and keyboard focus when you tap its tab directly from Money after opening an account from a History record. Bill, goal, card and loan details have a **Back** button instead of the main tabs. If you visit another main tab first, that return position is cleared. Opening History then starts at the top, with focus on its heading; its period, search, filters, open months and records shown are still kept.
+History also restores the place and keyboard focus when you tap its tab directly from Money after opening an account from a History record. Bill, goal, card and loan details have both a **Back** button and the main navigation. If you visit another main tab first, that return position is cleared. Opening History then starts at the top, with focus on its heading; its period, search, filters, open months and records shown are still kept.
 
 When you reload the page, these go back to the start.
 
