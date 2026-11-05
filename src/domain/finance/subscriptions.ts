@@ -20,8 +20,7 @@ const LOOK_AHEAD_MONTHS = 24
 
 /** A subscription is a bill in the Subscriptions category that has not ended. */
 export function activeSubscriptions(data: Pick<FinanceData, 'bills'>, today: CalendarDate): RecurringBill[] {
-  const month = yearMonthOf(today)
-  return data.bills.filter(bill => bill.category === 'Subscriptions' && validityOn(bill, month) !== 'ended')
+  return data.bills.filter(bill => bill.category === 'Subscriptions' && validityOn(bill, today) !== 'ended')
 }
 
 export interface UpcomingCharge {

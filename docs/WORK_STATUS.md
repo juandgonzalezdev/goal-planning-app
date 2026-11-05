@@ -1450,3 +1450,77 @@ registran en review-deliveries/increment-2a1-end-subscription/<hash>/DELIVERY.md
 y GIT_STATUS.md, fuera del commit de la app. Archivos ajenos conservados/excluidos.
 Siguientes pasos: revisión de Claude y validación manual de Dirección.
 Main, push y despliegue quedan sujetos a aprobación posterior; no se ejecutan.
+
+## 2A.1 — seguimiento autorizado de O1–O7 (5 de noviembre de 2026)
+
+Dirección comunica Approved with observations de Claude y autoriza solo correcciones
+UX y compatibilidad antes de validar manualmente. Codex leyó directamente
+review-deliveries/increment-2a1-end-subscription/4d23540fb5121628d4f88828a352a1df3a210047/REVISION.md.
+El informe declara suite 928/928 y lint/build de Claude sobre la base: se atribuyen
+al informe, no a ejecución propia de Codex sobre el seguimiento.
+
+Git propio al iniciar: rama codex/increment-2a1-end-subscription,
+HEAD/base 4d23540fb5121628d4f88828a352a1df3a210047, índice vacío, sin cambios seguidos.
+Todos los archivos ajenos sin seguimiento y las entregas/informes previos conservados.
+
+O1/O4: un criterio compartido respecto de hoy en detalle y All Bills (etiquetas,
+filtros y conteos). Para Subscriptions finitas se usa el último vencimiento realmente
+previsto, incluso anual heredada con fin posterior al último aniversario; no se
+reescribe ningún dato. Upcoming para inicio futuro, Ended sin vencimientos futuros,
+sin deducir Ended del límite de búsqueda. El mes seleccionado solo afecta al detalle
+de obligaciones/importes. Ingresos y otras categorías conservan el criterio mensual.
+
+O2/O3/O5/O6: Keep Subscription, ahorro singular/plural, mensaje de finalización
+natural/antes del primer cargo y ubicación de la preferencia bloqueante. O7: cada
+acción devuelve foco a su propio botón; borrador Action: End Subscription; sin
+Skipped months confuso antes del primer cargo, manteniendo su dato; limpieza mínima.
+Sin cambios de reglas financieras, applyCancel ni guardas de payments, modelo,
+almacenamiento, dependencias o fórmulas. bills.ts solo cambia tipos de parámetros
+para reutilizar sus predicados intactos.
+
+Regresiones nuevas fallaban antes: 11/14. Dirigida final 41/41 en tres archivos,
+5,87 s. Lint/build finales correctos: JS 713,83 kB/gzip 199,30 kB, aviso conocido
+>500 kB. Suite completa nueva por estado compartido; resultado final abajo.
+No se repite audit sin dependencias nuevas; mantiene ENOTFOUND anterior.
+No se ejecutaron navegador ni pruebas manuales de Dirección.
+
+Documentación/decisiones, manifiesto de 14 archivos y recorridos dirigidos en
+[INCREMENT_2A1.md](INCREMENT_2A1.md), apartado Correcciones dirigidas O1–O7.
+Sin preparar, nuevo commit, merge, push ni despliegue. Preparación de revisión local,
+no entrega fija por hash hasta autorización de nuevo commit.
+
+Resultado final propio del seguimiento: suite completa **946/946 en 67 archivos**,
+221,52 s, una sola ejecución; dirigida 41/41 incluida en la completa. Lint/build
+salida 0, diff sin errores, índice vacío y HEAD 4d23540 sin nuevo commit.
+Preparación local: review-deliveries/increment-2a1-end-subscription/observations-working-2026-11-05/DELIVERY.md.
+Catorce archivos propios; copias/diff/evidencias identificados sin atribuirlos a un
+commit que no los contiene. Entrega fija nueva pendiente de autorización de commit.
+Pendientes revisión dirigida de Claude y validación manual de Dirección.
+
+## Cierre autorizado de 2A.1 y base para UX-01 A (5 de noviembre de 2026)
+
+Dirección confirma aceptación manual y autoriza commit de los catorce archivos,
+entrega fija, integración en main y push. Codex leyó la revisión dirigida Approved
+y comprobó los catorce archivos idénticos a las copias aprobadas antes de añadir
+únicamente este registro y el de INCREMENT_2A1.md. Código y pruebas sin cambios.
+
+Confirmaciones comunicadas por Dirección: End Subscription visible; confirmación
+con ahorro/advertencia del proveedor; Keep Subscription sin cambios; Confirm End
+Subscription muestra Ended; payments históricos en History; tras reiniciar demo y
+repetir, sin cargos nuevos de Music Streaming en enero de 2027.
+No son ejecuciones de Codex ni confirman dispositivo/navegador, PDF visual,
+VoiceOver o recorridos no enumerados. No se amplía su atribución.
+
+N1/N2 de redacción y N3 de Active sin acción elegible se conservan como notas
+menores no bloqueantes, sin declararlas corregidas. Persisten bundle >500 kB y
+audit no completado por ENOTFOUND. Se reutilizan 946/946, lint/build propios del
+mismo contenido y las dirigidas 215/215 declaradas por Claude.
+
+Git inicial propio: codex/increment-2a1-end-subscription, HEAD 4d23540,
+main 4112c234a4e8813d3e04ae2f9c70877e41f8ef73 e índice vacío.
+Tras fetch se comprueban referencias antes de integrar. Resultado/hash final y
+estado posterior en review-deliveries/increment-2a1-end-subscription/<hash>/,
+sin incluir entregas ni UX-01 en el commit de cierre. Archivos ajenos preservados.
+El push activa despliegue automático, pero no acredita publicación del sitio.
+Siguiente prioridad autorizada: UX-01 A, rama independiente basada en el nuevo main;
+sin Pay rápido, Undo ni cambios bancarios.

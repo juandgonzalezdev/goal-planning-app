@@ -446,12 +446,12 @@ In the list, **✓ Paid** is announced as **Paid. Mark as Not Paid**, followed b
 On Home, a bill you mark as paid leaves Left to Pay, and a message says it was saved. In the Bills list with **Pending** chosen, the bill leaves the list in the same way.
 
 **Manage Subscription** appears near the top of a subscription's details:
-- **Status: Active / Ended** describes its plan today, independently of the month you are viewing.
+- **Status: Active / Upcoming / Ended** uses the same rule here and in All Bills, as of today, independently of the month you are viewing. Upcoming means its first month is still ahead. A plan with an end is Ended when its last scheduled charge is due today or is in the past, even when an older annual plan has a later end month. This does not remove overdue charges or recorded payments.
 - **End Subscription** previews the first month without planned charges and the months kept. Known amounts give estimated savings for the displayed charges; unknown amounts are excluded.
-- **Confirm End Subscription** records the ending here. **Cancel** leaves everything as it was. The app does not cancel the service with your provider.
+- **Confirm End Subscription** records the ending here. **Keep Subscription** leaves everything as it was and returns the keyboard focus to End Subscription. The app does not cancel the service with your provider.
 - Recorded payments stay in History and reports. If ending would exclude a recorded payment, the app explains the paid month and blocks confirmation.
 - Ending before the first charge shows **Ended**, with no invented charge. Existing overdue charges remain.
-- **Review Subscription** contains your Needed / Could adjust / Optional rating, provider options and the existing **What If I Pause It?** simulation. This finite skip is not a full Pause/Resume service.
+- **Review Subscription** contains your Needed / Could adjust / Optional rating, provider options and the existing **What If I Pause It?** simulation. Its **Cancel** returns focus to What If I Pause It?. This finite skip is not a full Pause/Resume service. If a provider preference blocks confirmation, change it in Review Subscription.
 
 ## 11. Cards and Loans
 

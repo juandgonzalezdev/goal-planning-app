@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
-import { validityOn } from '../../domain/finance/validity'
+import { VALIDITY_NAMES, validityOn } from '../../domain/finance/validity'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
   applyCancel, applyPause, rateSubscription, setSubscriptionOptions, simulateSubscription, subscriptionPaymentConflicts, subscriptionPlan, upcomingCharges, type Simulation, type SimulationKind,
@@ -26,6 +26,7 @@ const fromKnown = (value: string) => (value === 'yes' ? true : value === 'no' ? 
 export function SubscriptionSection({ data, bill, today, onChange, onMessage }: Props) {
   const preview = useRef<HTMLParagraphElement>(null)
   const action = useRef<HTMLButtonElement>(null)
+  const pauseAction = useRef<HTMLButtonElement>(null)
   const status = useRef<HTMLParagraphElement>(null)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
   useEffect(() => { if (simulation) preview.current?.focus() }, [simulation])
@@ -35,11 +36,14 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   const [base, setBase] = useState(revision)
   const [sending, setSending] = useState(false)
   // A simulation waiting for Confirm is a change not made yet.
-  useUnsavedChanges(`Subscription: ${bill.name}`, simulation ? { 'Simulation': simulation.kind === 'pause' ? 'Pause' : 'Cancel' } : null, { empty: {} })
+  useUnsavedChanges(`Subscription: ${bill.name}`, simulation ? (simulation.kind === 'pause' ? { 'Simulation': 'Pause' } : { 'Action': 'End Subscription' }) : null, { empty: {} })
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const info = bill.subscription
   const next = upcomingCharges(data, bill, today, 3)
-  const ended = validityOn(bill, today.slice(0, 7)) === 'ended' || (bill.endMonth !== null && bill.endMonth <= today.slice(0, 7) && next.length === 0)
+  const validity = validityOn(bill, today)
+  const ended = validity === 'ended'
+  const endedBeforeFirst = ended && bill.endMonth === bill.startMonth && bill.pausedMonths?.includes(bill.startMonth)
+  const skipped = (bill.pausedMonths ?? []).filter(month => !(endedBeforeFirst && month === bill.startMonth))
   const periodName = bill.frequency === 'yearly' ? 'yearly' : 'monthly'
   const candidate = simulation ? subscriptionPlan(data, simulation) : null
   const paymentConflicts = simulation ? subscriptionPaymentConflicts(data, simulation) : []
@@ -55,9 +59,10 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   const confirm = async () => {
     if (!simulation || blocked || sending || paymentConflicts.length > 0) return
     const sim = simulation
+    const beforeFirst = sim.kind === 'cancel' && candidate?.endMonth === bill.startMonth && candidate.pausedMonths?.includes(bill.startMonth)
     const outcome = await save(sim.kind === 'pause'
       ? `${bill.name} is paused for ${sim.charges.map(c => formatYearMonth(c.month)).join(', ')}. Payments already made stay.`
-      : `${bill.name} has ended in this app from ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}. Payments already made stay.`,
+      : `${bill.name} is ended in this app${beforeFirst ? ' before its first charge' : ''}. No charges are planned from ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}. Payments already made stay.`,
     current => (sim.kind === 'pause' ? applyPause(current, sim) : applyCancel(current, sim)), base)
     if (isKept(outcome)) { setSimulation(null); requestAnimationFrame(() => status.current?.focus()) }
   }
@@ -65,14 +70,17 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
   return (
     <section className="block" aria-labelledby="bill-subscription">
       <h2 id="bill-subscription" className="section-title">Manage Subscription</h2>
-      <p ref={status} tabIndex={-1}><b>Status: {ended ? 'Ended' : 'Active'}</b></p>
-      {!ended && !simulation && <button ref={action} type="button" className="button-small button-small-primary" onClick={() => simulate('cancel')}>End Subscription</button>}
-      {ended && <p>No more charges are planned. Recorded payments stay in History and reports.</p>}
+      <p ref={status} tabIndex={-1}><b>Status: {VALIDITY_NAMES[validity]}</b></p>
+      <p className="field-help">Status as of {formatDate(today)}, whatever month you are viewing.</p>
+      {!ended && next.length > 0 && !simulation && <button ref={action} type="button" className="button-small button-small-primary" onClick={() => simulate('cancel')}>End Subscription</button>}
+      {ended && <p>{endedBeforeFirst ? 'Ended before its first charge. No charges are kept in the plan.' : 'No more future charges are planned.'} Recorded payments stay in History and reports.</p>}
+      {validity === 'upcoming' && <p>Starts {formatYearMonth(bill.startMonth)}.</p>}
+      {!ended && next.length === 0 && <p>No upcoming unpaid charges were found in the next two years.</p>}
       <dl className="fact-rows">
         <div><dt>Billing</dt><dd>{bill.frequency === 'yearly' ? 'Once a year' : 'Every month'}</dd></div>
         <div><dt>Next charges</dt><dd>{ended ? 'Ended' : next.length === 0 ? 'None in the next two years'
           : next.map(c => `${formatDate(c.dueDate)}${c.amount === null ? ' (amount not known)' : ` · ${money(c.amount)}`}`).join('; ')}</dd></div>
-        {(bill.pausedMonths ?? []).length > 0 && <div><dt>Skipped months</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
+        {skipped.length > 0 && <div><dt>Skipped months</dt><dd>{skipped.map(formatYearMonth).join(', ')}</dd></div>}
       </dl>
 
       <details>
@@ -100,8 +108,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
 
       {!ended && !simulation && (
         <div className="inline-actions">
-          <button type="button" className="button-small" onClick={() => simulate('pause')}>What If I Pause It?</button>
-
+          <button ref={pauseAction} type="button" className="button-small" onClick={() => simulate('pause')}>What If I Pause It?</button>
         </div>
       )}
       </details>
@@ -117,7 +124,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
                 : `Ending planned charges for ${bill.name} from ${formatYearMonth(simulation.charges[0].month)}`}
               {simulation.unknownCount === simulation.charges.length
                 ? '. Savings cannot be estimated until an amount is known.'
-                : <> could reduce planned spending by {money(simulation.reduction)} for these {simulation.charges.length} planned {simulation.charges.length === 1 ? 'charge' : 'charges'}.</>}
+                : <> could reduce planned spending by {money(simulation.reduction)} for {simulation.charges.length} planned {simulation.charges.length === 1 ? 'charge' : 'charges'}.</>}
             </p>}
           {simulation.kind === 'cancel' && simulation.charges[0] && <p>{candidate?.endMonth === bill.startMonth && candidate.pausedMonths?.includes(bill.startMonth)
             ? 'No charges will be kept in the plan.'
@@ -126,7 +133,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
           {simulation.kind === 'pause' && (simulation.restartFee === null
             ? <p>A restart fee is not known: check with the service. It would lower this amount.</p>
             : simulation.restartFee > 0 && <p>A restart fee of {money(simulation.restartFee)} is already taken off.</p>)}
-          {simulation.allowed === false && <p>You noted that it {simulation.kind === 'pause' ? 'cannot be paused' : 'cannot be cancelled'}.</p>}
+          {simulation.allowed === false && <p>You noted that it {simulation.kind === 'pause' ? 'cannot be paused' : 'cannot be cancelled'}. Change this in Review Subscription.</p>}
           {simulation.allowed === null && <p>Check first that the service lets you {simulation.kind === 'pause' ? 'pause' : 'cancel'} it.</p>}
           <p className="field-help">Payments already made never change. Money not spent is not added to Savings by itself: record it as savings if you set it aside.</p>
           {paymentConflicts.length > 0 && <p role="alert">{paymentConflicts.map(formatYearMonth).join(', ')} {paymentConflicts.length === 1 ? 'is' : 'are'} already paid. {simulation.kind === 'pause'
@@ -136,7 +143,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
             {simulation.charges.length > 0 && simulation.allowed !== false && (
               <button type="button" className="button-small button-small-primary" aria-disabled={blocked || paymentConflicts.length > 0 || undefined} onClick={() => void confirm()}>{sending ? 'Saving…' : `Confirm ${simulation.kind === 'pause' ? 'Pause' : 'End Subscription'}`}</button>
             )}
-            <button type="button" className="button-small" disabled={sending} onClick={() => { setSimulation(null); requestAnimationFrame(() => action.current?.focus()) }}>Cancel</button>
+            <button type="button" className="button-small" disabled={sending} onClick={() => { setSimulation(null); requestAnimationFrame(() => (simulation.kind === 'pause' ? pauseAction : action).current?.focus()) }}>{simulation.kind === 'cancel' ? 'Keep Subscription' : 'Cancel'}</button>
           </div>
         </div>
       )}

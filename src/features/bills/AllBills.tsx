@@ -30,9 +30,9 @@ type Props = {
  */
 export function AllBills({ data, today, isDemo, open, onToggle, filter: chosen, onFilterChange, onOpenBill, onAddBill, money }: Props) {
   const reference = yearMonthOf(today)
-  const counts = countByValidity(data.bills, reference)
+  const counts = countByValidity(data.bills, today)
   const filter = usableFilter(chosen, counts)
-  const shown = data.bills.filter(bill => matchesValidity(bill, reference, filter))
+  const shown = data.bills.filter(bill => matchesValidity(bill, today, filter))
   const summary = data.bills.length === 0 ? 'No bills yet'
     : [`${data.bills.length} ${data.bills.length === 1 ? 'bill' : 'bills'}`, `${counts.active} active`, ...(counts.upcoming > 0 ? [`${counts.upcoming} upcoming`] : [])].join(' · ')
 
@@ -49,7 +49,7 @@ export function AllBills({ data, today, isDemo, open, onToggle, filter: chosen, 
         {shown.length === 0 && <p className="muted-note">No {filter} bills. Choose All to see every bill.</p>}
         <ul className="line-list compact-list">
           {shown.map(bill => {
-            const validity = validityOn(bill, reference)
+            const validity = validityOn(bill, today)
             // The usual amount on the reference month, or on the bill's first or last month when it is not active then.
             const at = validity === 'upcoming' ? bill.startMonth : validity === 'ended' ? bill.endMonth! : reference
             const usual = usualAmountFor(bill, at)

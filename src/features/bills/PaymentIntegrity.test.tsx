@@ -151,7 +151,7 @@ it('previews from the top of details, cancels without writing, then ends and sho
   expect(screen.getByText(/does not cancel the service with your provider/)).toBeTruthy()
   expect(screen.getByText(/Charges through January 2026 stay/)).toBeTruthy()
   expect(data).toEqual(before)
-  await fire.click(within(screen.getByRole('group', { name: 'End Subscription confirmation' })).getByRole('button', { name: 'Cancel' }))
+  await fire.click(within(screen.getByRole('group', { name: 'End Subscription confirmation' })).getByRole('button', { name: 'Keep Subscription' }))
   expect(change).not.toHaveBeenCalled()
   await fire.click(screen.getByRole('button', { name: 'End Subscription' }))
   await fire.click(screen.getByRole('button', { name: 'Confirm End Subscription' }))

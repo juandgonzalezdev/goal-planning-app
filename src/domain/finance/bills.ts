@@ -18,14 +18,14 @@ export interface BillOccurrence {
 }
 
 /** True when `month` is between the bill's first and last month (paused or not). */
-export const isWithinBillDates = (bill: RecurringBill, month: YearMonth) =>
+export const isWithinBillDates = (bill: Pick<RecurringBill, 'startMonth' | 'endMonth'>, month: YearMonth) =>
   month >= bill.startMonth && (bill.endMonth === null || month <= bill.endMonth)
 
 /**
  * True when the bill is due in `month`: between its first and last month,
  * not paused that month, and, for a yearly bill, in its month of the year.
  */
-export const isBillDueIn = (bill: RecurringBill, month: YearMonth) =>
+export const isBillDueIn = (bill: Pick<RecurringBill, 'startMonth' | 'endMonth' | 'pausedMonths' | 'frequency'>, month: YearMonth) =>
   isWithinBillDates(bill, month)
   && !(bill.pausedMonths ?? []).includes(month)
   && (bill.frequency !== 'yearly' || month.slice(5, 7) === bill.startMonth.slice(5, 7))

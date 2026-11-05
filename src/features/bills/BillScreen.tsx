@@ -16,6 +16,7 @@ import { formatAmount, formatDate, formatDueDay, formatYearMonth } from '../../u
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { isKept, outcomeText, type ChangeSpace, type SaveOutcome } from '../../ui/saveOutcome'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
+import { validityOn } from '../../domain/finance/validity'
 import { SubscriptionSection } from './SubscriptionSection'
 
 type Props = {
@@ -112,6 +113,8 @@ export function BillScreen(props: Props) {
   const debt = bill.debtId ? data.debts.find(d => d.id === bill.debtId) ?? null : null
   const monthLabel = formatYearMonth(month)
   const record = data.billMonths.find(item => item.billId === bill.id && item.month === month)
+  const endedBeforeFirst = bill.category === 'Subscriptions' && bill.endMonth === bill.startMonth && bill.pausedMonths?.includes(bill.startMonth) && validityOn(bill, today) === 'ended'
+  const skipped = (bill.pausedMonths ?? []).filter(m => !(endedBeforeFirst && m === bill.startMonth))
   const paymentCount = data.billMonths.filter(r => r.billId === bill.id && r.paid).length
 
   const saveMonthAmount = async (value: number | null | undefined, done: string) => {
@@ -210,15 +213,13 @@ export function BillScreen(props: Props) {
           </div>}
       </section>
 
-
-
       <section className="block" aria-labelledby="bill-details">
         <h2 id="bill-details" className="section-title">Details</h2>
         <dl className="fact-rows">
           <div><dt>Category</dt><dd>{bill.category}</dd></div>
           <div><dt>Due Day</dt><dd>{formatDueDay(bill.dueDay)}</dd></div>
           {bill.frequency === 'yearly' && <div><dt>Billing</dt><dd>Once a year</dd></div>}
-          {(bill.pausedMonths ?? []).length > 0 && <div><dt>Skipped months</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
+          {skipped.length > 0 && <div><dt>Skipped months</dt><dd>{skipped.map(formatYearMonth).join(', ')}</dd></div>}
           <div><dt>First Month</dt><dd>{formatYearMonth(bill.startMonth)}</dd></div>
           <div><dt>Last Month</dt><dd>{bill.endMonth ? formatYearMonth(bill.endMonth) : 'No end'}</dd></div>
           {bill.note && <div><dt>Note</dt><dd>{bill.note}</dd></div>}

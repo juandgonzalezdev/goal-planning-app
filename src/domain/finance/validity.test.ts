@@ -38,3 +38,26 @@ it('recognizes the restored pre-first-charge ending representation without chang
   for (const month of ['2026-10', '2026-11', '2026-12']) expect(validityOn(subscription, month)).toBe('ended')
   expect(validityOn({ ...subscription, category: 'Other' }, '2026-11')).toBe('active')
 })
+
+describe('subscription schedule status without rewriting legacy plans', () => {
+  const annual = { startMonth: '2026-03', endMonth: '2027-02', category: 'Subscriptions', frequency: 'yearly' as const, dueDay: 20 }
+  it('recognizes a legacy annual ending in a non-anniversary month and keeps monthly callers inclusive', () => {
+    const before = structuredClone(annual)
+    expect(validityOn(annual, '2026-11-05')).toBe('ended')
+    expect(validityOn(annual, '2026-03-19')).toBe('active')
+    expect(validityOn(annual, '2026-03-20')).toBe('ended')
+    expect(validityOn(annual, '2026-03')).toBe('active')
+    expect(annual).toEqual(before)
+  })
+  it('uses planned months, including skipped anniversaries, without the simulation horizon', () => {
+    expect(validityOn({ ...annual, pausedMonths: ['2026-03'] }, '2026-01-01')).toBe('ended')
+    expect(validityOn({ ...annual, endMonth: '2030-02' }, '2026-11-05')).toBe('active')
+    expect(validityOn({ ...annual, endMonth: null, pausedMonths: ['2026-03', '2027-03', '2028-03'] }, '2026-11-05')).toBe('active')
+  })
+  it('counts and filters the same status, with income and other bill categories unchanged', () => {
+    expect(matchesValidity(annual, '2026-11-05', 'ended')).toBe(true)
+    expect(countByValidity([annual], '2026-11-05')).toEqual({ all: 1, ended: 1, active: 0, upcoming: 0 })
+    expect(validityOn({ ...annual, category: 'Other' }, '2026-11-05')).toBe('active')
+    expect(validityOn({ startMonth: '2026-01', endMonth: '2026-11' }, '2026-11-30')).toBe('active')
+  })
+})

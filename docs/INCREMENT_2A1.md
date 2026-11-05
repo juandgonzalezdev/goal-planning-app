@@ -175,3 +175,192 @@ El hash final, manifiesto comprobado, estado posterior y ruta exacta para Claude
 quedan en DELIVERY.md y GIT_STATUS.md de la nueva carpeta por commit, fuera de la app.
 Pendientes: revisión independiente de Claude y validación manual de Dirección.
 No se autoriza ni ejecuta integración en main, push ni despliegue.
+
+## Correcciones dirigidas O1–O7 (5 de noviembre de 2026)
+
+Este apartado sustituye las decisiones de presentación anteriores sobre diferencias
+de estado entre detalle y All Bills, el texto Cancel para finalizar y Skipped months
+antes del primer cargo. Base/HEAD comprobado por Codex:
+4d23540fb5121628d4f88828a352a1df3a210047, rama codex/increment-2a1-end-subscription.
+Índice vacío al iniciar y sin cambios versionados; archivos ajenos conservados.
+Autorización: solo observaciones UX/compatibilidad, sin commit, main ni push nuevos.
+
+Se leyó directamente el informe:
+review-deliveries/increment-2a1-end-subscription/4d23540fb5121628d4f88828a352a1df3a210047/REVISION.md.
+Veredicto comunicado por Dirección: Approved with observations. El informe declara
+928/928 de Claude y lint/build propios de Claude; son resultados del informe sobre
+la base, no ejecuciones atribuidas a Codex ni pruebas del contenido corregido.
+
+### Resolución y criterio de estados
+
+| Observación | Corrección |
+| --- | --- |
+| O1 | validityOn examina el último cargo realmente previsto de un plan finito, con los predicados existentes. Una anual marzo 2026–febrero 2027 ya es Ended en noviembre 2026. No se reescriben fechas ni payments heredados. End Subscription solo se ofrece si hay un cargo elegible para la simulación. |
+| O2 | Keep Subscription en la vista de finalización. La simulación de pausa conserva Cancel. |
+| O3 | Ahorro para 1 planned charge / N planned charges, sin these 1. |
+| O4 | Detalle, etiquetas, filtros y conteos de All Bills reciben la misma fecha de hoy y llaman al mismo validityOn. El detalle muestra la fecha de referencia; el mes seleccionado solo cambia las obligaciones/importe que se consultan. |
+| O5 | Mensaje: is ended in this app. No charges are planned from…; antes del primer cargo lo indica expresamente. |
+| O6 | Se conserva canCancel=false y se indica Change this in Review Subscription. No se modifica la política de bloqueo. |
+| O7 | Cancel de pausa devuelve el foco a su botón; Keep Subscription a End Subscription. El borrador se identifica Action: End Subscription. En el caso sin primer cargo se muestra una explicación de finalización y se oculta ese mes de Skipped months en ambas secciones, sin quitarlo del dato. Eliminadas líneas vacías residuales. |
+
+Regla de presentación común, solo para Subscriptions:
+- Upcoming: su mes inicial es posterior al mes actual, salvo un plan finito sin
+  ningún cargo conservado, que ya es Ended.
+- Con fin: localizar el último mes previsto con isBillDueIn, incluidas anualidad y
+  omisiones. Si no hay ninguno, Ended. Si su fecha de vencimiento es hoy o anterior,
+  Ended; de lo contrario Active/Upcoming según inicio. Se usa el vencimiento de hoy
+  como límite, coherente con upcomingCharges, que no omite el cargo de hoy al finalizar.
+- Sin fin: Active/Upcoming según inicio. Agotar los 24 meses del simulador no prueba
+  Ended; no se deduce finalización de ausencia de resultados o payments.
+- El pago anticipado no adelanta por sí mismo el estado: si el último cargo del plan
+  finito vence en el futuro, sigue Active hasta ese vencimiento, incluso pagado.
+  La confirmación y Last Month explican el corte guardado; la ausencia de cargos
+  elegibles oculta la acción sin fingir que hay algo que confirmar.
+- Ended describe que no quedan vencimientos futuros planificados; no significa
+  que todos los vencidos se hayan pagado. Los pendientes de hoy/anteriores y los
+  payments conservan su selección financiera y su historial.
+- Los llamadores que solo pasan un mes conservan la semántica mensual inclusiva
+  hasta el último mes previsto. Las dos vistas de suscripciones pasan hoy completo.
+  Ingresos y facturas de otras categorías conservan su criterio mensual anterior.
+
+No cambia ninguna regla financiera, esquema, migración, almacenamiento ni dato.
+En bills.ts solo se acotan las firmas TypeScript para reutilizar los predicados
+sin necesitar campos ajenos a las fechas; sus cuerpos permanecen idénticos.
+applyCancel, subscriptionPlan, subscriptionPaymentConflicts, selección financiera,
+reportes y guardas de incompatibilidad no se modifican en este seguimiento.
+
+### Archivos de este seguimiento
+
+Producto:
+- src/domain/finance/bills.ts (solo tipos de parámetros).
+- src/domain/finance/validity.ts.
+- src/domain/finance/subscriptions.ts (consumidor del estado con fecha completa).
+- src/features/bills/AllBills.tsx.
+- src/features/bills/BillScreen.tsx.
+- src/features/bills/SubscriptionSection.tsx.
+
+Pruebas:
+- src/domain/finance/validity.test.ts.
+- src/features/bills/SubscriptionReview.test.tsx (nuevo).
+- src/features/bills/PaymentIntegrity.test.tsx.
+- src/BillsCalendar.test.tsx.
+- src/AlexDemo.test.tsx.
+
+Documentación:
+- docs/USER_GUIDE.md.
+- docs/WORK_STATUS.md.
+- docs/INCREMENT_2A1.md.
+
+### Comprobaciones del seguimiento
+
+Regresiones nuevas antes de corregir: 11 fallos y 3 aprobadas en 14 casos.
+Después se precisaron las expectativas de foco para comprobar el botón visible
+recreado por React, no un elemento ya desmontado. Se añadió el caso de texto del
+registro de cambios sin confirmar. Dirigida final: 41/41 en tres archivos, 5,87 s.
+Incluye estados heredados mensuales/anuales, vencimiento actual, futuros, planes
+fuera del horizonte de simulación, pagos históricos y restaurados intactos, igualdad
+de detalle/All Bills con otro mes seleccionado, singular/plural, ambos retornos de
+foco, preferencia bloqueada, borrador y confirmación incompatible previa.
+No se presenta como teclado real ni como validación manual de Dirección.
+
+Suite completa nueva justificada por el cambio del criterio compartido de
+validityOn y de los filtros/conteos de All Bills. Resultados finales al terminar
+en el apartado siguiente. No se repite audit: sin cambios de dependencias, permanece
+la limitación ENOTFOUND de la ejecución anterior; no se declara audit limpio.
+
+### Revisión dirigida y validación pendientes
+
+No se ha ejecutado navegador, móvil, Safari/iPhone, VoiceOver ni PDF visual.
+No hay validación manual nueva ni se amplían las confirmaciones de incrementos previos.
+Los límites de simulación (24 meses) y la preferencia canCancel=false permanecen.
+No se conoce cuántos datos reales presentan el caso heredado; solo fixtures ficticias.
+
+Recorridos dirigidos propuestos, todavía pendientes:
+1. Anual ficticia marzo 2026–febrero 2027, hoy noviembre 2026: Ended tanto en detalle
+   como All Bills; sin End Subscription; payments y datos del plan intactos.
+2. Mensual fin este mes: comparar ambas vistas antes, el día y después del último
+   vencimiento. Cambiar el mes seleccionado no altera el estado general ni los pagos.
+3. Inicio futuro: Upcoming y Starts…, tanto en detalle como en All Bills.
+4. End Subscription anual: texto 1 planned charge; Keep Subscription no guarda y
+   devuelve foco al botón correcto. Repetir con mensual: N planned charges.
+5. Confirmar fin antes del primer cargo: mensaje explícito, sin Skipped months
+   del mes omitido, sin cargo inventado. El backup conserva el dato original de omisión.
+6. Review Subscription → pausa → Cancel: foco en What If I Pause It?.
+7. canCancel=No: explicar dónde cambiarlo y conservar el bloqueo. Anticipo posterior
+   al corte: impedir Confirm sin cambiar payment, History ni PDF.
+
+El resultado queda sin preparar, pendiente de autorización de nuevo commit para
+una entrega fija por hash. La entrega anterior y REVISION.md se conservan intactos.
+Claude debe revisar O1–O7, el criterio temporal elegido y la evidencia de integridad;
+no escribir sobre su informe anterior. Tras autorización de commit se generará una
+carpeta nueva con REVISION.md propio, conforme a WORKFLOW. Sin integración ni push.
+
+### Resultados finales propios de Codex — seguimiento O1–O7
+
+- npm test -- --maxWorkers=2: **946/946**, 67/67 archivos, 221,52 s,
+  una sola ejecución completa sobre el producto final de este seguimiento.
+- Dirigida final: **41/41**, tres archivos, 5,87 s. La completa incluye estas
+  regresiones y las de integridad de payments, History, almacenamiento y PDF.
+- npm run lint: salida 0.
+- npm run build: salida 0; JS 713,83 kB/gzip 199,30 kB, aviso conocido >500 kB.
+- git diff --check: correcto. Índice vacío; HEAD sigue en 4d23540.
+- Sin nueva ejecución de audit ni audit fix, porque no cambian dependencias:
+  permanece el ENOTFOUND anterior, sin acreditación de audit limpio.
+- Sin navegador ni nueva aceptación manual. Avisos conocidos de jsdom sin fallos.
+
+Preparación local dirigida:
+review-deliveries/increment-2a1-end-subscription/observations-working-2026-11-05/DELIVERY.md.
+Incluye diff, copias y evidencia de los catorce archivos autorizados por el alcance
+de correcciones. Es una copia revisable local del contenido sin preparar, no una
+entrega fija por commit. SHA256.json identifica las copias; la entrega por hash y
+el nuevo informe de Claude se prepararán tras autorizar el commit correspondiente.
+No se sobrescribe la entrega fija anterior ni su REVISION.md.
+
+## Cierre e integración autorizados de 2A.1 (5 de noviembre de 2026)
+
+Dirección confirma aceptación manual y autoriza el commit final de los catorce
+archivos, entrega fija, integración en main y push. Este apartado sustituye los
+pendientes de aceptación y autorización anteriores; conserva sus límites históricos.
+Codex comprobó que los catorce archivos coincidían byte a byte con las copias
+Approved de Claude antes de añadir este registro y el de WORK_STATUS.md.
+No cambia producto ni pruebas después de la revisión.
+
+Confirmaciones manuales comunicadas expresamente por Dirección, no ejecutadas por Codex:
+- End Subscription visible en Bill Details.
+- Confirmación con ahorro estimado y advertencia sobre el proveedor.
+- Keep Subscription conserva la suscripción sin cambios.
+- Confirm End Subscription actualiza el estado a Ended.
+- Los payments históricos permanecen visibles en History.
+- Tras reiniciar la demo y repetir la finalización, no aparecen nuevos cargos de
+  Music Streaming en enero de 2027.
+
+No se atribuyen navegador, dispositivo, modo visual o lector no especificados.
+No se amplían estas confirmaciones a PDF visual, anual heredada, dos pestañas
+reales, móvil/teclado/VoiceOver u otros recorridos no confirmados expresamente.
+Dirección acepta el cierre con la revisión independiente Approved y estas pruebas.
+
+Observaciones menores conservadas, sin declarar resueltas:
+- N1: redacción de la ayuda Status as of… puede naturalizarse.
+- N2: is ended in this app puede naturalizarse.
+- N3: Active sin End Subscription cuando no hay cargos elegibles, por anticipos
+  o límite del horizonte; decisión/limitación documentada. Edit Details sigue
+  disponible; no se cambian payments ni se inventan cargos para habilitar la acción.
+- Aviso conocido de bundle >500 kB; audit sin completar por ENOTFOUND.
+No se introducen correcciones nuevas para estas notas durante el cierre.
+
+Se reutilizan las comprobaciones vigentes del mismo código/entorno:
+Codex 946/946 en 67 archivos (221,52 s), lint/build correctos y diff sin errores;
+Claude declara 215/215 dirigidas y lint/build, atribuidos a su informe.
+No se repite suite por registros documentales ni se atribuyen pruebas de UX-01.
+
+Manifiesto: los catorce archivos del apartado Correcciones dirigidas O1–O7.
+Se excluyen UX_01_TECHNICAL_EVALUATION.md, UX_01_IMPLEMENTATION.md,
+review-deliveries y todos los archivos ajenos. No se implementa UX-01 en este commit.
+La entrega fija nueva documentará hash completo, diff/copies desde commit, pruebas,
+aceptación, notas residuales y estado Git. El informe original de Claude no se edita.
+
+El resultado de commit, integración/push y sincronización se registra fuera del
+commit en review-deliveries/increment-2a1-end-subscription/<hash-final>/DELIVERY.md
+y GIT_STATUS.md. El push activa Cloudflare Pages; publicación no comprobada por
+Codex hasta que se verifique expresamente. No confundir push con sitio publicado.
+Tras integrar, se prepara codex/ux-01-navigation desde el nuevo main para UX-01 A.

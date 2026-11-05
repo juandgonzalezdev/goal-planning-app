@@ -424,9 +424,9 @@ const saved = async () => (await storedData())!
     const data = await saved()
     expect(data.bills[0]).toMatchObject({ startMonth: '2026-10', endMonth: '2026-10', pausedMonths: ['2026-10'] })
     expect(data.billMonths).toEqual([])
-    expect(screen.getAllByText('Skipped months')).toHaveLength(2)
+    expect(screen.queryByText('Skipped months')).toBeNull()
     expect(screen.queryByText('Paused')).toBeNull()
-    expect(screen.getByText('Test single subscription has ended in this app from October 2026. Payments already made stay. Saved on this device.')).toBeTruthy()
+    expect(screen.getByText('Test single subscription is ended in this app before its first charge. No charges are planned from October 2026. Payments already made stay. Saved on this device.')).toBeTruthy()
   })
 
   it('N1 omits Ends only for a new single-month bill and preserves it when editing', async () => {
