@@ -1615,3 +1615,29 @@ Commit final autorizado de siete correcciones, entrega fija con conjunto UX-01 A
 de once archivos; hash/estado final en DELIVERY.md y GIT_STATUS.md por hash.
 Pendiente aprobación expresa de integración; sin merge/push. Siguiente prioridad:
 UX-01 B, All Bills y búsqueda, aún sin iniciar. Archivos ajenos excluidos.
+
+
+## Integración autorizada de UX-01 A — 2026-11-05
+
+Dirección autoriza integrar el commit aprobado
+`f37e422ced44e0bc42689871a38aa891134a185a` y ejecutar push de main.
+Entrega fija verificada: once archivos exactos del alcance, copias y diff
+coincidentes con Git y SHA-256 correctos. Integración por fast-forward desde
+`00bae6c8407fed2aeaf5da9471eaf2d0c7833ed9`, sin conflictos. Este registro
+documental de cierre no cambia el producto aprobado. Se reutilizan las pruebas
+vigentes: 26/26 finales para O1/O2 y regresiones anteriores de 160/160 para
+alcance no alterado; lint/build correctos. No hay nueva suite ni prueba manual.
+
+Revisión de Claude aprobada con observaciones no bloqueantes; diez recorridos
+Chrome y Safari/iPhone confirmados por Dirección. O1/O2 resueltas; O3 permanece
+como precaución menor del primer frame entre motores, sin declararla corregida.
+Persisten la heurística del teclado, el audit no completado por ENOTFOUND y
+el aviso de bundle >500 kB. Archivos ajenos preservados y excluidos.
+
+El hash final de cierre (que añade solo este registro y WORK_STATUS/UX_01_A),
+resultado del push y comparación local/remota se registran en
+`review-deliveries/ux-01-a/integration-2026-11-05/CLOSURE.md`. No se confunde
+push con publicación: Cloudflare Pages no se considera verificado por el push.
+UX-01 B — All Bills y búsqueda es la siguiente entrega según el plan local
+UX_01_IMPLEMENTATION.md; su base será el nuevo main sincronizado. No se
+implementa B ni se incluyen archivos ajenos del plan como parte de este cierre.
