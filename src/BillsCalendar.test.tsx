@@ -300,6 +300,7 @@ describe('Add Bill', () => {
   /** The own space's records as the browser's database keeps them now. */
 const saved = async () => (await storedData())!
   const addButton = () => within(document.querySelector('.bill-form') as HTMLElement).getByRole('button', { name: 'Save' })
+  const moreSummary = () => document.getElementById(button('More details').getAttribute('aria-describedby')!)!
 
   it('shows the main fields first, in English, and a check sentence', async () => {
     await openAddBill()
@@ -370,7 +371,7 @@ const saved = async () => (await storedData())!
     await type('Due day', '8')
     await fire.click(button(/More details/))
     expect(repeat.closest('label')!.nextElementSibling).toBe(schedule)
-    expect(schedule.nextElementSibling).toBe(button(/More details/))
+    expect(schedule.nextElementSibling).toBe(button('More details').parentElement)
     await fire.click(repeat)
     expect(document.getElementById('bill-schedule')).toBe(schedule)
     expect(schedule.textContent).toBe('One month only: October 2026, on day 8.')
@@ -384,27 +385,27 @@ const saved = async () => (await storedData())!
     await showView('List')
     await fire.click(button('Furniture Loan details'))
     await fire.click(button('Edit Details'))
-    expect(button(/More details/).textContent).toContain('Pays Furniture Loan')
-    expect(button(/More details/).textContent).toContain('Ends June 2027')
+    expect(moreSummary().textContent).toContain('Pays Furniture Loan')
+    expect(moreSummary().textContent).toContain('Ends June 2027')
     expect(button(/More details/).getAttribute('aria-expanded')).toBe('false')
     await fire.click(button(/More details/))
     await fire.change(field('Category'), { target: { value: 'Housing' } })
     await type('Note', 'Test receipt')
     await fire.click(button(/More details/))
-    expect(button(/More details/).textContent).toContain('Category: Housing')
-    expect(button(/More details/).textContent).toContain('Note added')
+    expect(moreSummary().textContent).toContain('Category: Housing')
+    expect(moreSummary().textContent).toContain('Note added')
   })
 
   it('H5 explains Yearly beside Repeat and in the collapsed details summary', async () => {
     await openAddBill()
-    expect(button(/More details/).textContent).toContain('Category: Other')
+    expect(moreSummary().textContent).toContain('Category: Other')
     await type('Due day', '9')
     await fire.click(button(/More details/))
     await fire.click(field('Yearly'))
     await fire.click(button(/More details/))
     const note = screen.getByText('Yearly is on (More details).')
     expect(field('Repeat every month').getAttribute('aria-describedby')).toContain(note.id)
-    expect(button(/More details/).textContent).toContain('Yearly')
+    expect(moreSummary().textContent).toContain('Yearly')
     expect(field('Repeat every month').checked).toBe(false)
     await fire.click(button(/More details/))
     await fire.click(field('Yearly'))
@@ -430,6 +431,51 @@ const saved = async () => (await storedData())!
     expect(screen.getAllByText('Skipped months')).toHaveLength(2)
     expect(screen.queryByText('Paused')).toBeNull()
     expect(screen.getByText('Test single subscription is cancelled from October 2026. Payments already made stay. Saved on this device.')).toBeTruthy()
+  })
+
+  it('N1 omits Ends only for a new single-month bill and preserves it when editing', async () => {
+    await openAddBill()
+    await type('Bill name', 'Test one month')
+    await type('Amount (PLN)', '20')
+    await type('Due day', '8')
+    await fire.click(field('Repeat every month'))
+    expect(screen.getByText('One month only: October 2026, on day 8.')).toBeTruthy()
+    expect(screen.queryByText(/Ends October 2026/)).toBeNull()
+    await fire.click(addButton())
+    await fire.click(button('Edit Details'))
+    expect(screen.getByText(/Ends October 2026/)).toBeTruthy()
+  })
+
+  it('N2 keeps the exact More details name and exposes a separate accessible description', async () => {
+    await openAddBill()
+    const more = screen.getByRole('button', { name: 'More details', description: 'Category: Other' })
+    const description = document.getElementById(more.getAttribute('aria-describedby')!)!
+    expect(description).not.toBeNull()
+    expect(more.contains(description)).toBe(false)
+    expect(description.parentElement).toBe(more.parentElement)
+    expect(description.classList.contains('muted-note')).toBe(true)
+    expect(more.getAttribute('aria-controls')).toBe('bill-more')
+    expect(more.getAttribute('aria-expanded')).toBe('false')
+    await fire.click(more)
+    await fire.change(field('Category'), { target: { value: 'Housing' } })
+    expect(screen.getByRole('button', { name: 'More details', description: 'Category: Housing' })).toBe(more)
+    expect(more.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('N3 restores the edit reassurance as Start month help inside More details', async () => {
+    await openAddBill()
+    await type('Bill name', 'Test monthly')
+    await type('Amount (PLN)', '20')
+    await type('Due day', '8')
+    await fire.click(addButton())
+    await fire.click(button('Edit Details'))
+    expect(screen.queryByText('Existing billing periods are kept when you save details.')).toBeNull()
+    await fire.click(button(/More details/))
+    const help = screen.getByText('Existing billing periods are kept when you save details.')
+    expect(help.closest('#bill-more')).not.toBeNull()
+    for (const label of ['Start month: month', 'Start month: year']) {
+      expect(screen.getByRole('combobox', { name: label }).getAttribute('aria-describedby')).toContain(help.id)
+    }
   })
 
   it('creates a single-month bill without opening More details, with Other as category', async () => {
@@ -466,6 +512,9 @@ const saved = async () => (await storedData())!
     await fire.click(field('Yearly'))
     expect(field('Repeat every month').checked).toBe(false)
     expect(screen.getByText('Once a year in October, on day 9, starting October 2026. No end date.')).toBeTruthy()
+    await fire.change(screen.getByRole('combobox', { name: 'End month: month' }), { target: { value: '12' } })
+    expect(moreSummary().textContent).toContain('Ends December 2026')
+    await fire.change(screen.getByRole('combobox', { name: 'End month: month' }), { target: { value: '' } })
     await fire.click(addButton())
     expect((await saved()).bills).toMatchObject([{ frequency: 'yearly', startMonth: '2026-10', endMonth: null }])
     await fire.click(button('Edit Details'))

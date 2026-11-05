@@ -103,7 +103,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     `Category: ${draft.category}`,
     draft.yearly ? 'Yearly' : null,
     !bill && draft.amountUnknown ? 'Amount not known yet' : null,
-    endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
+    (bill || draft.repeat || draft.yearly) && endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
     draft.debtId ? `Pays ${data.debts.find(debt => debt.id === draft.debtId)?.name ?? 'card or loan'}` : null,
     draft.note.trim() ? 'Note added' : null,
   ].filter(Boolean).join(' · ')
@@ -180,10 +180,12 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
           <p id="bill-schedule" className="bill-schedule" aria-live="polite" aria-atomic="true">{sentence ?? 'Choose a due day to see when this bill is due.'}</p>
           {!bill && draft.yearly && <p id="bill-yearly-help" className="field-help">Yearly is on (More details).</p>}
 
-          <button type="button" className="more-toggle" aria-expanded={moreOpen} aria-controls="bill-more" onClick={() => setMoreOpen(!moreOpen)}>
-            More details
-            <span className="muted-note">{detailsSummary}</span>
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '4px 10px', justifySelf: 'start' }}>
+            <button type="button" className="more-toggle" aria-expanded={moreOpen} aria-controls="bill-more" aria-describedby="bill-more-summary" onClick={() => setMoreOpen(!moreOpen)}>
+              More details
+            </button>
+            <span id="bill-more-summary" className="muted-note">{detailsSummary}</span>
+          </div>
           {moreOpen && (
             <div id="bill-more" className="form-stack more-options">
               <div className="form-field">
@@ -206,7 +208,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
               </>}
               {bill && <>
                 <MonthYearField id="bill-start" label="Start month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} years={years}
-                  defaultYear={startYear} error={errors.startMonth} />
+                  defaultYear={startYear} error={errors.startMonth} help="Existing billing periods are kept when you save details." />
               </>}
               {(bill || draft.repeat || draft.yearly) && <>
               <MonthYearField id="bill-end" label="End month" value={draft.endMonth} onChange={endMonth => set({ endMonth })} years={years}

@@ -1037,3 +1037,50 @@ estado de Git se comunicarán en GIT_STATUS.md de esa entrega. Ningún archivo d
 review-deliveries se incluye en el commit. Sin merge, push, despliegue, 2B ni otros incrementos.
 No se ejecutó navegador, lector de pantalla ni prueba manual; H7 y la aceptación de
 H1–H6 en Chrome/Safari/iPhone siguen pendientes de confirmación expresa de Juan.
+
+
+## Incremento 2A: observaciones N1–N3 (5 de noviembre de 2026)
+
+Juan autoriza corregir N1–N3 de la segunda revisión, guardar un nuevo commit y
+entrega fija, limitados a BillForm.tsx, sus pruebas y documentación de 2A.
+Codex leyó directamente review-deliveries/increment-2a-bills/
+762ce38109dad249db67893ad3bb3e82da09b588/REVISION.md. Claude aprueba H1–H6 por
+inspección con observaciones menores N1–N3 y aceptación manual pendiente. Esa
+aprobación no equivale a ejecutar pruebas ni autorizar integración.
+Git comprobado al iniciar: codex/increment-2a-bills, HEAD/base
+762ce38109dad249db67893ad3bb3e82da09b588, índice vacío y sin cambios versionados.
+Se conservan archivos ajenos sin seguimiento, entregas e informes anteriores.
+
+- N1: More omite Ends solo al crear una factura sin repetición. En edición y Yearly
+  con fin se conserva; One month only sigue indicando la duración del alta de un mes.
+- N2: botón llamado exactamente More details; resumen gris en elemento hermano
+  identificado y enlazado con aria-describedby. Conserva aria-expanded, aria-controls,
+  clase y padding del botón; disposición flex local sin editar CSS global.
+- N3: la ayuda de Start month al editar vuelve a indicar Existing billing periods
+  are kept when you save details., asociada a ambos selectores.
+- Guion N1–N3 añadido a docs/INCREMENT_2A.md; H1–H7 continúan en el recorrido pendiente.
+
+Comprobaciones propias de Codex:
+- Antes: las 3 pruebas nuevas fallaron y las 42 anteriores pasaron (33,42 s).
+- Primer build posterior: error de tipos en una prueba nueva por exact: true no
+  admitido; se retiró esa opción. El nombre string ya exige coincidencia exacta.
+  Después se conservó el padding original del botón. Logs intermedios conservados.
+- Después de todos los ajustes: npm test -- src/BillsCalendar.test.tsx
+  src/AlexDemo.test.tsx src/domain/finance/singleMonthBills.test.ts
+  src/features/bills/billsView.test.ts --maxWorkers=2: 90/90 en 4 archivos, 36,44 s.
+- npm run lint y npm run build finales: salida 0. JS 709,12 kB, gzip 197,91 kB;
+  aviso conocido >500 kB. Logs finales: release-tests.txt, release-lint.txt y
+  release-build.txt en review-deliveries/increment-2a-bills/n1-n3-fixes/.
+- git diff --check correcto; lista preparada y git diff --cached --check se
+  comprobarán antes del commit y constarán en la nueva entrega fija.
+- Sin cambios de dominio, esquema, cálculos, dependencias ni entorno. Se reutiliza
+  audit anterior (10 vulnerabilidades moderadas en herramientas). No se repiten
+  suite completa ni otras regresiones: cambios localizados de presentación y
+  pruebas dirigidas solicitadas por Juan. Los resultados históricos no se atribuyen
+  al contenido final de esta corrección.
+
+Se guardan exclusivamente cuatro archivos: BillForm.tsx, BillsCalendar.test.tsx,
+docs/INCREMENT_2A.md y este registro. No se ejecutaron navegador, teclado real ni
+VoiceOver. La prueba manual queda pendiente para esta versión. Sin merge a main,
+push, despliegue, 2B ni otros incrementos. La nueva entrega identifica el hash
+completo, el diff desde 762ce38 y la resolución individual de N1–N3.

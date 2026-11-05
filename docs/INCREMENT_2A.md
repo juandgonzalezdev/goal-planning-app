@@ -122,3 +122,31 @@ no se consideran confirmados por las pruebas automáticas ni por la revisión de
    collapsed/expanded de More y que el lector puede abrirlo aunque su contenido no está
    montado al cerrarlo (aria-controls conserva el comportamiento existente). Confirmar
    que Save resulta inequívoco bajo el título Add Bill. Probar gesto de atrás.
+
+
+## Ajustes N1–N3 de la segunda revisión (aceptación pendiente)
+
+- N1: al crear sin repetición, More details no muestra Ends: el único resumen de
+  esa duración es One month only. Al editar o crear Yearly con fin, Ends se conserva.
+- N2: el botón tiene el nombre estable More details. El resumen gris permanece junto
+  a él como elemento separado, enlazado con aria-describedby; aria-expanded y
+  aria-controls conservan su comportamiento. Esta corrección no modifica estilos globales.
+- N3: al editar, Start month muestra Existing billing periods are kept when you save
+  details., asociada como ayuda a los selectores de mes y año. No cambia los períodos guardados.
+
+Antes de integrar, confirmar en Chrome a 390 px y Safari/iPhone, claro/oscuro:
+
+1. Crear una factura nueva con Repeat desmarcado: One month only indica el período,
+   y el resumen gris de More no contiene Ends ni ofrece un End month inexistente.
+2. Seleccionar Yearly y un fin: el resumen sigue mostrando Ends. Abrir Edit Details
+   de una factura con fin: Ends sigue visible aunque More esté cerrado.
+3. Con VoiceOver y teclado, el nombre del botón es solo More details; su descripción
+   contiene categoría, vínculo y demás valores del resumen. Cambiar categoría no cambia
+   el nombre. Verificar que el resumen continúa gris junto al botón, sin desbordamiento,
+   y que collapsed/expanded, foco y apertura conservan su comportamiento.
+4. Edit Details → More: Start month muestra la frase de conservación de períodos.
+   El lector la asocia tanto al selector de mes como al de año. Guardar otra nota
+   conserva fechas, frecuencia y payments.
+
+Estos pasos complementan H1–H7. No se acredita ejecución manual ni anuncio real del
+lector de pantalla por las pruebas DOM; Juan debe confirmar expresamente el recorrido.
