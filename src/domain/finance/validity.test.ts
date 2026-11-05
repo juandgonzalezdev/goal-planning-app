@@ -32,3 +32,9 @@ describe('filters', () => {
     expect([job, salary, bonus].filter(item => matchesValidity(item, '2026-12', 'ended'))).toEqual([job])
   })
 })
+
+it('recognizes the restored pre-first-charge ending representation without changing other categories', () => {
+  const subscription = { startMonth: '2026-11', endMonth: '2026-11', category: 'Subscriptions', pausedMonths: ['2026-11'] }
+  for (const month of ['2026-10', '2026-11', '2026-12']) expect(validityOn(subscription, month)).toBe('ended')
+  expect(validityOn({ ...subscription, category: 'Other' }, '2026-11')).toBe('active')
+})

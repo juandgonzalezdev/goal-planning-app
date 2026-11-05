@@ -419,14 +419,14 @@ const saved = async () => (await storedData())!
     await fire.click(button(/More details/))
     await fire.change(field('Category'), { target: { value: 'Subscriptions' } })
     await fire.click(addButton())
-    await fire.click(button('What If I Cancel It?'))
-    await fire.click(button('Confirm Cancellation'))
+    await fire.click(button('End Subscription'))
+    await fire.click(button('Confirm End Subscription'))
     const data = await saved()
     expect(data.bills[0]).toMatchObject({ startMonth: '2026-10', endMonth: '2026-10', pausedMonths: ['2026-10'] })
     expect(data.billMonths).toEqual([])
     expect(screen.getAllByText('Skipped months')).toHaveLength(2)
     expect(screen.queryByText('Paused')).toBeNull()
-    expect(screen.getByText('Test single subscription is cancelled from October 2026. Payments already made stay. Saved on this device.')).toBeTruthy()
+    expect(screen.getByText('Test single subscription has ended in this app from October 2026. Payments already made stay. Saved on this device.')).toBeTruthy()
   })
 
   it('N1 omits Ends only for a new single-month bill and preserves it when editing', async () => {

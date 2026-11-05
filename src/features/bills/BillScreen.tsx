@@ -135,6 +135,7 @@ export function BillScreen(props: Props) {
         <h1 className="tab-title">{bill.name}</h1>
         <p className="muted-note">{bill.category} · Due {formatDueDay(bill.dueDay).toLowerCase()}</p>
       </div>
+      {bill.category === 'Subscriptions' && <SubscriptionSection data={data} bill={bill} today={today} onChange={onChange} onMessage={setMessage} />}
       <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
       <p className="muted-note" role="status">{message}</p>
 
@@ -209,7 +210,7 @@ export function BillScreen(props: Props) {
           </div>}
       </section>
 
-      {bill.category === 'Subscriptions' && <SubscriptionSection data={data} bill={bill} today={today} onChange={onChange} onMessage={setMessage} />}
+
 
       <section className="block" aria-labelledby="bill-details">
         <h2 id="bill-details" className="section-title">Details</h2>

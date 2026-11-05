@@ -322,7 +322,7 @@ describe('Alex demo: goals, emergency fund and subscriptions', () => {
     await fire.click(button('What If I Pause It?'))
     const screenText = () => text(document.querySelector('[data-screen="bill"]'))
     expect(screenText()).toContain('Simulation only. Nothing has changed.')
-    expect(screenText()).toContain('Pausing Gym Membership for 3 monthly periods (January 2027, February 2027, March 2027) could reduce planned spending by 387,00 zł.')
+    expect(screenText()).toContain('Pausing Gym Membership for 3 monthly periods (January 2027, February 2027, March 2027) could reduce planned spending by 387,00 zł for these 3 planned charges.')
     expect(screenText()).toContain('Money not spent is not added to Savings by itself')
     await fire.click(button('Cancel'))
     expect(screenText()).not.toContain('Simulation only')

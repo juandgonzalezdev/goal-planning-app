@@ -53,6 +53,9 @@ describe('single-month bills across consumers', () => {
     expect(billsForMonth(cancelled, '2026-11')).toEqual([])
     expect(upcomingCharges(cancelled, cancelled.bills[0], '2026-10-28', 12)).toEqual([])
     expect(cancelled.billMonths).toEqual(data.billMonths)
+    expect(validityOn(cancelled.bills[0], '2026-10')).toBe('ended')
+    expect(validityOn(cancelled.bills[0], '2026-11')).toBe('ended')
+    expect(activeSubscriptions(cancelled, '2026-10-28')).toEqual([])
   })
   it('yearly bills respect both a one-month boundary and their original anniversary', () => {
     const single = added({}, true)

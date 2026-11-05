@@ -13,9 +13,11 @@ export type ValidityFilter = Validity | 'all'
 
 export const VALIDITY_NAMES: Record<Validity, string> = { active: 'Active', upcoming: 'Upcoming', ended: 'Ended' }
 
-type Dated = { startMonth: YearMonth; endMonth: YearMonth | null }
+type Dated = { startMonth: YearMonth; endMonth: YearMonth | null; category?: string; pausedMonths?: YearMonth[] }
 
 export function validityOn(item: Dated, month: YearMonth): Validity {
+  // Existing representation of a subscription ended before its first charge.
+  if (item.category === 'Subscriptions' && item.endMonth === item.startMonth && item.pausedMonths?.includes(item.startMonth)) return 'ended'
   if (item.startMonth > month) return 'upcoming'
   if (item.endMonth !== null && item.endMonth < month) return 'ended'
   return 'active'

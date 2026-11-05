@@ -445,13 +445,13 @@ In the list, **✓ Paid** is announced as **Paid. Mark as Not Paid**, followed b
 
 On Home, a bill you mark as paid leaves Left to Pay, and a message says it was saved. In the Bills list with **Pending** chosen, the bill leaves the list in the same way.
 
-**Subscriptions** also show:
-
-- **How do you see it?**: Needed, Could adjust or Optional. This is your own view: the app never decides what is worth it for you.
-- **Can it be paused?** and **Can it be cancelled?**
-- **What If I Pause It?** and **What If I Cancel It?** show a simulation first: "Simulation only. Nothing has changed."
-  - **Confirm Pause** or **Confirm Cancellation** records it in the app, in your bill's months.
-  - This doesn't contact the service. Cancel it with them yourself.
+**Manage Subscription** appears near the top of a subscription's details:
+- **Status: Active / Ended** describes its plan today, independently of the month you are viewing.
+- **End Subscription** previews the first month without planned charges and the months kept. Known amounts give estimated savings for the displayed charges; unknown amounts are excluded.
+- **Confirm End Subscription** records the ending here. **Cancel** leaves everything as it was. The app does not cancel the service with your provider.
+- Recorded payments stay in History and reports. If ending would exclude a recorded payment, the app explains the paid month and blocks confirmation.
+- Ending before the first charge shows **Ended**, with no invented charge. Existing overdue charges remain.
+- **Review Subscription** contains your Needed / Could adjust / Optional rating, provider options and the existing **What If I Pause It?** simulation. This finite skip is not a full Pause/Resume service.
 
 ## 11. Cards and Loans
 

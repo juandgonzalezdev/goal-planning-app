@@ -1404,3 +1404,49 @@ No se ejecutó navegador, Safari/iPhone, teclado real ni VoiceOver; aceptación 
 selector y recorridos previos pendientes. Solo se guardan BillForm.tsx, sus dos
 archivos de pruebas (BillsCalendar y el nuevo BillForm.test), ajuste de prueba
 OtherTabs y tres documentos de 2A. Sin merge, push, despliegue, 2B ni otros incrementos.
+
+## Incremento 2A.1 — End Subscription (5 de noviembre de 2026)
+
+Dirección autoriza iniciar 2A.1 tras comunicar integración y publicación de 2A.
+Codex comprobó main en 4112c234a4e8813d3e04ae2f9c70877e41f8ef73, índice vacío y
+sin cambios versionados. Rama creada: codex/increment-2a1-end-subscription.
+Todos los archivos ajenos sin seguimiento se conservan y excluyen.
+
+Manage Subscription aparece al inicio de Bill Details, con Active/Ended y End
+Subscription. Se reutilizan simulación, confirmación, revisión base y protecciones
+de payments de 2A. La confirmación distingue el plan local de la cancelación con
+el proveedor, explica corte/último cargo y estima los cargos conocidos. Valoración
+y pausa finita existentes quedan en Review Subscription. Sin Pause/Resume nuevo.
+
+El fin se fija al último cargo realmente previsto, también en anuales y huecos;
+antes del primer cargo conserva inicio=fin+mes omitido y se interpreta como Ended,
+incluso restaurado. Decisiones, límites, manifiesto y guion manual están en
+[INCREMENT_2A1.md](INCREMENT_2A1.md). No cambia esquema, almacenamiento ni payments.
+
+Pruebas y entrega final se completan en ese documento. Codex no ha ejecutado
+navegador, Safari/iPhone, VoiceOver ni validación manual; no hay nueva confirmación
+de Juan. Sin preparar, commit, push, merge ni despliegue. La entrega fija por hash
+requiere autorización del commit según WORKFLOW; no se atribuye el código local a
+4112c23 como si ese commit lo contuviera.
+
+Comprobaciones finales propias 2A.1: suite completa 927 aprobadas/1 expectativa de
+texto antigua fallida, 66 archivos (219,98 s); corregida solo la expectativa de
+AlexDemo y archivo completo repetido 28/28. Cobertura combinada 928 pruebas distintas
+aprobadas en 66 archivos, no una única ejecución 928/928. Lint/build finales salida 0,
+JS 712,90 kB/gzip 199,01 kB, aviso conocido >500 kB. Audit no completado por ENOTFOUND;
+diff --check correcto. Doce archivos propios sin preparar e índice vacío.
+
+
+### 2A.1: commit local y entrega fija autorizados (5 de noviembre de 2026)
+
+Dirección autoriza guardar exclusivamente los doce archivos de INCREMENT_2A1.md
+y generar la entrega fija por hash. Codex comprobó rama/base, índice vacío y
+coincidencia SHA-256 de los doce archivos con la entrega local anterior antes de
+añadir este registro y el de INCREMENT_2A1. Sin cambios de producto ni pruebas:
+se reutilizan los resultados vigentes de 928 pruebas distintas combinadas,
+lint/build correctos y audit sin completar por ENOTFOUND.
+El resultado de commit, hash completo, manifiesto exacto y estado posterior se
+registran en review-deliveries/increment-2a1-end-subscription/<hash>/DELIVERY.md
+y GIT_STATUS.md, fuera del commit de la app. Archivos ajenos conservados/excluidos.
+Siguientes pasos: revisión de Claude y validación manual de Dirección.
+Main, push y despliegue quedan sujetos a aprobación posterior; no se ejecutan.

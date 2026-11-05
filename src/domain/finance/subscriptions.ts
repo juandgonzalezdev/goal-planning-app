@@ -3,6 +3,7 @@ import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
 import { sumMinor } from '../money'
 import { isBillDueIn, newlyExcludedPaidMonths, usualAmountFor } from './bills'
+import { validityOn } from './validity'
 import { monthResult, monthSpending } from './spending'
 import type { FinanceData, Id, RecurringBill, SpendingCategory, SubscriptionRating } from './types'
 
@@ -20,7 +21,7 @@ const LOOK_AHEAD_MONTHS = 24
 /** A subscription is a bill in the Subscriptions category that has not ended. */
 export function activeSubscriptions(data: Pick<FinanceData, 'bills'>, today: CalendarDate): RecurringBill[] {
   const month = yearMonthOf(today)
-  return data.bills.filter(bill => bill.category === 'Subscriptions' && (bill.endMonth === null || bill.endMonth >= month))
+  return data.bills.filter(bill => bill.category === 'Subscriptions' && validityOn(bill, month) !== 'ended')
 }
 
 export interface UpcomingCharge {
@@ -102,7 +103,7 @@ export function applyCancel(data: FinanceData, simulation: Simulation): FinanceD
 }
 
 /** Builds the candidate once for both validation and application. */
-function subscriptionPlan(data: Pick<FinanceData, 'bills'>, simulation: Simulation): RecurringBill | null {
+export function subscriptionPlan(data: Pick<FinanceData, 'bills'>, simulation: Simulation): RecurringBill | null {
   const bill = data.bills.find(b => b.id === simulation.billId)
   if (!bill) return null
   if (simulation.kind === 'pause') return {
@@ -110,7 +111,9 @@ function subscriptionPlan(data: Pick<FinanceData, 'bills'>, simulation: Simulati
   }
   const next = simulation.charges[0]
   if (!next) return bill
-  const last = addMonthsToYearMonth(next.month, -1)
+  let last = addMonthsToYearMonth(next.month, -1)
+  // Keep the last actual planned charge, including annual and skipped-month gaps.
+  while (last >= bill.startMonth && !isBillDueIn(bill, last)) last = addMonthsToYearMonth(last, -1)
   // Inclusive ranges cannot end before they start: skip the first charge.
   return last < bill.startMonth ? {
     ...bill, endMonth: bill.startMonth,
