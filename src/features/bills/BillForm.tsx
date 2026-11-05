@@ -8,6 +8,7 @@ import { addBill, updateBill, validateBillFields, type BillFieldError, type Bill
 import { BILL_CATEGORIES, type FinanceData, type Id, type Owner, type RecurringBill } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import { parseMoneyInput } from '../../ui/moneyInput'
+import { formatYearMonth } from '../../ui/format'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useEditBase, useSaver } from '../../app/writeStatus'
 
@@ -96,7 +97,16 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   const years = yearsAround(Number(today.slice(0, 4)))
   const startYear = isYearMonth(draft.startMonth) ? Number(draft.startMonth.slice(0, 4)) : Number(yearMonthOf(today).slice(0, 4))
   const availableDebts = data.debts.filter(debt => !data.bills.some(b => b.debtId === debt.id && b.id !== bill?.id))
-  const sentence = scheduleSentence({ ...draft, endMonth: !bill && !draft.repeat && !draft.yearly ? draft.startMonth : draft.endMonth }, draft.yearly)
+  const endMonth = !bill && !draft.repeat && !draft.yearly ? draft.startMonth : draft.endMonth
+  const sentence = scheduleSentence({ ...draft, endMonth }, draft.yearly)
+  const detailsSummary = [
+    `Category: ${draft.category}`,
+    draft.yearly ? 'Yearly' : null,
+    !bill && draft.amountUnknown ? 'Amount not known yet' : null,
+    endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
+    draft.debtId ? `Pays ${data.debts.find(debt => debt.id === draft.debtId)?.name ?? 'card or loan'}` : null,
+    draft.note.trim() ? 'Note added' : null,
+  ].filter(Boolean).join(' · ')
 
   useEffect(() => {
     if (!focusField.current) return
@@ -126,7 +136,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
     let amount: number | null = null
     if (!bill && !draft.amountUnknown) {
-      if (draft.amount.trim() === '') found.amount = 'Enter the usual amount, or choose Amount not known yet.'
+      if (draft.amount.trim() === '') found.amount = 'Enter the amount. Not known yet? Open More details.'
       else {
         amount = parseMoneyInput(draft.amount)
         if (amount === null) found.amount = 'Enter an amount such as 700 or 120.45.'
@@ -158,17 +168,21 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
           {!bill && (
             <div className="bill-amount-group">
               <Field id="bill-amount" label={`Amount (${currency})`} inputMode="decimal" value={draft.amountUnknown ? '' : draft.amount}
-                disabled={draft.amountUnknown} onChange={amount => set({ amount })} error={errors.amount} />
+                disabled={draft.amountUnknown} onChange={amount => set({ amount })} error={errors.amount}
+                help={draft.amountUnknown ? 'Not known yet. Change this in More details.' : undefined} />
             </div>
           )}
           <Field id="bill-due" label="Due day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Shorter months use their last day." />
           {!bill && <label className="check-row">
-            <input type="checkbox" checked={draft.repeat} onChange={e => set({ repeat: e.target.checked, yearly: false })} />
+            <input type="checkbox" checked={draft.repeat} aria-describedby={`bill-schedule${draft.yearly ? ' bill-yearly-help' : ''}`} onChange={e => set({ repeat: e.target.checked, yearly: false })} />
             <span>Repeat every month</span>
           </label>}
+          <p id="bill-schedule" className="bill-schedule" aria-live="polite" aria-atomic="true">{sentence ?? 'Choose a due day to see when this bill is due.'}</p>
+          {!bill && draft.yearly && <p id="bill-yearly-help" className="field-help">Yearly is on (More details).</p>}
 
           <button type="button" className="more-toggle" aria-expanded={moreOpen} aria-controls="bill-more" onClick={() => setMoreOpen(!moreOpen)}>
             More details
+            <span className="muted-note">{detailsSummary}</span>
           </button>
           {moreOpen && (
             <div id="bill-more" className="form-stack more-options">
@@ -185,18 +199,19 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
                 </label>
                 <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
                 <label className="check-row">
-                  <input type="checkbox" checked={draft.yearly} onChange={e => set({ yearly: e.target.checked, repeat: !e.target.checked })} />
+                  <input type="checkbox" checked={draft.yearly} aria-describedby="bill-yearly-choice-help bill-schedule" onChange={e => set({ yearly: e.target.checked, repeat: !e.target.checked })} />
                   <span>Yearly</span>
                 </label>
+                <p id="bill-yearly-choice-help" className="field-help">Turn off Yearly to repeat every month.</p>
               </>}
               {bill && <>
                 <MonthYearField id="bill-start" label="Start month" value={draft.startMonth} onChange={startMonth => set({ startMonth })} years={years}
                   defaultYear={startYear} error={errors.startMonth} />
-                <p className="field-help">{draft.yearly ? 'Repeats yearly.' : draft.repeat ? 'Repeats monthly.' : 'One month only.'} Existing billing periods are kept when you save details.</p>
               </>}
               {(bill || draft.repeat || draft.yearly) && <>
               <MonthYearField id="bill-end" label="End month" value={draft.endMonth} onChange={endMonth => set({ endMonth })} years={years}
-                noneLabel="No end month" defaultYear={startYear} error={errors.endMonth} />
+                noneLabel="No end month" defaultYear={startYear} error={errors.endMonth}
+                help={bill && endMonth === draft.startMonth ? 'To repeat it, choose No end month.' : undefined} />
               </>}
               <div className="form-field">
                 <label htmlFor="bill-debt">Pays a card or loan</label>
@@ -214,7 +229,6 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
           )}
         </div>
       </section>
-      {sentence && <p className="bill-schedule">{sentence}</p>}
       {saver.refusal && <p className="field-error" role="alert">{saver.refusal}</p>}
       <div className="inline-actions">
         <button type="submit" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined}>{saver.sending ? 'Saving…' : bill ? 'Save Changes' : 'Save'}</button>

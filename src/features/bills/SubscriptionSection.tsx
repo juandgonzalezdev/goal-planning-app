@@ -50,7 +50,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
     const sim = simulation
     const outcome = await save(sim.kind === 'pause'
       ? `${bill.name} is paused for ${sim.charges.map(c => formatYearMonth(c.month)).join(', ')}. Payments already made stay.`
-      : `${bill.name} ends after ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}: the last month due is the one before. Payments already made stay.`,
+      : `${bill.name} is cancelled from ${sim.charges[0] ? formatYearMonth(sim.charges[0].month) : 'now'}. Payments already made stay.`,
     current => (sim.kind === 'pause' ? applyPause(current, sim) : applyCancel(current, sim)), base)
     if (isKept(outcome)) setSimulation(null)
   }
@@ -62,7 +62,7 @@ export function SubscriptionSection({ data, bill, today, onChange, onMessage }: 
         <div><dt>Billing</dt><dd>{bill.frequency === 'yearly' ? 'Once a year' : 'Every month'}</dd></div>
         <div><dt>Next charges</dt><dd>{ended ? 'Ended' : next.length === 0 ? 'None in the next two years'
           : next.map(c => `${formatDate(c.dueDate)}${c.amount === null ? ' (amount not known)' : ` · ${money(c.amount)}`}`).join('; ')}</dd></div>
-        {(bill.pausedMonths ?? []).length > 0 && <div><dt>Paused</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
+        {(bill.pausedMonths ?? []).length > 0 && <div><dt>Skipped months</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
       </dl>
 
       <fieldset className="choice-row">

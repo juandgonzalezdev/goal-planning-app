@@ -214,7 +214,7 @@ export function BillScreen(props: Props) {
           <div><dt>Category</dt><dd>{bill.category}</dd></div>
           <div><dt>Due Day</dt><dd>{formatDueDay(bill.dueDay)}</dd></div>
           {bill.frequency === 'yearly' && <div><dt>Billing</dt><dd>Once a year</dd></div>}
-          {(bill.pausedMonths ?? []).length > 0 && <div><dt>Paused</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
+          {(bill.pausedMonths ?? []).length > 0 && <div><dt>Skipped months</dt><dd>{bill.pausedMonths!.map(formatYearMonth).join(', ')}</dd></div>}
           <div><dt>First Month</dt><dd>{formatYearMonth(bill.startMonth)}</dd></div>
           <div><dt>Last Month</dt><dd>{bill.endMonth ? formatYearMonth(bill.endMonth) : 'No end'}</dd></div>
           {bill.note && <div><dt>Note</dt><dd>{bill.note}</dd></div>}

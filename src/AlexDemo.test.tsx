@@ -329,7 +329,7 @@ describe('Alex demo: goals, emergency fund and subscriptions', () => {
     expect(screenText()).not.toContain('January 2027, February 2027')
     await fire.click(button('What If I Pause It?'))
     await fire.click(button('Confirm Pause'))
-    expect(screenText()).toContain('PausedJuly 2026, August 2026, September 2026, January 2027, February 2027, March 2027')
+    expect(screenText()).toContain('Skipped monthsJuly 2026, August 2026, September 2026, January 2027, February 2027, March 2027')
     await backHome()
     expect(region('Year Summary')).toContain('Spent in 202648 781,14 zł')
   })

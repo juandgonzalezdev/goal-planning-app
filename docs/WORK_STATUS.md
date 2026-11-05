@@ -979,3 +979,61 @@ lint y build registrados arriba porque no cambia el código ni su entorno.
 Se comprobarán la lista exacta preparada y git diff --cached --check antes del
 commit; el hash completo y los resultados finales de Git constarán en GIT_STATUS.md
 de la nueva entrega. El borrador y las entregas anteriores quedan intactos.
+
+
+## Incremento 2A: correcciones H1–H6 y segunda revisión (5 de noviembre de 2026)
+
+Juan autoriza resolver H1–H6, incluir H7 en el recorrido manual y entregar nuevo
+commit fijo. Codex leyó directamente el informe de Claude en
+review-deliveries/increment-2a-bills/88212ff02478bb0893e596953a6b1fc112356981/REVISION.md.
+El informe es una revisión por inspección, no pruebas ejecutadas ni validación manual.
+Git comprobado al iniciar: codex/increment-2a-bills, HEAD/base
+88212ff02478bb0893e596953a6b1fc112356981, sin cambios versionados e índice vacío.
+Se conservan archivos ajenos sin seguimiento, la entrega fija y el informe originales.
+
+- H1: el error indica Open More details y conserva el foco en Amount. El importe
+  desconocido tiene ayuda visible y asociada al campo incluso con More cerrado.
+- H2: se elimina la ayuda de frecuencia fijada al abrir. El resumen se calcula con
+  las fechas del borrador; cuando coinciden, End month explica cómo volver a repetir.
+- H3: un único resumen persistente inmediatamente después de Repeat, antes de More,
+  aria-live polite, aria-atomic true y aria-describedby desde Repeat y Yearly.
+- H4: More conserva cerrado inicial y resume categoría, Yearly, importe desconocido,
+  fin, vínculo y presencia de nota. No expone el texto de la nota.
+- H5: Yearly activo tiene explicación visible junto al resumen y en More cerrado;
+  la ayuda de Yearly explica que desmarcarlo vuelve a mensual. Sin cambiar esa lógica.
+- H6: cancelación y pausa usan el mismo pausedMonths y no guardan el origen de la
+  acción. Solo presentación: Skipped months en Subscription y Details y confirmación
+  is cancelled from …, sin inferir un estado Cancelled ni modificar datos. No se ha
+  modificado lógica financiera, esquema, dominio, importes, vínculos ni cálculos.
+  No fue necesaria una propuesta de cambio financiero. El ternario redundante
+  observado por Claude queda intacto fuera del alcance de esta corrección visual.
+- H7: aceptación manual ampliada en docs/INCREMENT_2A.md: escritorio, Tab/Espacio/Enter,
+  foco, teclado numérico, disposición apilada, VoiceOver, More y etiqueta Save.
+
+Comprobaciones propias, no atribuidas a Claude:
+- Antes del arreglo, BillsCalendar: 6 fallos nuevos H1–H6, 36 pruebas previas aprobadas
+  (42 pruebas, 31,39 s). Los seis hallazgos se reprodujeron automáticamente.
+- Tras los ajustes finales, npm test -- src/BillsCalendar.test.tsx src/AlexDemo.test.tsx
+  src/domain/finance/singleMonthBills.test.ts src/features/bills/billsView.test.ts
+  --maxWorkers=2: 87/87 en 4 archivos, 36,17 s. Incluye preservación de History,
+  payments, anuales, mes único y etiqueta neutra tanto tras pausa como cancelación.
+- Regresión de navegación, borradores y guardado: npm test -- src/HomeAreas.test.tsx
+  src/LeaveForms.test.tsx src/OtherTabs.test.tsx --maxWorkers=2: 55/55 en 3 archivos,
+  52,45 s. Después solo se aclaró la frase inicial sin día y su aserción en BillsCalendar;
+  ese contenido final quedó cubierto por las 87 pruebas anteriores.
+- Total de cobertura dirigida: 142 pruebas aprobadas en 7 archivos (dos ejecuciones).
+  No es una suite completa de este commit. Las 859 pruebas de la entrega anterior
+  conservan su atribución temporal; no se vuelven a presentar como resultados nuevos.
+- Lint y build finales correctos; JS 708,84 kB, gzip 197,80 kB, aviso conocido >500 kB.
+- Se reutiliza audit anterior: 10 vulnerabilidades moderadas de herramientas; no hay
+  cambios de dependencias ni de entorno que justifiquen repetirlo. Sin audit fix.
+- git diff --check correcto. Se ejecutará git diff --cached --check antes del commit.
+  Avisos conocidos de jsdom sobre scrollTo y navegación, sin fallos finales.
+
+Solo se guardan los ocho archivos de formulario, presentación, pruebas y documentación
+propios de estas correcciones. Logs antes/después en review-deliveries/increment-2a-bills/
+review-fixes/ y copias en la segunda entrega fija por hash. El nuevo hash final y el
+estado de Git se comunicarán en GIT_STATUS.md de esa entrega. Ningún archivo de
+review-deliveries se incluye en el commit. Sin merge, push, despliegue, 2B ni otros incrementos.
+No se ejecutó navegador, lector de pantalla ni prueba manual; H7 y la aceptación de
+H1–H6 en Chrome/Safari/iPhone siguen pendientes de confirmación expresa de Juan.
