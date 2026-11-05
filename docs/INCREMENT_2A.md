@@ -7,12 +7,14 @@ Rama: codex/increment-2a-bills.
 
 ## Comportamiento
 
-- Add Bill muestra Bill name, Amount, Due day y Repeat every month (marcado por defecto).
+- Add Bill muestra Bill name, Amount, Amount not known yet (justo debajo del importe),
+  Due day y Repeat every month (marcado por defecto). La casilla de importe desconocido
+  está visible desde el inicio y no se duplica en More details.
 - El primer mes es el seleccionado al abrir el formulario, también desde Home y el calendario.
   No se permite introducir otra fecha inicial al crear: para otro mes se selecciona ese mes antes.
 - Sin repetición: endMonth = startMonth, ambos inclusivos. No hay ocurrencias anteriores ni posteriores.
 - More details empieza cerrado. Conserva Other como categoría interna por defecto;
-  permite categoría, importe desconocido, Yearly, último mes cuando hay repetición, nota y vínculo.
+  permite categoría, Yearly, último mes cuando hay repetición, nota y vínculo.
   Yearly y Repeat every month son opciones excluyentes; al quitar Yearly se vuelve a mensual.
   La elección anual se explica junto a Repeat y en el resumen de More details.
 - Edit Details conserva frecuencia, meses, pausas, importes y payments existentes al guardar
@@ -26,10 +28,13 @@ Rama: codex/increment-2a-bills.
   mes y lo pausa. Así no conserva accidentalmente un cargo por el límite inclusivo.
   Las fechas omitidas se muestran como Skipped months, tanto para pausas como para
   esa cancelación: el modelo no guarda qué acción originó cada mes omitido.
-- El error de importe vacío indica cómo llegar a More details. Si se elige importe desconocido,
-  Amount explica su estado incluso al cerrar More. El resumen de recurrencia queda junto
+- El error de importe vacío indica la opción visible Amount not known yet. Al marcarla,
+  Amount queda deshabilitado y explica que su valor es desconocido; al desmarcarla se
+  reactiva y recupera el borrador anterior, que se puede modificar. Se guarda null al
+  elegir desconocido, nunca cero ni el valor tecleado previamente.
+  El resumen de recurrencia queda junto
   a Repeat, antes de More, con aria-live polite. More resume categoría, frecuencia anual,
-  importe desconocido, último mes, vínculo y presencia de nota sin abrirlo.
+  último mes, vínculo y presencia de nota sin abrirlo.
 
 ## Evidencia automática
 
@@ -47,15 +52,17 @@ Los resultados exactos y las limitaciones se registran en WORK_STATUS.md y la en
 Usar solo datos ficticios y un espacio de prueba. Repetir en Chrome a 390 px y Safari en
 un iPhone real, en modo claro y oscuro. No usar datos personales para capturas o informes.
 
-1. Seleccionar February 2028 en Bills. Add Bill: solo los cuatro controles principales y
-   More details cerrado. Escribir Test repair, 75 y día 31; desmarcar Repeat every month.
+1. Seleccionar February 2028 en Bills. Add Bill: campos principales y More details
+   cerrado, con Amount not known yet visible debajo de Amount. Escribir Test repair,
+   75 y día 31; desmarcar Repeat every month.
    El resumen indica solo February 2028. Save: una factura el 29 de febrero.
    January y March no la muestran. All Bills conserva su fila y sus fechas.
 2. Seleccionar un mes futuro y crear Test monthly, 20, día 5, sin abrir More details.
    Aparece desde ese mes y en el siguiente, nunca en el anterior. Category queda Other.
    Probar también Add Bill desde Home y desde un día del calendario; Cancel vuelve al origen.
-3. Abrir More details: Category, Yearly, End month cuando corresponda, Note,
-   Amount not known yet y vínculo. Crear Test yearly: el resumen dice Once a year;
+3. Abrir More details: Category, Yearly, End month cuando corresponda, Note y vínculo.
+   Amount not known yet permanece debajo de Amount, sin duplicarse dentro de More.
+   Crear Test yearly: el resumen dice Once a year;
    aparece en el mes inicial y su aniversario, no en meses intermedios.
    Probar un último mes y comprobar que no aparece después. Un importe desconocido
    se muestra como desconocido y nunca como cero.
@@ -89,10 +96,11 @@ realizado; las confirmaciones del Incremento 1 no se extienden al 2A.
 Repetir en Chrome a 390 px y Safari/iPhone real, claro y oscuro. Estos recorridos
 no se consideran confirmados por las pruebas automáticas ni por la revisión de Claude.
 
-1. **H1:** Add Bill con nombre y día, sin importe → Save. El error dice
-   “Enter the amount. Not known yet? Open More details.” y el foco sigue en Amount.
-   Abrir More, marcar Amount not known yet y cerrarlo: Amount queda deshabilitado,
-   con “Not known yet. Change this in More details.” visible. No parece cero ni un fallo.
+1. **H1, actualizado por la mejora manual:** Add Bill con nombre y día, sin importe → Save.
+   El error dice “Enter the amount, or select Amount not known yet.” y el foco sigue en
+   Amount. La casilla está visible inmediatamente debajo. Marcarla sin abrir More:
+   Amount queda deshabilitado con “Amount is unknown. Uncheck Amount not known yet to
+   enter an amount.”. Desmarcarla permite escribir; no parece cero ni un fallo.
 2. **H2:** Editar Test repair de un mes → More details. Se explica
    “To repeat it, choose No end month.”. Cambiar End month a No end month:
    la frase pasa a mensual y desaparece esa pista. Volver al mes inicial:
@@ -113,7 +121,7 @@ no se consideran confirmados por las pruebas automáticas ni por la revisión de
    Skipped months con el mes correcto, no Paused ni una afirmación deducida de Cancelled.
    Una pausa normal usa también Skipped months; sus fechas y próximos cargos siguen iguales.
 7. **H7, teclado de escritorio:** con More cerrado, Tab recorre Bill name → Amount →
-   Due day → Repeat → More details → Save → Cancel, además de Back antes del formulario.
+   Amount not known yet → Due day → Repeat → More details → Save → Cancel, además de Back antes del formulario.
    Espacio cambia casillas; Enter desde un campo crea una sola factura; foco visible
    en Repeat y More. Con More abierto, los controles adicionales entran en el orden visual.
 8. **H7, móvil y lector:** con teclado numérico en Due day y Amount, valorar si el
@@ -150,3 +158,25 @@ Antes de integrar, confirmar en Chrome a 390 px y Safari/iPhone, claro/oscuro:
 
 Estos pasos complementan H1–H7. No se acredita ejecución manual ni anuncio real del
 lector de pantalla por las pruebas DOM; Juan debe confirmar expresamente el recorrido.
+
+
+## Mejora manual: importe desconocido visible (pendiente de nueva aceptación)
+
+Juan solicita este cambio durante su validación manual; no se deduce de ello que
+los recorridos anteriores estén aprobados. Sustituye la ubicación anterior en More.
+
+1. Add Bill: una única casilla Amount not known yet justo debajo de Amount, aun con
+   More cerrado. Abrir y cerrar More: la casilla no se duplica ni cambia su estado.
+2. Escribir 120, marcar la casilla: campo vacío y deshabilitado con ayuda explícita
+   de valor desconocido. Desmarcar: vuelve a estar habilitado, conserva el borrador
+   120 y permite cambiarlo a 125.50. Guardar: el importe conocido es 125.50.
+3. Otra factura ficticia: nombre, día y casilla marcada, sin tocar Amount ni More.
+   Guardar: aparece Unknown, no cero. Recargar conserva el valor desconocido.
+4. Cambiar solo la casilla y pulsar Back: Keep Editing mantiene la elección.
+   Sin importe ni casilla seleccionada, Save enfoca Amount y menciona la opción visible.
+5. Chrome a 390 px y Safari/iPhone, claro y oscuro: comprobar disposición, teclado y
+   lectura de la ayuda. Con teclado, la casilla va después de Amount; cuando Amount
+   está deshabilitado, Tab lo omite. No debe añadir otro foco dentro de More.
+
+Estos pasos no acreditan ejecución por Codex. Mantener los recorridos H1–H7 y N1–N3
+restantes, con esta ubicación y los textos nuevos del importe desconocido.

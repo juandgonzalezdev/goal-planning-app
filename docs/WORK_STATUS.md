@@ -1084,3 +1084,47 @@ docs/INCREMENT_2A.md y este registro. No se ejecutaron navegador, teclado real n
 VoiceOver. La prueba manual queda pendiente para esta versión. Sin merge a main,
 push, despliegue, 2B ni otros incrementos. La nueva entrega identifica el hash
 completo, el diff desde 762ce38 y la resolución individual de N1–N3.
+
+
+## Incremento 2A: importe desconocido visible (5 de noviembre de 2026)
+
+Durante su validación manual Juan solicita mover Amount not known yet debajo de
+Amount, sin abrir More details, manteniendo la lógica financiera y el flujo de
+revisión. Esta indicación sustituye la ubicación inicial en More y el requisito
+anterior de cuatro controles visibles. No confirma el resto del recorrido manual.
+Git comprobado por Codex al iniciar: codex/increment-2a-bills, HEAD/base
+e493ed893ca73a1cd830b0d870c5e5841e02d5ed, índice vacío y sin cambios versionados.
+Se conservan archivos ajenos sin seguimiento, entregas e informes anteriores.
+
+- Casilla única visible inmediatamente debajo de Amount. No está dentro de More
+  ni se presenta como opción de su resumen contextual. More sigue cerrado al entrar.
+- Al marcarla, Amount se vacía visualmente, queda deshabilitado y muestra ayuda
+  explícita asociada al campo. Al quitarla, se reactiva con el borrador anterior
+  y se puede introducir otro importe. No se cambia la representación guardada.
+- El error de importe vacío indica seleccionar Amount not known yet, sin remitir
+  a More. El importe desconocido se sigue guardando como null, nunca cero.
+- Actualizados el manual, la aceptación de H1 y el orden de teclado de H7. Se
+  conserva H1–H7/N1–N3 con los textos y ubicación nuevos; ningún recorrido se da
+  por aprobado por esta petición de usabilidad.
+
+Comprobaciones propias de Codex:
+- Antes: tres pruebas nuevas de ubicación, reversibilidad y Back con solo la
+  casilla cambiada fallaron; 45 pruebas omitidas (selección por nombre), 6,90 s.
+- Después: npm test -- src/BillsCalendar.test.tsx src/AlexDemo.test.tsx
+  src/domain/finance/singleMonthBills.test.ts src/features/bills/billsView.test.ts
+  --maxWorkers=2: 93/93 en cuatro archivos, 39,15 s. Incluye casilla única con More
+  abierto, ayuda accesible, reactivar/editar/guardar importe conocido, guardado
+  null sin abrir More, protección de borrador, cero explícito y consumidores previos.
+- npm run lint y npm run build: salida 0. JS 709,09 kB, gzip 197,90 kB. Se conserva
+  el aviso conocido >500 kB. Avisos conocidos de jsdom, sin fallos finales.
+- git diff --check correcto. Sin cambios del dominio financiero, esquema,
+  dependencias, cálculos, payments ni vínculos. Se reutiliza audit anterior
+  (10 vulnerabilidades moderadas de herramientas); no se repite suite completa
+  para este cambio localizado. Los resultados antiguos no se atribuyen a este commit.
+
+Solo cinco archivos propios: BillForm.tsx, BillsCalendar.test.tsx, USER_GUIDE.md,
+INCREMENT_2A.md y WORK_STATUS.md. Se comprobará el índice antes del commit y se
+generará otra entrega fija por hash desde la base e493ed8, conservando las anteriores.
+Logs propios en review-deliveries/increment-2a-bills/visible-unknown-amount/.
+No se ejecutó navegador, Safari/iPhone ni VoiceOver; nueva aceptación pendiente.
+Sin merge, push, despliegue, 2B ni otros incrementos.

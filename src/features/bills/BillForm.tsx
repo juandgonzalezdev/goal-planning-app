@@ -102,7 +102,6 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
   const detailsSummary = [
     `Category: ${draft.category}`,
     draft.yearly ? 'Yearly' : null,
-    !bill && draft.amountUnknown ? 'Amount not known yet' : null,
     (bill || draft.repeat || draft.yearly) && endMonth && isYearMonth(endMonth) ? `Ends ${formatYearMonth(endMonth)}` : null,
     draft.debtId ? `Pays ${data.debts.find(debt => debt.id === draft.debtId)?.name ?? 'card or loan'}` : null,
     draft.note.trim() ? 'Note added' : null,
@@ -136,7 +135,7 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
     const found: DraftErrors = Object.fromEntries(validateBillFields(data, fields, bill?.id ?? null).map(problem => FIELD_ERRORS[problem]))
     let amount: number | null = null
     if (!bill && !draft.amountUnknown) {
-      if (draft.amount.trim() === '') found.amount = 'Enter the amount. Not known yet? Open More details.'
+      if (draft.amount.trim() === '') found.amount = 'Enter the amount, or select Amount not known yet.'
       else {
         amount = parseMoneyInput(draft.amount)
         if (amount === null) found.amount = 'Enter an amount such as 700 or 120.45.'
@@ -169,7 +168,12 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
             <div className="bill-amount-group">
               <Field id="bill-amount" label={`Amount (${currency})`} inputMode="decimal" value={draft.amountUnknown ? '' : draft.amount}
                 disabled={draft.amountUnknown} onChange={amount => set({ amount })} error={errors.amount}
-                help={draft.amountUnknown ? 'Not known yet. Change this in More details.' : undefined} />
+                help={draft.amountUnknown ? 'Amount is unknown. Uncheck Amount not known yet to enter an amount.' : undefined} />
+              <label className="check-row">
+                <input type="checkbox" checked={draft.amountUnknown} aria-describedby="bill-amount-unknown-help" onChange={e => set({ amountUnknown: e.target.checked })} />
+                <span>Amount not known yet</span>
+              </label>
+              <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
             </div>
           )}
           <Field id="bill-due" label="Due day" inputMode="numeric" value={draft.dueDay} onChange={dueDay => set({ dueDay })} error={errors.dueDay} help="Shorter months use their last day." />
@@ -195,11 +199,6 @@ export function BillForm({ data, bill, month, dueDay, today, owner, newId, onCan
                 </select>
               </div>
               {!bill && <>
-                <label className="check-row">
-                  <input type="checkbox" checked={draft.amountUnknown} aria-describedby="bill-amount-unknown-help" onChange={e => set({ amountUnknown: e.target.checked })} />
-                  <span>Amount not known yet</span>
-                </label>
-                <p id="bill-amount-unknown-help" className="field-help check-help">It shows as Unknown, never as 0.</p>
                 <label className="check-row">
                   <input type="checkbox" checked={draft.yearly} aria-describedby="bill-yearly-choice-help bill-schedule" onChange={e => set({ yearly: e.target.checked, repeat: !e.target.checked })} />
                   <span>Yearly</span>
