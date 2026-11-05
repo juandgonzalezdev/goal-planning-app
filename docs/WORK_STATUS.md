@@ -1715,3 +1715,39 @@ Quince archivos exactos; ajenos excluidos y preservados por SHA-256. Hash del
 commit final, pruebas y estado comprobado en entrega fija
 review-deliveries/ux-01-b/<hash>/DELIVERY.md y GIT_STATUS.md. Pendientes
 revisión final de Claude, validación manual y aprobación de integración.
+
+
+## Cierre e integración autorizados de UX-01 B — 2026-11-06
+
+Estado vigente que sustituye los pendientes históricos de aceptación. Dirección
+aprueba integrar 755e601cb02af57a0ea64adcd2a0dcc9b9c4ffb7 y ejecutar push
+de main. Commit y entrega fija verificados: quince archivos exactos, SHA-256,
+copias y diff coincidentes con Git. Integración por fast-forward desde
+868ab7b983e19b49cdc2244c8ebfe5ba9d1c2777, sin conflictos.
+
+Revisión final de Claude leída en la entrega fija: Approved with observations,
+sin bloqueantes. El revisor declara 38/38 dirigidas y medidas Chromium; no son
+nuevas comprobaciones de Codex. Dirección confirma diez pruebas manuales en
+Safari/iPhone, incluidas búsqueda por nombre/categoría, filtros, navegación
+entre vistas, vacíos, Bill Details, N1, protección de cambios y VoiceOver. Se
+registra su confirmación, sin atribuir nuevas pruebas ni extenderla a otros
+navegadores, dispositivos o versiones no indicados.
+
+Decisiones de Dirección: N1 corregido y validado; N2 aceptado, manteniendo la
+guarda de cambios sin guardar (no se modifica ni se declara eliminado el
+comportamiento); O3/VoiceOver validado manualmente. F1 diferido como mejora
+menor de accesibilidad: desde Bills, + Add → Mark a Bill as Paid puede conservar
+el foco en Add; desde otras secciones usa addFocus. F1 no se declara resuelto
+ni se implementa en este cierre o automáticamente como parte de C.
+
+Solo se añade este registro documental en UX_01_B.md y WORK_STATUS.md. Código,
+estilos, pruebas y dependencias idénticos al commit aprobado. Se reutilizan
+986/986 completas, 176/176 dirigidas y 6/6 nuevas de Codex, sin repetir ni sumar
+resultados; lint/build correctos. Audit previo ENOTFOUND no completado y aviso
+de bundle >500 kB siguen documentados. Archivos ajenos preservados y excluidos.
+
+Hash final documental, resultado del push y coincidencia local/remota:
+review-deliveries/ux-01-b/integration-2026-11-06/CLOSURE.md. El push no acredita
+publicación: despliegue en Cloudflare Pages no verificado en este cierre.
+Siguiente rama preparada desde el nuevo main: codex/ux-01-c-details-edit, para
+Details/Edit Details conforme al checklist. No se implementa UX-01 C todavía.
