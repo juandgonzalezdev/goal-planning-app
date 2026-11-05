@@ -18,7 +18,7 @@ import { LeftToPayMessage } from '../home/LeftToPay'
 import { MonthSwitch } from '../../components/MonthSwitch'
 import { AllBills } from './AllBills'
 import { BillsCalendar } from './BillsCalendar'
-import { FILTER_NAMES, filterBills, selectedDay, shortDay, type BillsFilter, type BillsMode, type BillsView } from './billsView'
+import { FILTER_NAMES, filterBills, matchesBillSearch, selectedDay, shortDay, type BillsFilter, type BillsMode, type BillsView } from './billsView'
 
 type Props = {
   data: FinanceData
@@ -57,7 +57,9 @@ const scrollBehavior = (): ScrollBehavior => (window.matchMedia?.('(prefers-redu
 export function BillsScreen({ data, months, month, today, isDemo, view, onViewChange, onMonthChange, onChange, onOpenBill, onAddBill, onAddBillOn }: Props) {
   const all = billsForMonth(data, month)
   const summary = summarizeBills(all)
-  const shown = filterBills(all, view.filter)
+  const filtered = filterBills(all, view.filter)
+  const shown = filtered.filter(o => matchesBillSearch(o.bill, view.query))
+  const search = useRef<HTMLInputElement>(null)
   const amounts = useAllAmounts(data.space.currency)
   // What Mark as Paid or Mark as Not Paid just did in the list, for this month. A bill that leaves the
   // list (Pending or Paid chosen) leaves the keyboard on this message.
@@ -68,7 +70,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   }
   // A bill just added from the day panel: the calendar shows its day in this month.
   const added = view.added ? { ...view.added, bill: data.bills.find(b => b.id === view.added?.id), here: all.find(o => o.bill.id === view.added?.id) } : null
-  const selected = selectedDay(month, added?.here?.dueDate ?? view.selected, today, shown)
+  const selected = selectedDay(month, added?.here?.dueDate ?? view.selected, today, filtered)
   const monthLabel = formatYearMonth(month)
   const unknownPaid = summary.unknownCount - summary.unpaidUnknownCount
   const counts: Record<BillsFilter, number> = { all: summary.count, pending: summary.count - summary.paidCount, paid: summary.paidCount }
@@ -76,9 +78,9 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   const set = (patch: Partial<BillsView>) => onViewChange({ ...view, added: null, ...patch })
   // Calendar or List, and the filter: an amount being changed in the list stays only if its bill is still listed; otherwise the app asks first.
   const guard = useLeaveGuard()
-  const setShown = (patch: Pick<Partial<BillsView>, 'mode' | 'filter'>) => {
+  const setShown = (patch: Pick<Partial<BillsView>, 'mode' | 'filter' | 'scope' | 'query'>) => {
     const next = { ...view, ...patch }
-    const staying = new Set(next.mode === 'list' ? filterBills(all, next.filter).map(o => itemTag(o.bill.id)) : [])
+    const staying = new Set(next.scope === 'month' && next.mode === 'list' ? filterBills(all, next.filter).filter(o => matchesBillSearch(o.bill, next.query)).map(o => itemTag(o.bill.id)) : [])
     guard(form => form.tag?.startsWith(ITEM_TAG) === true && !staying.has(form.tag), () => set(patch))
   }
   // A new month starts again from its own useful day (the app asks first when an amount typed for this month would close).
@@ -104,7 +106,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   /** "View day details" and "+N more": the day (if a new one) is chosen, then the view and the focus go to its panel. */
   const showDay = (date?: CalendarDate) => { move.current = 'panel'; if (date && date !== selected) set({ selected: date }); else onViewChange({ ...view }) }
   const backToCalendar = () => { move.current = 'calendar'; onViewChange({ ...view }) }
-  const showAll = () => { move.current = 'added'; onViewChange({ ...view, filter: 'all' }) }
+  const showAll = () => { move.current = 'added'; onViewChange({ ...view, filter: 'all', query: '' }) }
   const countLine = (count: number, unknown: number) => `${plural(count, 'bill', 'bills')}${unknown > 0 ? ` · ${unknown} unknown` : ''}`
 
   return (
@@ -113,12 +115,27 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
         <h1 className="tab-title">Bills</h1>
         <button type="button" className="button-small button-small-primary" onClick={onAddBill}><Icon name="plus" size={16} /> Add Bill</button>
       </div>
+      <div className="bills-scope-toolbar no-print">
+        <div className="segmented" role="group" aria-label="Bills section">
+          <button type="button" aria-pressed={view.scope === 'month'} className={view.scope === 'month' ? 'is-active' : ''} onClick={() => setShown({ scope: 'month' })}>This Month</button>
+          <button type="button" aria-pressed={view.scope === 'all'} className={view.scope === 'all' ? 'is-active' : ''} onClick={() => setShown({ scope: 'all' })}>All Bills</button>
+        </div>
+        <AllAmountsToggle />
+      </div>
+      <div className="bills-search no-print">
+        <label className="form-field" htmlFor="bill-search">Search bills
+          <input ref={search} id="bill-search" type="search" placeholder="Name or category" value={view.query} onChange={event => setShown({ query: event.target.value })} aria-describedby="bill-search-results" />
+        </label>
+        {view.query !== '' && <button type="button" className="button-small" onClick={() => { setShown({ query: '' }); search.current?.focus() }}>Clear</button>}
+      </div>
+      {view.scope === 'month' && <>
+      <p id="bill-search-results" className="muted-note no-print" aria-live="off">{shown.length} {shown.length === 1 ? 'bill' : 'bills'}{view.query.trim() ? ' found' : ' shown'} in {monthLabel}</p>
+      {view.query.trim() && shown.length === 0 && <p className="muted-note no-print">No bills match your search and payment filter in {monthLabel}. Try another name or category, or change the payment filter.</p>}
       <MonthSwitch months={months} value={month} onChange={changeMonth} />
 
       <section className="bills-summary" aria-labelledby="bills-summary-title">
         <div className="section-head">
           <h2 id="bills-summary-title" className="section-title">Whole month</h2>
-          <span className="no-print"><AllAmountsToggle /></span>
         </div>
         <div className="stat-grid three">
           <div className="stat"><small>Planned</small><b>{amounts.money(summary.knownTotal)}</b><small>{countLine(summary.count, summary.unknownCount)}</small></div>
@@ -137,7 +154,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
             <button key={mode.id} type="button" aria-pressed={view.mode === mode.id} className={view.mode === mode.id ? 'is-active' : ''} onClick={() => setShown({ mode: mode.id })}>{mode.label}</button>
           ))}
         </div>
-        <div className="segmented" role="group" aria-label="Show bills">
+        <div className="segmented" role="group" aria-label="Show bills by payment">
           {FILTERS.map(filter => (
             <button key={filter} type="button" aria-pressed={view.filter === filter} className={view.filter === filter ? 'is-active' : ''} onClick={() => setShown({ filter })}>
               {FILTER_NAMES[filter]} <span className="filter-count">{counts[filter]}</span>
@@ -163,7 +180,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
               onSelect={date => set({ selected: date })} onShowDay={showDay} onOpenBill={id => onOpenBill(id, `chip-${id}`)} />
           </div>
           <DayList id={DAY_LIST_ID} date={selected} bills={dayBills} filter={view.filter} monthLabel={monthLabel} amounts={amounts}
-            notice={added && <AddedNotice added={added} shown={dayBills.some(o => o.bill.id === added.id)} filter={view.filter} month={month} monthLabel={monthLabel} onShowAll={showAll} />}
+            notice={added && <AddedNotice added={added} shown={dayBills.some(o => o.bill.id === added.id)} searchActive={!!view.query.trim()} filter={view.filter} month={month} monthLabel={monthLabel} onShowAll={showAll} />}
             onOpenBill={id => onOpenBill(id, `row-${id}`)} onAdd={onAddBillOn} onBack={backToCalendar} />
         </div>
       )}
@@ -183,8 +200,10 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
         </div>
       )}
 
-      <AllBills data={data} today={today} isDemo={isDemo} money={amounts.money} open={view.allOpen} onToggle={() => onViewChange({ ...view, allOpen: !view.allOpen })}
-        filter={view.allFilter} onFilterChange={allFilter => onViewChange({ ...view, allFilter })} onOpenBill={id => onOpenBill(id, `all-${id}`)} onAddBill={onAddBill} />
+      </>}
+      {view.scope === 'all' && <AllBills data={data} today={today} isDemo={isDemo} money={amounts.money}
+        query={view.query}
+        filter={view.allFilter} onFilterChange={allFilter => onViewChange({ ...view, allFilter })} onOpenBill={id => onOpenBill(id, `all-${id}`)} onAddBill={onAddBill} />}
 
       <PrintList bills={all} monthLabel={monthLabel} amounts={amounts} data={data} />
     </div>
@@ -219,13 +238,13 @@ function DayBar({ date, bills, filter, monthLabel, onShow }: {
  * new bill may not be in sight (the filter hides it, or it starts in a later
  * month). The filter is never changed without asking: Show All does it.
  */
-function AddedNotice({ added, shown, filter, month, monthLabel, onShowAll }: {
-  added: { message: string; bill?: RecurringBill; here?: BillOccurrence }; shown: boolean; filter: BillsFilter; month: YearMonth; monthLabel: string; onShowAll: () => void
+function AddedNotice({ added, shown, searchActive, filter, month, monthLabel, onShowAll }: {
+  added: { message: string; bill?: RecurringBill; here?: BillOccurrence }; shown: boolean; searchActive: boolean; filter: BillsFilter; month: YearMonth; monthLabel: string; onShowAll: () => void
 }) {
   if (!added.bill) return null
-  const hiddenByFilter = !!added.here && !shown && filter !== 'all'
+  const hiddenByFilter = !!added.here && !shown && (searchActive || filter !== 'all')
   const why = added.here
-    ? (hiddenByFilter ? ` The ${FILTER_NAMES[filter]} filter hides it.` : '')
+    ? (hiddenByFilter ? (searchActive ? ' The current search hides it.' : ` The ${FILTER_NAMES[filter]} filter hides it.`) : '')
     : (added.bill.startMonth > month ? ` It is not in ${monthLabel}: it starts in ${formatYearMonth(added.bill.startMonth)}.` : '')
   return (
     <div className="cal-added">

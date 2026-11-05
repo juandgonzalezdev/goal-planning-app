@@ -35,7 +35,7 @@ it.each([
     <BillScreen data={data} billId="review-stream" months={['2025-01']} month="2025-01" today="2026-11-05"
       owner="shared" newId={() => 'unused'} onBack={vi.fn()} onMonthChange={vi.fn()} onChange={vi.fn()}
       onCreated={vi.fn()} onDeleted={vi.fn()} onOpenDebt={vi.fn()} />
-    <AllBills data={data} today="2026-11-05" isDemo={false} open onToggle={vi.fn()} filter="all"
+    <AllBills data={data} today="2026-11-05" isDemo={false} query="" filter="all"
       onFilterChange={vi.fn()} onOpenBill={vi.fn()} onAddBill={vi.fn()} money={String} />
   </>)
   expect(screen.getByText(`Status: ${status}`)).toBeTruthy()

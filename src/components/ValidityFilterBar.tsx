@@ -5,6 +5,7 @@ import { referenceDay } from '../ui/format'
 type Props = {
   /** What is filtered, for screen readers: "Income sources" or "Bills". */
   label: string
+  groupLabel?: string
   value: ValidityFilter
   counts: Record<ValidityFilter, number>
   onChange: (filter: ValidityFilter) => void
@@ -17,11 +18,11 @@ type Props = {
  * Upcoming only appears when something starts later. The filter only
  * hides lines on screen: no record is changed or removed.
  */
-export function ValidityFilterBar({ label, value, counts, onChange, today, isDemo }: Props) {
+export function ValidityFilterBar({ label, groupLabel, value, counts, onChange, today, isDemo }: Props) {
   const options: ValidityFilter[] = ['active', ...(counts.upcoming > 0 ? ['upcoming' as const] : []), 'ended', 'all']
   return (
     <div className="validity-filter">
-      <div className="segmented" role="group" aria-label={`Show ${label.toLowerCase()}`}>
+      <div className="segmented" role="group" aria-label={groupLabel ?? `Show ${label.toLowerCase()}`}>
         {options.map(option => (
           <button key={option} type="button" aria-pressed={value === option} className={value === option ? 'is-active' : ''} onClick={() => onChange(option)}>
             {option === 'all' ? 'All' : VALIDITY_NAMES[option]} <span className="filter-count">{counts[option]}</span>

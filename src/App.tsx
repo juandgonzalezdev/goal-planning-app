@@ -242,7 +242,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [lastScreen, setLastScreen] = useState(screen)
   if (lastScreen !== screen) {
     setLastScreen(screen)
-    if (billsView.added && screen !== 'bills' && screen !== 'bill') setBillsView({ ...billsView, added: null })
+    const clearBillSearch = isTab(screen) && screen !== 'bills'
+    if ((billsView.added && screen !== 'bills' && screen !== 'bill') || (clearBillSearch && billsView.query)) {
+      setBillsView({ ...billsView, added: null, query: clearBillSearch ? '' : billsView.query })
+    }
     // Back to the step a Coming up bill (or + Add's Mark a Bill as Paid) was opened from: that step's month again.
     if (monthBack) {
       const step = navigation.current()
@@ -736,7 +739,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       // This month's bills still to pay, in the list, where each has Mark as Paid. Back finds the month it was on.
       if (month !== thisMonth) setMonthBack({ ...step, month })
       setMonth(thisMonth)
-      setBillsView({ ...billsView, mode: 'list', filter: 'pending', added: null, selected: null })
+      setBillsView({ ...billsView, scope: 'month', mode: 'list', filter: 'pending', query: '', added: null, selected: null })
       addFocus.current = '.bill-list [aria-label^="Mark as Paid:"]'
       navigation.go('bills')
     } else if (choice === 'bill') showBill(null)
@@ -980,7 +983,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               <HomeScreen ringsView={ringsLocation?.generation === space.generation ? ringsLocation.view : 'all'} onRingsViewChange={view => setRingsLocation({ generation: space.generation, view })} showRings={showRings} newId={newId} data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 showAllBills={showAllBills} onShowAllBillsChange={changeShowAllBills}
-                onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => navigation.go(next))}
+                onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => { if (next === 'bills') setBillsView(view => ({ ...view, scope: 'month' })); navigation.go(next) })}
                 onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
                 onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}

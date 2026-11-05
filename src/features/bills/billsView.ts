@@ -1,6 +1,6 @@
 import { isYearMonth, yearMonthOf, type YearMonth } from '../../domain/calendar'
 import type { BillOccurrence } from '../../domain/finance/bills'
-import type { Id } from '../../domain/finance/types'
+import type { Id, RecurringBill } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import type { ValidityFilter } from '../../domain/finance/validity'
 import { formatDate, formatYearMonth, monthName, weekdayOf } from '../../ui/format'
@@ -24,12 +24,13 @@ export interface BillsView {
    * day, the month, the view or the filter changes.
    */
   added: { id: Id; message: string } | null
-  /** All Bills, at the end of Bills: open or closed, and which bills it lists (Active, Upcoming, Ended or All). */
-  allOpen: boolean
+  /** Visual scope and search live only for the session, never in financial storage. */
+  scope: 'month' | 'all'
+  query: string
   allFilter: ValidityFilter
 }
 
-export const INITIAL_BILLS_VIEW: BillsView = { mode: 'calendar', filter: 'all', selected: null, added: null, allOpen: false, allFilter: 'active' }
+export const INITIAL_BILLS_VIEW: BillsView = { mode: 'calendar', filter: 'all', selected: null, added: null, scope: 'month', query: '', allFilter: 'all' }
 
 export const FILTER_NAMES: Record<BillsFilter, string> = { all: 'All', pending: 'Pending', paid: 'Paid' }
 
@@ -71,4 +72,11 @@ export function scheduleSentence(draft: { dueDay: string; startMonth: string; en
   const end = draft.endMonth === '' ? '. No end date.'
     : isYearMonth(draft.endMonth) && draft.endMonth >= draft.startMonth ? `, ending ${formatYearMonth(draft.endMonth)}.` : '.'
   return `${repeat}, starting ${formatYearMonth(draft.startMonth)}${end}`
+}
+
+/** Presentation-only literal search shared by both Bills scopes. */
+export function matchesBillSearch(bill: Pick<RecurringBill, 'name' | 'category'>, query: string): boolean {
+  const normalize = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  const needle = normalize(query.trim())
+  return normalize(bill.name).includes(needle) || normalize(bill.category).includes(needle)
 }

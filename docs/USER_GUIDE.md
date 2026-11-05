@@ -158,7 +158,7 @@ The main tabs are **Home**, **Bills**, **Goals**, **Money** and **History**. Eac
 - Each control is shown once. When the window changes width, the logo and Settings move between the header and the sidebar; they are never in both.
 
 - **Home**: your month at a glance.
-- **Bills**: the bills of the month (Calendar or List), and **All Bills** at the end, with every bill whatever the month.
+- **Bills**: the bills of the month (Calendar or List), and **All Bills** at the top, with every bill regardless of the selected month.
 - **Goals**: the **Emergency Fund** and your goals.
 - **Money**: **Income**, **Accounts & Savings** and **Cards & Loans**, to look at and change in one place. Each is a block that opens and closes; **Expand All** and **Collapse All** open or close the three. One Add action stays in each section header. The labelled **?** buttons open contextual help and link to Help & Guide; **About Your data** explains local storage or the demo.
 - **History**: everything you recorded.
@@ -182,12 +182,12 @@ A **?** next to a figure opens a short note under it: two or three sentences, an
 | **Add Transfer** | you have two or more accounts | History, with a new transfer form |
 | **Update a Balance** | you have an account | Money › Accounts & Savings. With one account, it opens on **Update Balance**; with more, you choose the account. |
 | **Add a Contribution** | you have an active goal or Emergency Fund | With one, that goal, on the amount. With more, Goals says to choose one, and the goal opens on the amount. |
-| **Mark a Bill as Paid** | a bill of this month isn't paid yet | Bills › List, this month, **Pending** bills, on the first **Mark as Paid** |
+| **Mark a Bill as Paid** | a bill of this month isn't paid yet | Bills › List, this month, **Pending** bills |
 | **Add Income** | always | Money › Income, with a new income source form |
 | **Add Bill** | always | a new bill |
 | **Add Goal** | always | New Goal. What you typed is kept while the app stays open. |
 
-**Cancel** on a form that + Add opened, or **Back**, returns to where you used + Add, in the same place, with the keyboard on **+ Add**. After saving, you stay where the form is, and **Back** returns there too. **Mark a Bill as Paid** shows this month in Bills; **Back** returns to the month you were looking at.
+**Cancel** on a form that + Add opened, or **Back**, returns to where you used + Add, in the same place, with the keyboard on **+ Add**. After saving, you stay where the form is, and **Back** returns there too. **Mark a Bill as Paid** clears any active Bills search and shows all pending bills for this month in List; **Back** returns to the month you were looking at.
 
 If you typed something and leave in another way (a tab, the browser's Back), the app asks first, as described under **Leaving a form you changed** below. Each choice opens its form once: coming back to Money or History later doesn't open a new form again.
 
@@ -394,7 +394,10 @@ The **Bills** tab shows the bills of the chosen month.
   - **Change Amount for [month]** changes that month only.
   - **Details** opens the bill.
 - The **All / Pending / Paid** filter changes the list only. The month's totals stay the same.
-- **All Bills**, at the end of Bills, lists every bill with its usual amount, whatever the month above. Its filter shows **Active**, **Upcoming**, **Ended** or **All** bills. Tap a bill to open it; Back returns to the same place.
+- Use **This Month / All Bills** near the top of Bills. This Month keeps Calendar/List, monthly filters and totals.
+- **All Bills** lists every bill with its usual amount and Monthly/Yearly frequency. **Search bills** works in This Month (Calendar or List) and All Bills, searching names and categories while ignoring case and accents; **Clear** resets the search and returns focus to the field. No results? Try another name or category, or change the payment/status filter.
+- All Bills starts with **All** statuses; use **Active**, **Upcoming** or **Ended** to narrow it. These are general statuses as of the reference date, separate from a month’s Paid/Pending status. Search and filters never change monthly totals or payments. The filter groups are named Show bills by payment (monthly) and Show bills by status (general).
+- Tap a bill to open Details. Back returns to the same search, status filter and row. Switching to This Month keeps the month, Calendar/List, monthly filter and selected day. Search stays while switching views and returning from Details. After visiting another main section, Bills starts with a clear search while keeping the other view preferences. Search is never saved to financial storage. Results are available next to the field without a live announcement for every character.
 - **Add Bill**: Bill name, Amount, Amount not known yet, Due day and Frequency. Choose Every month, Every year or One month only (Every month is the default). The bill starts in the selected month. **More details** starts closed and has Category (Other by default), an optional end month for repeating bills, Note and the card or loan it pays. The summary next to Frequency explains when the bill is due. More details summarizes your choices while closed. Amount not known yet is a checkbox just below Amount. Check it to save an unknown amount (never zero); Amount is disabled with one explanation. Uncheck it to enter an amount again; the explanation disappears. Save adds one bill; Cancel drops the draft and Back asks before leaving changes.
 - **Edit Details** keeps the existing first and last month, yearly billing, pauses, amounts and payments when you save other details. More details contains the existing date and linking controls. The Frequency selector is for new bills; editing details keeps the bill’s original frequency. Change Usual Amount still asks which month the change starts from; earlier amounts stay as recorded. Subscription pause and cancellation actions remain in the bill detail. To repeat a one-month bill, choose No end month. Skipped months lists months with no charge, including pauses and a cancellation before the first charge.
 

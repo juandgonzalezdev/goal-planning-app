@@ -1641,3 +1641,77 @@ push con publicación: Cloudflare Pages no se considera verificado por el push.
 UX-01 B — All Bills y búsqueda es la siguiente entrega según el plan local
 UX_01_IMPLEMENTATION.md; su base será el nuevo main sincronizado. No se
 implementa B ni se incluyen archivos ajenos del plan como parte de este cierre.
+
+
+## UX-01 B — implementación local revisable (2026-11-05)
+
+Rama codex/ux-01-b-all-bills desde main
+868ab7b983e19b49cdc2244c8ebfe5ba9d1c2777; sin commit ni integración nuevos.
+Selector This Month / All Bills al inicio, búsqueda por nombre sin mayúsculas/
+tildes, Clear/conteo/vacíos, estados generales y retorno de contexto. Monthly
+Calendar/List/filtros/totales y guardas conservados; acceso mensual de Home y
++ Add selecciona scope month. Sin reglas financieras, payments, almacenamiento,
+UX-01 C/UX-02/UX-03 ni cambios de navegación A.
+
+Comprobaciones: BillsSearch final 7/7; regresión afectada 53/53 (tres archivos,
+antes del séptimo caso, no se suman). Suite completa 973/976, tres expectativas
+antiguas de MoneyBlocks corregidas y verificadas en las 53/53; no se declara
+976/976 final ni se repite completa por ajustes de pruebas. Lint/build finales
+correctos; JS 718,66 kB/gzip 200,78, aviso >500 kB. Audit ENOTFOUND no completado;
+diff correcto. Sin verificación visual, teclado real ni Safari/iPhone nuevos.
+
+Doce archivos del manifiesto en UX_01_B.md. Índice vacío, ajenos preservados.
+Entrega local: review-deliveries/ux-01-b/working-2026-11-05/DELIVERY.md.
+Pendientes revisión de Claude, recorridos manuales de Dirección y autorización
+de commit para entrega fija. Main/push/integración pendientes de aprobación.
+
+
+## UX-01 B — correcciones O1–O5 (estado vigente, 2026-11-05)
+
+Rama codex/ux-01-b-all-bills, base/HEAD/main 868ab7b983e19b49cdc2244c8ebfe5ba9d1c2777.
+O1 categoría y frecuencia visibles. O2 nombres distintos de filtros de pago
+y vigencia. O3 contador accesible sin live/status por carácter. O4 búsqueda
+compartida en This Month (Calendar/List) y All Bills por nombre/categoría.
+O5 al llegar a otra sección principal se limpia solo query; scopes/filters/mes
+conservados, Details retiene consulta. Guardas protegen borradores al buscar.
+Totales/historial sin cambios; sin dominio financiero ni persistencia ni C/UX-02.
+
+Comprobación propia final: suite completa 980/980, 69 archivos, 234,89 s, salida 0.
+Dirigida previa 103/103 incluida, no se suman. Lint/build/diff correctos. JS
+719,46 kB/gzip 200,99, aviso >500 kB. Audit previo ENOTFOUND no completado;
+dependencias sin cambios. Se sustituye estado anterior 973/976.
+
+Intento de navegador local en 5190: ERR_CONNECTION_TIMED_OUT; sin medidas
+actuales de desbordamiento ni Safari/iPhone ni lector real. Pendientes manuales
+B; no se trasladan confirmaciones de A ni medidas previas de Claude.
+
+Quince archivos en UX_01_B.md; índice vacío, ajenos preservados. Nueva entrega
+local: review-deliveries/ux-01-b/observations-2026-11-05/DELIVERY.md.
+Revisión dirigida de Claude y validación manual de Dirección pendientes.
+Sin commit ni entrega fija por hash; sin merge/push, main intacto.
+
+
+## UX-01 B — N1 corregido y commit fijo autorizado (2026-11-06)
+
+Base main 868ab7b983e19b49cdc2244c8ebfe5ba9d1c2777; rama codex/ux-01-b-all-bills.
+Dirección autoriza commit y entrega inmutable, sin merge/push. N1: query vacía
+en + Add → Mark a Bill as Paid. No se altera foco/navegación existentes.
+Seis regresiones para consulta vacía de resultados y parciales de nombre/
+categoría, en ambas vistas, verifican todos los pendientes, excluyen el pagado
+y preservan datos/historial. O1–O5, guardas, finanzas y A se conservan.
+
+Resultados propios finales: nueva 6/6, dirigidas 176/176 en ocho archivos,
+suite completa **986/986**, 69 archivos, 232,44 s. No se suman. Lint/build/diff
+correctos. JS 719,47 kB/gzip 201,00, aviso >500 kB. Audit previo ENOTFOUND
+sigue no completado. Sin manuales nuevos de Codex o Dirección.
+
+N2 (guarda al escribir que oculta un borrador) y VoiceOver (contador sin live)
+son observaciones de aceptación manual pendientes, no fallos resueltos.
+Desde Bills el foco puede quedar en Add; no se incorpora otro cambio de foco.
+Las mediciones Chromium previas de Claude son del revisor y no acreditan
+Safari/iPhone, lector, temas ni zoom. Guion y trazabilidad: UX_01_B.md.
+
+Quince archivos exactos; ajenos excluidos y preservados por SHA-256. Hash del
+commit final, pruebas y estado comprobado en entrega fija
+review-deliveries/ux-01-b/<hash>/DELIVERY.md y GIT_STATUS.md. Pendientes
+revisión final de Claude, validación manual y aprobación de integración.

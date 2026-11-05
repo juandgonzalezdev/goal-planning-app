@@ -343,9 +343,9 @@ describe('changes inside a screen', () => {
     expect(question()).toBeTruthy()
     await fire.click(inQuestion('Keep Editing'))
     // December's bills are all paid in the demo: Paid keeps it, Pending hides it.
-    await fire.click(group('Show bills').getByRole('button', { name: /^Paid/ }))
+    await fire.click(group('Show bills by payment').getByRole('button', { name: /^Paid/ }))
     expect(question()).toBeNull()
-    await fire.click(group('Show bills').getByRole('button', { name: /^Pending/ }))
+    await fire.click(group('Show bills by payment').getByRole('button', { name: /^Pending/ }))
     expect(question()).toBeTruthy()
   })
 

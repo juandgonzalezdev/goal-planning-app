@@ -24,7 +24,7 @@ const regionOf = (name: string) => screen.getByRole('region', { name })
 const toggleOf = (name: string) => within(regionOf(name)).getByRole('button', { name: new RegExp(`^${escape(name)}`) })
 const bodyOf = (name: string) => regionOf(name).querySelector('.block-body')!
 const isOpen = (name: string) => toggleOf(name).getAttribute('aria-expanded') === 'true'
-const openBlock = async (name: string) => { if (!isOpen(name)) await fire.click(toggleOf(name)) }
+const openBlock = async (name: string) => { if (name === 'All Bills') await fire.click(button('All Bills')); else if (!isOpen(name)) await fire.click(toggleOf(name)) }
 const summaryOf = (name: string) => text(regionOf(name).querySelector('.block-summary'))
 const lineNames = (name: string) => [...regionOf(name).querySelectorAll('.compact-list > li .item-name')].map(item => text(item).trim())
 const filter = async (block: string, option: RegExp) => await fire.click(within(regionOf(block)).getByRole('button', { name: option }))
@@ -244,14 +244,14 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
   it('lists bills compactly with their usual amount, filtered by status', async () => {
     await openAlex()
     await fire.click(tab('Bills'))
-    expect(isOpen('All Bills')).toBe(false)
+    expect(button('This Month').getAttribute('aria-pressed')).toBe('true')
     await openBlock('All Bills')
-    expect(text(regionOf('All Bills'))).toContain('The amount is the bill’s usual amount.')
+    expect(text(regionOf('All Bills'))).toContain('Usual amounts.')
     await filter('All Bills', /^Ended/)
     expect(lineNames('All Bills')).toEqual(['Rent (shared flat) Ended', 'Video Streaming Ended', 'Design Software Ended'])
     await filter('All Bills', /^Active/)
     const utilities = text(within(regionOf('All Bills')).getByRole('button', { name: /^Utilities/ }))
-    expect(utilities).toContain('Utilities · Due day 12')
+    expect(utilities).toContain('Monthly · Due day 12')
     expect(utilities).toContain('330,00 zł')
     expect(utilities).toContain('usual')
   })
@@ -266,7 +266,7 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
     expect(monthSelect().value).toBe('2026-08')
     // Back: Bills as it was, with the focus on the bill that was opened.
     await fire.click(button(/Back/))
-    expect(isOpen('All Bills')).toBe(true)
+    expect(button('All Bills').getAttribute('aria-pressed')).toBe('true')
     expect(document.activeElement).toBe(within(regionOf('All Bills')).getByRole('button', { name: /^Utilities/ }))
   })
 

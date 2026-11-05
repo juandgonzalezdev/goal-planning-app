@@ -82,7 +82,7 @@ describe('Tabs and where every former Data and Cards function is now', () => {
     for (const name of ['Income', 'Accounts & Savings', 'Cards & Loans']) expect(toggleOf(name)).toBeTruthy()
     for (const name of [/Add Income/, /Add Account/, /Add Card or Loan/, 'Expand All', 'Collapse All']) expect(button(name)).toBeTruthy()
     await fire.click(tab('Bills'))
-    expect(toggleOf('All Bills')).toBeTruthy()
+    expect(button('All Bills')).toBeTruthy()
     await fire.click(tab('Goals'))
     expect(within(regionOf('Emergency Fund')).getByRole('button', { name: /^Emergency Fund/ })).toBeTruthy()
     expect(button(/Add Goal/)).toBeTruthy()
@@ -427,7 +427,7 @@ describe('Demo and own space', () => {
   })
 })
 
-/** Opens a block outside Money (All Bills) from its heading, unless it is already open. */
+/** Opens the All Bills scope from the top of Bills. */
 async function openMoneyBlockless(name: string) {
-  if (!isOpen(name)) await fire.click(toggleOf(name))
+  await fire.click(button(name))
 }
