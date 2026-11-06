@@ -1821,3 +1821,27 @@ salida 0; lint/build/diff correctos, JS 720,89 kB/gzip 201,51 kB. Sustituye el
 estado de suite en curso. Audit previo no completado; bundle >500 kB. Nuevo
 commit autorizado de cinco archivos y entrega incremental por hash desde 9aaa1e9.
 Main/remoto sin modificar. Pendientes revisión dirigida y validación manual.
+
+## Cierre e integración autorizados de UX-01 C — 2026-11-06
+
+Estado vigente: Dirección aprueba integrar 2aefc47a4f06742e743d92ad865beeec46f4fe88
+y ejecutar push de main. Commit/entregas fijas 9aaa1e9 y 2aefc47 verificados por
+manifiestos, SHA-256, blobs y diff. Base local/origin/remoto directo b4190ba;
+fast-forward al aprobado sin conflictos. Este cierre documental solo cambia
+WORK_STATUS.md y UX_01_C.md, conservando producto/pruebas/estilos/dependencias.
+
+Claude: Approved para C1–C3 y Approved with observations para navegación, sin
+defectos nuevos; informes leídos. Dirección confirma Details/Edit, guardado,
+cancelación, cambios sin guardar, navegación vinculada, historial de importes,
+scroll, Back, movimiento reducido, filtros de History y VoiceOver en Safari/iPhone.
+Son manuales comunicados, no ejecutados por Codex; sin extender confirmaciones.
+O1 aceptado expresamente: History desde barra abre arriba, conserva filtros;
+Back recupera posición contextual. No exige cambio de producto.
+
+Se reutilizan 1000/1000 completas y 96/96 dirigidas finales, lint/build correctos,
+sin repetir ni sumar ni atribuir pruebas nuevas. Audit ENOTFOUND no completado
+y bundle >500 kB vigentes. Ajenos y entregas fijas preservados y excluidos.
+Hash final documental, push y coincidencia main/origin/main/remoto en:
+review-deliveries/ux-01-c/integration-2026-11-06/CLOSURE.md.
+Push no equivale a despliegue: Cloudflare Pages no verificado. Próxima rama
+codex/ux-02-month-selector desde main final, preparada sin implementar UX-02/03.

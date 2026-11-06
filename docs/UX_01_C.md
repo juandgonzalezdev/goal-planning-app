@@ -199,3 +199,38 @@ Lint/build/diff finales correctos. JS 720,89 kB/gzip 201,51 kB, aviso conocido
 >500 kB. Audit previo ENOTFOUND no completado reutilizado sin dependencias nuevas.
 Sin navegador real nuevo ni aceptación manual atribuida. Nuevo commit autorizado
 de los cinco archivos; entrega fija incremental por hash, sin merge/push.
+
+## Cierre e integración autorizados de UX-01 C — 2026-11-06
+
+Estado vigente que sustituye los pendientes históricos de revisión y aceptación.
+Dirección aprueba integrar 2aefc47a4f06742e743d92ad865beeec46f4fe88 y push de main.
+Codex verifica el commit y las dos entregas fijas (9aaa1e9 y 2aefc47): manifiestos,
+SHA-256 y copias contra blobs de Git; diff incremental idéntico al de Git.
+Main, origin/main y remoto directo estaban en b4190ba67b55f4e92da2a391f30204b576f0f68c.
+Integración fast-forward hasta el aprobado, sin conflictos ni archivos ajenos.
+
+Revisiones de Claude leídas: C1–C3 Approved en 9aaa1e9; navegación Approved with
+observations, sin defectos nuevos en 2aefc47. Sus pruebas y casos Chromium son
+del revisor, no ejecuciones nuevas de Codex. Dirección comunica validación manual
+de Details/Edit, guardado, cancelación, cambios sin guardar, navegación vinculada,
+historial de importes, scroll, Back, movimiento reducido, filtros de History y
+VoiceOver en Safari/iPhone. Se registra esa confirmación, sin extenderla a otras
+plataformas, versiones, temas o recorridos no indicados.
+
+O1 decidido por Dirección: History abre arriba al seleccionarlo desde la barra
+flotante y conserva sus filtros; Back sigue recuperando la posición contextual
+cuando corresponde. Se acepta el comportamiento implementado, sin cambio nuevo.
+
+Este cierre cambia únicamente docs/UX_01_C.md y docs/WORK_STATUS.md. Código,
+pruebas, estilos y dependencias idénticos al aprobado. Se reutilizan 1000/1000,
+70 archivos, y 96/96 dirigidas, sin repetir ni sumar; lint/build correctos.
+No se atribuyen nuevas pruebas de Codex ni más manuales de Dirección. Audit
+previo ENOTFOUND no completado y aviso bundle >500 kB continúan documentados.
+Archivos ajenos y entregas fijas preservados; sin UX-02 ni UX-03.
+
+Commit documental final, resultado del push, coincidencia local/remota y rama
+nueva de preparación se registran fuera del commit en:
+review-deliveries/ux-01-c/integration-2026-11-06/CLOSURE.md.
+El push no acredita despliegue efectivo de Cloudflare Pages; publicación no
+verificada en este cierre. Se prepara codex/ux-02-month-selector desde main
+final, sin iniciar implementación ni publicar esa rama.
