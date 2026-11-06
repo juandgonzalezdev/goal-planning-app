@@ -114,24 +114,20 @@ describe('Back to History', () => {
     expect(scrolled.at(-1)).toBe(420)
   })
 
-  it('also restores the record when the History tab is used directly from Money, but clears it after Home', async () => {
-    const { scrolled, at } = trackScroll()
+  it('focuses the section heading when History is explicitly selected from Money or Home', async () => {
+    const { at } = trackScroll()
     await openAlex()
     await fire.click(tab('History'))
     const record = () => screen.getAllByRole('button', { name: /^Balance updateSavings Account/ })[0]
-    const key = record().getAttribute('data-return-key')
     at(580)
     await fire.click(record())
     at(0)
     await fire.click(tab('History'))
     expect(shownScreen()).toBe('history')
-    expect(document.activeElement?.getAttribute('data-return-key')).toBe(key)
-    expect(scrolled.at(-1)).toBe(580)
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'History' }))
     await fire.click(tab('Home'))
-    const scrollCalls = scrolled.length
     await fire.click(tab('History'))
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'History' }))
-    expect(scrolled.length).toBe(scrollCalls)
   })
 })
 

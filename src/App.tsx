@@ -232,6 +232,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // Reports & Backup asked for from Money: Settings opens with the focus on that section.
   const settingsTarget = useRef(false)
   const mainRef = useRef<HTMLElement>(null)
+  const navTop = useRef<{ tab: Tab; repeat: boolean } | null>(null)
+  const [navSelection, setNavSelection] = useState(0)
   const firstScreen = useRef(true)
 
   // Space screens need an open space, and an open space never shows the
@@ -438,6 +440,22 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
   }, [screen, requested, space.opening, navigation, focusRequest])
+
+  // Only an explicit main-navigation selection goes to the top. Back and
+  // contextual links keep their existing position/focus restoration above.
+  useEffect(() => {
+    const selection = navTop.current
+    if (!selection || selection.tab !== screen) return
+    navTop.current = null
+    if (!selection.repeat) {
+      const heading = mainRef.current?.querySelector<HTMLElement>('h1')
+      if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }) }
+    }
+    // shell-main grows with the document; the rail's own overflow is unrelated.
+    const scroller = document.scrollingElement ?? document.documentElement
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    scroller.scrollTo?.({ top: 0, left: 0, behavior: selection.repeat && !reduced ? 'smooth' : 'instant' })
+  }, [screen, navSelection])
 
   // After the space is read again (changes from another tab), the screens start again from the new records.
   // The screen, the month and the views stay; the focus and the scroll position are put back where they were, when that place is still there.
@@ -836,8 +854,14 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     writeEmergencyLater(storage, later)
   }
   const selectTab = (tab: Tab) => {
-    if (tab === screen) return
+    if (tab === screen) {
+      navTop.current = { tab, repeat: true }
+      setNavSelection(value => value + 1)
+      return
+    }
     confirmLeave(ANY_FORM, () => {
+      navTop.current = { tab, repeat: false }
+      setNavSelection(value => value + 1)
       if (tab === 'history') {
         // From the tab bar, History opens as it was left (no purchase from Home); the first time, on the year of the month shown.
         setHistoryFocus(null)

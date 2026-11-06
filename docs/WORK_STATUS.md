@@ -1801,3 +1801,23 @@ lint/build/diff correctos. JS 720,34 kB/gzip 201,34 kB, aviso >500 kB. Audit pre
 ENOTFOUND no completado reutilizado sin cambios de dependencias. Sin manuales
 nuevos. Commit autorizado de nueve archivos; hash y estado posterior en entrega
 fija review-deliveries/ux-01-c/<hash>/, sin merge/push.
+
+## UX-01 C — navegación principal al inicio (2026-11-06)
+
+Dirección autoriza mejora acotada, nuevo commit y entrega fija desde
+9aaa1e921c3bac38057c7a882195d30217e00c1a, sin merge/push. La entrega anterior
+no se modifica. Selección explícita cambia de sección al inicio y enfoca título;
+reselección sube suavemente sin navegar ni cambiar foco/estado, inmediata con
+movimiento reducido. Petición tras guarda aceptada, consumida tras render.
+Back conserva restauración. Contenedor identificado por CSS como documento;
+se usa document.scrollingElement, no window.scrollY, ni scroll del rail.
+Cinco archivos del manifiesto en UX_01_C.md. Sin dominio ni persistencia ni
+UX-02/03. Dirigidas 96/96, seis archivos, 41,92 s; suite completa en curso al
+redactar. Resultados finales y hash en entrega fija. Sin nueva prueba real de
+navegador o aceptación manual; guion adicional en UX_01_C.md. Ajeno preservado.
+
+Resultado final de navegación al inicio: **1000/1000**, 70 archivos, 242,80 s,
+salida 0; lint/build/diff correctos, JS 720,89 kB/gzip 201,51 kB. Sustituye el
+estado de suite en curso. Audit previo no completado; bundle >500 kB. Nuevo
+commit autorizado de cinco archivos y entrega incremental por hash desde 9aaa1e9.
+Main/remoto sin modificar. Pendientes revisión dirigida y validación manual.

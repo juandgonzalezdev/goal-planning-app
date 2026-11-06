@@ -131,3 +131,71 @@ Primer lint detectó dependencia setBillEdit del callback, corregida. No se
 repitió audit: dependencias intactas y resultado previo ENOTFOUND no completado.
 Persisten aviso bundle >500 kB y manuales pendientes. Se autoriza y prepara
 commit solo de los nueve archivos; main y remoto sin modificar.
+
+## Mejora adicional: inicio al seleccionar navegación principal (2026-11-06)
+
+Dirección autoriza una mejora acotada antes del cierre, con nuevo commit y entrega
+fija independientes. Base: 9aaa1e921c3bac38057c7a882195d30217e00c1a. La entrega
+anterior se conserva íntegra; no se sobrescribe ni se amplía su alcance aprobado.
+
+Seleccionar Home/Bills/Goals/Money/History desde float o rail lleva al inicio del
+documento tras confirmar la salida. Cambiar de sección enfoca su encabezado con
+preventScroll y hace scroll inmediato. Reseleccionar la pantalla principal activa
+solo desplaza suavemente, sin navegación, recarga ni cambios de foco/formulario.
+Con prefers-reduced-motion el desplazamiento es inmediato. Seleccionar la pestaña
+de origen desde un detalle sigue siendo una salida protegida, no una reselección.
+No se añaden resets de mes, filtros ni datos. Se conserva el comportamiento de
+búsqueda de B al cambiar de sección, sin introducir otro cambio en esos estados.
+
+Contenedor comprobado por inspección de CSS: shell y shell-main crecen con el
+documento (app.css:13/33); main no tiene altura limitada ni overflow propio.
+finance.css reserva scroll-padding en html; el overflow-y auto de escritorio
+(finance.css:944) corresponde al rail, no a main. La ejecución usa el contenedor
+que informa document.scrollingElement, con documentElement como fallback, y no
+lee window.scrollY para decidir ni para realizar este nuevo desplazamiento.
+Las regresiones modelan ese elemento independientemente del scroll de window.
+No se acredita una nueva medición de layout en navegador real.
+
+El efecto consume únicamente peticiones explícitas de selectTab, después del
+render de destino y del efecto existente de foco. Si la guarda se cancela no hay
+petición ni scroll. Back y enlaces contextuales conservan su restauración. La
+selección explícita de History desde Money ahora enfoca el encabezado y empieza
+arriba; el test de esa selección se actualiza. Los tests separados de Back a
+cuenta/préstamo/History mantienen el retorno al registro.
+
+Manifiesto de esta mejora (cinco archivos, diff desde 9aaa1e9):
+- src/App.tsx
+- src/NavScroll.test.tsx (nuevo)
+- src/LinksReturn.test.tsx
+- docs/UX_01_C.md
+- docs/WORK_STATUS.md
+
+Regresiones nuevas: siete casos, float/rail, las cinco secciones, reselección con
+y sin movimiento reducido, mes/búsqueda/vista/datos intactos, historial sin paso
+nuevo y foco conservado; salida con borrador, Keep Editing sin scroll y Discard
+con scroll. Primeras dirigidas detectaron expectativa anterior de foco de History
+y título Our Goals de la fixture; expectativas adaptadas, sin cambiar producto
+para ellas. Dirigidas finales 96/96 en seis archivos, 41,92 s, incluidos C1/F1,
+Back, formularios y navegación. No se suman con la suite completa.
+
+Guion manual adicional pendiente de Dirección, con datos ficticios:
+1. Móvil y escritorio: bajar en cada sección, elegir otra y comprobar inicio y
+   encabezado accesible; mes/filtros siguen el comportamiento vigente.
+2. Bajar en Bills con mes y filtro seleccionados: pulsar Bills de nuevo; subir
+   suavemente, sin recarga, mismo mes/filtro/búsqueda, foco en el control pulsado.
+3. Activar movimiento reducido y repetir: ir arriba sin animación.
+4. Editar una factura, bajar y pulsar Home: Keep Editing no desplaza ni borra;
+   Discard and Leave lleva arriba de Home. Repetir con teclado/VoiceOver.
+5. History → préstamo/cuenta → Back: mismo registro/foco/posición; seleccionar
+   History explícitamente desde Money: encabezado y comienzo de History.
+6. Safari/iPhone, claro/oscuro y zoom: comprobar movimiento, foco y safe areas.
+
+Sin finanzas, almacenamiento, historial de payments, dependencias ni UX-02/03.
+F1 y consumo único C1 conservados. Resultados finales y hash en la nueva entrega.
+
+Verificación final propia de la mejora: **1000/1000**, 70 archivos, 242,80 s,
+salida 0; suite npm test -- --maxWorkers=2. Dirigidas 96/96 incluidas, no se suman.
+Lint/build/diff finales correctos. JS 720,89 kB/gzip 201,51 kB, aviso conocido
+>500 kB. Audit previo ENOTFOUND no completado reutilizado sin dependencias nuevas.
+Sin navegador real nuevo ni aceptación manual atribuida. Nuevo commit autorizado
+de los cinco archivos; entrega fija incremental por hash, sin merge/push.
