@@ -1105,3 +1105,6 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .bills-search input { width: 100%; min-height: 44px; }
 .bills-search > button { min-height: 44px; }
 .bills-scope-toolbar .segmented button { min-height: 44px; }
+.all-bill-entry { display: flex; align-items: center; gap: 8px; }
+.all-bill-entry > .line-button { flex: 1; min-width: 0; } .all-bill-entry > .button-small, .bill-details-header > button { min-height: 44px; } .bill-details-header { flex-wrap: wrap; } .bill-details-header > div { min-width: 0; overflow-wrap: anywhere; }
+.bill-details-link { min-height: 44px; text-align: left; }

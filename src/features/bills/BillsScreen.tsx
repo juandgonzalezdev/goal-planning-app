@@ -32,7 +32,7 @@ type Props = {
   onMonthChange: (month: YearMonth) => void
   onChange: ChangeSpace
   /** Opens a bill; `returnKey` names the button that opened it (data-return-key), which gets the focus back on return. */
-  onOpenBill: (id: Id, returnKey: string) => void
+  onOpenBill: (id: Id, returnKey: string, edit?: boolean) => void
   /** Add Bill at the top: an empty form. */
   onAddBill: () => void
   /** + Add Bill in the day panel: the form starts on that day and month. */
@@ -203,7 +203,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
       </>}
       {view.scope === 'all' && <AllBills data={data} today={today} isDemo={isDemo} money={amounts.money}
         query={view.query}
-        filter={view.allFilter} onFilterChange={allFilter => onViewChange({ ...view, allFilter })} onOpenBill={id => onOpenBill(id, `all-${id}`)} onAddBill={onAddBill} />}
+        filter={view.allFilter} onFilterChange={allFilter => onViewChange({ ...view, allFilter })} onOpenBill={id => onOpenBill(id, `all-${id}`)} onEditBill={id => onOpenBill(id, `edit-${id}`, true)} onAddBill={onAddBill} />}
 
       <PrintList bills={all} monthLabel={monthLabel} amounts={amounts} data={data} />
     </div>
@@ -375,7 +375,7 @@ function BillItem({ data, occurrence, today, amounts, filter, onChange, onPaid, 
   return (
     <div className="bill-item">
       <div className="bill-line">
-        <span className="bill-name"><i className="owner-dot" style={{ background: ownerColor(data.space, bill.owner) }} aria-hidden="true" />{bill.name}</span>
+        <button type="button" className="text-button bill-name bill-details-link" aria-label={`${bill.name} details`} data-return-key={`details-${bill.id}`} onClick={() => onOpenBill(bill.id)}><i className="owner-dot" style={{ background: ownerColor(data.space, bill.owner) }} aria-hidden="true" />{bill.name}</button>
         <b>{amount === null ? 'Unknown' : amounts.money(amount)}</b>
       </div>
       <div className="bill-line">
@@ -407,7 +407,6 @@ function BillItem({ data, occurrence, today, amounts, filter, onChange, onPaid, 
       {!editing && (
         <div className="inline-actions">
           <button type="button" className="text-button" aria-label={`Change Amount for ${monthName}: ${bill.name}`} onClick={startEditing}>Change Amount for {monthName}</button>
-          <button type="button" className="text-button" aria-label={`${bill.name} details`} data-return-key={`details-${bill.id}`} onClick={() => onOpenBill(bill.id)}>Details</button>
         </div>
       )}
       {editing && (

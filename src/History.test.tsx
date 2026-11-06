@@ -51,10 +51,10 @@ async function createOwnSpace() {
   await fire.click(button('Create My Space'))
 }
 
-/** Goes back through the browser history until the tabs show again. */
+/** Waits for History itself: floating navigation also exists on detail screens. */
 async function backToTabs() {
   window.history.back()
-  await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeTruthy())
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'History', level: 1 })).toBeTruthy())
 }
 
 describe('History layout', () => {

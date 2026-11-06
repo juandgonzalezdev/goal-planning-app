@@ -20,7 +20,7 @@ const text = (element: Element) => element.textContent
 function fixture(empty = false) {
   const seed = createDemoHousehold()
   const data = { ...seed, bills: empty ? [] : [
-    { ...seed.bills[0], id: 'sample-cafe', name: 'Café Service', category: 'Subscriptions' as const, amount: 2500, dueDay: 20, startMonth: '2026-01', endMonth: null, frequency: 'monthly' as const },
+    { ...seed.bills[0], id: 'sample-cafe', debtId: undefined, name: 'Café Service', category: 'Subscriptions' as const, amount: 2500, dueDay: 20, startMonth: '2026-01', endMonth: null, frequency: 'monthly' as const },
     { ...seed.bills[0], id: 'sample-ended', name: 'Old Annual Plan', category: 'Other' as const, amount: 9000, dueDay: 10, startMonth: '2025-01', endMonth: '2026-02', frequency: 'yearly' as const },
     { ...seed.bills[0], id: 'sample-future', name: 'Future Internet', category: 'Utilities' as const, amount: null, dueDay: 5, startMonth: '2027-01', endMonth: null, frequency: 'monthly' as const },
   ], billMonths: [] }
@@ -172,7 +172,7 @@ it('searches names and categories in monthly Calendar and List, combines payment
   await openAll()
   expect(search().value).toBe('cafe')
   await fire.change(search(), { target: { value: 'Utilities' } })
-  expect(within(all()).getByRole('button', { name: /Future Internet/ })).toBeTruthy()
+  expect(within(all()).getByRole('button', { name: /Future Internet Upcoming/ })).toBeTruthy()
   await fire.click(button('This Month'))
   expect(search().value).toBe('Utilities')
   expect(screen.getByText(/No bills match your search and payment filter/)).toBeTruthy()
@@ -247,6 +247,80 @@ it.each(['month', 'all'].flatMap(scope => ['zzz', 'cafe', 'Utilities'].map(query
   expect(screen.getAllByRole('button', { name: /^Mark as Paid:/ }).map(item => item.getAttribute('aria-label'))).toEqual([
     'Mark as Paid: Café Service, November 2026', 'Mark as Paid: Water Service, November 2026',
   ])
+  expect(document.activeElement).toBe(screen.getAllByRole('button', { name: /^Mark as Paid:/ })[0])
   expect(data).toEqual(before)
   expect(activityLog(data)).toEqual(history)
+})
+
+it('opens direct editing from All Bills and returns to the same search and Edit target', async () => {
+  const { data, before } = await start()
+  await openAll()
+  await fire.change(search(), { target: { value: 'cafe' } })
+  await fire.click(button('Edit Café Service'))
+  expect(screen.getByRole('heading', { name: 'Edit Café Service' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Bill name' }))
+  await fire.click(screen.getAllByRole('button', { name: 'Cancel' })[0])
+  const edit = button('Edit Details')
+  expect(document.activeElement).toBe(edit)
+  expect(edit.compareDocumentPosition(screen.getByRole('region', { name: 'November 2026' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  await fire.click(button('Back'))
+  expect(search().value).toBe('cafe')
+  expect(document.activeElement).toBe(button('Edit Café Service'))
+  expect(data).toEqual(before)
+})
+
+it('protects a monthly amount draft when opening Edit Details', async () => {
+  await start()
+  await openAll()
+  await fire.click(button(/Café Service Active/))
+  await fire.click(button('Change Amount for November 2026'))
+  await fire.change(screen.getByRole('textbox', { name: /Amount for November/ }), { target: { value: '37' } })
+  await fire.click(button('Edit Details'))
+  expect(screen.queryByRole('heading', { name: 'Edit Café Service' })).toBeNull()
+  await fire.click(button('Keep Editing'))
+  expect((screen.getByRole('textbox', { name: /Amount for November/ }) as HTMLInputElement).value).toBe('37')
+})
+
+it('keeps direct Edit drafts when floating navigation is cancelled and saves through the existing form', async () => {
+  await start()
+  await openAll()
+  await fire.click(button('Edit Café Service'))
+  await fire.change(screen.getByRole('textbox', { name: 'Bill name' }), { target: { value: 'Sample Service' } })
+  await fire.click(within(nav()).getByRole('button', { name: 'Home' }))
+  await fire.click(button('Keep Editing'))
+  expect((screen.getByRole('textbox', { name: 'Bill name' }) as HTMLInputElement).value).toBe('Sample Service')
+  await fire.click(button('Save Changes'))
+  expect(screen.getByRole('heading', { name: 'Sample Service' })).toBeTruthy()
+  expect(document.activeElement).toBe(button('Edit Details'))
+  await fire.click(button('Back'))
+  expect(button('Edit Sample Service')).toBeTruthy()
+})
+
+it.each(['cancel', 'save', 'normal', 'browser-back'] as const)('consumes direct editing before linked loan return: %s', async exit => {
+  const data = createDemoHousehold()
+  data.bills.find(item => item.id === 'furniture-loan')!.name = 'Small Loan'
+  data.debts.find(item => item.id === 'furniture')!.name = 'Small Loan'
+  const before = structuredClone(data)
+  const bill = data.bills.find(item => item.name === 'Small Loan')!
+  const debt = data.debts.find(item => item.id === bill.debtId)!
+  await start(false, data)
+  await openAll()
+  if (exit === 'normal') await fire.click(button(/Small Loan Active/))
+  else {
+    await fire.click(button('Edit Small Loan'))
+    expect(screen.getByRole('heading', { name: 'Edit Small Loan' })).toBeTruthy()
+    if (exit === 'save') await fire.click(button('Save Changes'))
+    else if (exit === 'browser-back') {
+      window.history.back()
+      await settle()
+      window.history.forward()
+      await settle()
+    } else await fire.click(screen.getAllByRole('button', { name: 'Cancel' })[0])
+  }
+  expect(screen.queryByRole('textbox', { name: 'Bill name' })).toBeNull()
+  await fire.click(within(screen.getByRole('region', { name: 'Details' })).getByRole('button', { name: debt.name }))
+  await fire.click(button('Back'))
+  expect(screen.getByRole('heading', { name: 'Small Loan' })).toBeTruthy()
+  expect(screen.queryByRole('textbox', { name: 'Bill name' })).toBeNull()
+  expect(data).toEqual(before)
 })

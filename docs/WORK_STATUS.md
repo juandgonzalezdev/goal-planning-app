@@ -1751,3 +1751,53 @@ review-deliveries/ux-01-b/integration-2026-11-06/CLOSURE.md. El push no acredita
 publicación: despliegue en Cloudflare Pages no verificado en este cierre.
 Siguiente rama preparada desde el nuevo main: codex/ux-01-c-details-edit, para
 Details/Edit Details conforme al checklist. No se implementa UX-01 C todavía.
+
+## UX-01 C — implementación local revisable (2026-11-06)
+
+Base/HEAD comprobado b4190ba67b55f4e92da2a391f30204b576f0f68c; rama
+codex/ux-01-c-details-edit. Edit Details en cabecera y Edit directo en All Bills
+reutilizan BillForm. List abre Details desde el nombre sin botón repetido;
+importe mensual y payment conservados. Historial de importes desplegable;
+End Subscription y ayudas críticas intactos. Guardas y foco de edición/retorno
+cubiertos; F1 solicita foco explícito incluso desde Bills. Sin dominio financiero,
+almacenamiento, dependencias, UX-02/03 ni nuevas rutas.
+
+Entrega y guion: docs/UX_01_C.md y
+review-deliveries/ux-01-c/working-2026-11-06/DELIVERY.md. Es entrega local sin
+commit, no fija por hash. Ocho archivos del manifiesto, índice vacío y ajenos
+conservados; sin commit, merge, push ni despliegue. Pendientes revisión de Claude,
+validación manual de Dirección y autorización de commit para entrega fija.
+No hay prueba real nueva de navegador, Safari/iPhone, teclado virtual ni lector.
+Lint/build finales correctos; audit ENOTFOUND no completado, bundle >500 kB.
+Resultados completos finales en el documento de entrega, sin reutilizar como
+propios los manuales de A/B ni sumar ejecuciones dirigidas y completas.
+
+Comprobación final propia C: 989/989 en 69 archivos, 235,34 s, salida 0.
+Lint/build/diff finales correctos; JS 720,24 kB/gzip 201,24 kB. Sustituye la
+suite intermedia 981/989; las 20/20 dirigidas no se suman. Audit no completado.
+
+## UX-01 C — C1–C3 corregidos y commit autorizado (2026-11-06)
+
+Revisión de Claude leída: working-2026-11-06/REVISION.md, Changes requested.
+C1 consume al montar la intención inicial de Edit mediante callback estable,
+conservando la edición local y las guardas. C2/C3 limpian comentario y formato.
+Cuatro regresiones: Cancel, Save, control normal y Back/Forward del navegador,
+con préstamo vinculado y retorno a Details; tres fallaban antes y cuatro pasan
+después. Dirigidas navegación/formularios/Bills 157/157 (siete archivos), más
+SubscriptionReview 15/15, sin sumar con la suite completa. F1 conservado.
+Resultados finales y hash en entrega fija; guion ampliado en UX_01_C.md.
+Dirección autoriza commit de los ocho archivos, sin merge/push. Pendientes
+revisión final dirigida de Claude y manuales de Dirección. Sin navegador real
+nuevo ni aceptación atribuida. Archivos ajenos conservados y excluidos.
+
+El manifiesto final de C incluye además src/History.test.tsx: nueve archivos.
+Una segunda suite señaló una espera heredada que comprobaba la navegación ya
+visible en Details; se cambia únicamente el helper para esperar el encabezado
+History. No se modifica el recorrido de producto. Se repite la suite final;
+no se presenta el 992/993 intermedio como verificación satisfactoria.
+
+C1–C3, resultados finales propios: **993/993**, 69 archivos, 236,82 s, salida 0;
+lint/build/diff correctos. JS 720,34 kB/gzip 201,34 kB, aviso >500 kB. Audit previo
+ENOTFOUND no completado reutilizado sin cambios de dependencias. Sin manuales
+nuevos. Commit autorizado de nueve archivos; hash y estado posterior en entrega
+fija review-deliveries/ux-01-c/<hash>/, sin merge/push.

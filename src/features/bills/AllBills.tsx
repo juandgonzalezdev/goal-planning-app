@@ -17,6 +17,7 @@ type Props = {
   filter: ValidityFilter
   onFilterChange: (filter: ValidityFilter) => void
   onOpenBill: (id: Id) => void
+  onEditBill?: (id: Id) => void
   onAddBill: () => void
   /** How an amount is written: Bills' own, so hiding all amounts hides these too. */
   money: (minor: number) => string
@@ -29,7 +30,7 @@ type Props = {
  * month's own amount), independent of the selected month. Each opens the
  * bill's own screen, on the shared month. Closing it drops nothing.
  */
-export function AllBills({ data, today, isDemo, query, filter: chosen, onFilterChange, onOpenBill, onAddBill, money }: Props) {
+export function AllBills({ data, today, isDemo, query, filter: chosen, onFilterChange, onOpenBill, onEditBill, onAddBill, money }: Props) {
   const reference = yearMonthOf(today)
   const counts = countByValidity(data.bills, today)
   const filter = usableFilter(chosen, counts)
@@ -54,7 +55,7 @@ export function AllBills({ data, today, isDemo, query, filter: chosen, onFilterC
             const at = validity === 'upcoming' ? bill.startMonth : validity === 'ended' ? bill.endMonth! : reference
             const usual = usualAmountFor(bill, at)
             return (
-              <li key={bill.id}>
+              <li key={bill.id} className="all-bill-entry">
                 <button type="button" className="line line-button" data-return-key={`all-${bill.id}`} onClick={() => onOpenBill(bill.id)}>
                   <span>
                     <span className="item-name">{bill.name} <ValidityTag validity={validity} /></span>
@@ -64,6 +65,7 @@ export function AllBills({ data, today, isDemo, query, filter: chosen, onFilterC
                   <b className="usual-amount">{usual === null ? 'Amount needed' : money(usual)}<small>usual</small></b>
                   <Icon name="arrowRight" size={16} />
                 </button>
+                {onEditBill && <button type="button" className="button-small" aria-label={`Edit ${bill.name}`} data-return-key={`edit-${bill.id}`} onClick={() => onEditBill(bill.id)}>Edit</button>}
               </li>
             )
           })}

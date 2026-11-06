@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { isSpaceScreen, isTab, shownScreen, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
@@ -150,6 +150,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // The card or loan, and the bill, shown on their own screens (null: adding a new one).
   const [debtId, setDebtId] = useState<Id | null>(null)
   const [billId, setBillId] = useState<Id | null>(null)
+  const [billEdit, setBillEdit] = useState(false)
+  const consumeBillEdit = useCallback(() => setBillEdit(false), [setBillEdit])
   // The record History opens on (a purchase chosen on Home).
   const [historyFocus, setHistoryFocus] = useState<Id | null>(null)
   const [ringsLocation, setRingsLocation] = useState<{ generation: number; view: RingsView } | null>(null)
@@ -226,6 +228,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [goalsAddHint, setGoalsAddHint] = useState(false)
   // What gets the focus when the next screen opens: a field's id (+ Add) or a selector (an account, an income month).
   const addFocus = useRef<string | null>(null)
+  const [focusRequest, setFocusRequest] = useState(0)
   // Reports & Backup asked for from Money: Settings opens with the focus on that section.
   const settingsTarget = useRef(false)
   const mainRef = useRef<HTMLElement>(null)
@@ -434,7 +437,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (!heading) return
     if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
     heading.focus()
-  }, [screen, requested, space.opening, navigation])
+  }, [screen, requested, space.opening, navigation, focusRequest])
 
   // After the space is read again (changes from another tab), the screens start again from the new records.
   // The screen, the month and the views stay; the focus and the scroll position are put back where they were, when that place is still there.
@@ -661,7 +664,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const showDebt = (id: Id | null) => { setDebtId(id); navigation.go('debt') }
   const openDebt = (id: Id | null) => confirmLeave(ANY_FORM, () => showDebt(id))
   /** Opens a bill; with `forMonth` (a payment chosen in a card or loan, or in History), on that month, which becomes the shared month. */
-  const showBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillDay(null); if (forMonth) setMonth(forMonth); navigation.go('bill') }
+  const showBill = (id: Id | null, forMonth?: YearMonth) => { setBillId(id); setBillEdit(false); setBillDay(null); if (forMonth) setMonth(forMonth); navigation.go('bill') }
   const openBill = (id: Id | null, forMonth?: YearMonth) => confirmLeave(ANY_FORM, () => showBill(id, forMonth))
   /** Bills opens a bill, or Add Bill on a day: Back finds Bills where it was, with the focus on the button used. */
   const fromBills = (key: string, show: () => void) => confirmLeave(ANY_FORM, () => { billsReturn.current = { y: window.scrollY, key }; show() })
@@ -741,6 +744,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       setMonth(thisMonth)
       setBillsView({ ...billsView, scope: 'month', mode: 'list', filter: 'pending', query: '', added: null, selected: null })
       addFocus.current = '.bill-list [aria-label^="Mark as Paid:"]'
+      setFocusRequest(value => value + 1)
       navigation.go('bills')
     } else if (choice === 'bill') showBill(null)
     else navigation.go('new-goal')
@@ -997,7 +1001,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
               <BillsScreen data={open.data} months={months} month={month} today={space.today} isDemo={open.kind === 'demo'} view={billsView} onViewChange={setBillsView}
                 onMonthChange={next => confirmLeave(form => form.month !== undefined && form.month !== next, () => { setBillsView(view => ({ ...view, added: null, selected: null })); setMonth(next) })}
-                onChange={space.update} onOpenBill={(id, key) => fromBills(key, () => showBill(id))} onAddBill={() => openBill(null)} onAddBillOn={addBillOn} />
+                onChange={space.update} onOpenBill={(id, key, edit) => fromBills(key, () => { showBill(id); setBillEdit(!!edit); if (edit) addFocus.current = '#bill-name' })} onAddBill={() => openBill(null)} onAddBillOn={addBillOn} />
             </AmountVisibilityProvider>
           </div>}
           {shows('debt') && <div className="screen" data-screen="debt">
@@ -1006,7 +1010,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onCreated={id => { setDebtId(id); replace('debt') }} onDeleted={() => { setDebtId(null); navigation.backAllowed() }} />
           </div>}
           {shows('bill') && <div className="screen" data-screen="bill">
-            <BillScreen key={billId ?? `new-${billDay ?? ''}`} data={open.data} billId={billId} dueDate={billDay} months={months} month={month} onMonthChange={changeMonth} today={space.today} owner={newGoalOwner} newId={newId}
+            <BillScreen key={billId ?? `new-${billDay ?? ''}`} data={open.data} billId={billId} initiallyEditing={billEdit} onInitialEditingConsumed={consumeBillEdit} dueDate={billDay} months={months} month={month} onMonthChange={changeMonth} today={space.today} owner={newGoalOwner} newId={newId}
               onBack={back} onCancel={() => navigation.backAllowed()} onChange={space.update} onOpenDebt={openDebt}
               onCreated={billCreated} onDeleted={() => { setBillId(null); navigation.backAllowed() }} />
           </div>}

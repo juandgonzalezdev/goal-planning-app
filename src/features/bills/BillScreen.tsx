@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { amountText } from '../../ui/labels'
@@ -23,6 +23,9 @@ type Props = {
   data: FinanceData
   /** null: adding a new bill. */
   billId: Id | null
+  /** One-time request to open the existing bill's editor. */
+  initiallyEditing?: boolean
+  onInitialEditingConsumed?: () => void
   /** Adding a bill from a day of the calendar: its due day starts on that day. */
   dueDate?: CalendarDate | null
   months: YearMonth[]
@@ -50,7 +53,18 @@ export function BillScreen(props: Props) {
   const bill = billId ? data.bills.find(b => b.id === billId) ?? null : null
   const currency = data.space.currency
   const money = (minor: number) => formatAmount(minor, currency)
-  const [editing, setEditing] = useState(billId === null)
+  const [editing, setEditing] = useState(billId === null || !!props.initiallyEditing)
+  const { initiallyEditing, onInitialEditingConsumed } = props
+  useEffect(() => {
+    if (initiallyEditing) onInitialEditingConsumed?.()
+  }, [initiallyEditing, onInitialEditingConsumed])
+  const editButton = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(editing)
+  useEffect(() => {
+    if (wasEditing.current && !editing) editButton.current?.focus()
+    if (editing) document.getElementById('bill-name')?.focus()
+    wasEditing.current = editing
+  }, [editing])
   // The amount being typed for one month; another month shows its own amount, not this draft.
   const [monthDraft, setMonthDraft] = useState<{ month: YearMonth; text: string } | null>(null)
   const monthText = monthDraft?.month === month ? monthDraft.text : null
@@ -134,9 +148,10 @@ export function BillScreen(props: Props) {
   return (
     <div className="tab-screen">
       <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
-      <div>
-        <h1 className="tab-title">{bill.name}</h1>
-        <p className="muted-note">{bill.category} · Due {formatDueDay(bill.dueDay).toLowerCase()}</p>
+      <div className="screen-top bill-details-header">
+        <div><h1 className="tab-title">{bill.name}</h1>
+        <p className="muted-note">{bill.category} · Due {formatDueDay(bill.dueDay).toLowerCase()}</p></div>
+        <button ref={editButton} type="button" className="button-small button-small-primary" onClick={() => guard(() => true, () => { setMonthText(null); setUsual(null); setPaying(null); setEditing(true); setMessage('') })}>Edit Details</button>
       </div>
       {bill.category === 'Subscriptions' && <SubscriptionSection data={data} bill={bill} today={today} onChange={onChange} onMessage={setMessage} />}
       <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
@@ -192,12 +207,12 @@ export function BillScreen(props: Props) {
         <h2 id="bill-usual" className="section-title">Usual Amount</h2>
         <div className="bill-line"><span>From {monthLabel}</span><b>{usualNow === null ? 'Unknown' : money(usualNow)}</b></div>
         {(bill.amountChanges ?? []).length > 0 && (
-          <ul className="line-list">
+          <details><summary>Amount history</summary><ul className="line-list">
             <li className="line"><span>From {formatYearMonth(bill.startMonth)}</span><b>{bill.amount === null ? 'Unknown' : money(bill.amount)}</b></li>
             {bill.amountChanges!.map(change => (
               <li key={change.from} className="line"><span>From {formatYearMonth(change.from)}</span><b>{change.amount === null ? 'Unknown' : money(change.amount)}</b></li>
             ))}
-          </ul>
+          </ul></details>
         )}
         {!usual
           ? <button type="button" className="button-small align-start" onClick={() => { setUsualBase(revision); setUsual({ amount: amountText(usualNow), from: month }) }}>Change Usual Amount</button>
@@ -226,7 +241,6 @@ export function BillScreen(props: Props) {
           <div><dt>Pays</dt><dd>{debt ? <button type="button" className="text-button inline-link" onClick={() => props.onOpenDebt(debt.id)}>{debt.name}</button> : 'No card or loan'}</dd></div>
         </dl>
         <div className="inline-actions">
-          <button type="button" className="button-small" onClick={() => { setEditing(true); setMessage('') }}>Edit Details</button>
           {!confirmDelete && <button type="button" className="button-small" onClick={() => { setDeleteBase(revision); setConfirmDelete(true) }}>Delete Bill</button>}
         </div>
         {confirmDelete && (
