@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -20,8 +21,8 @@ const text = (element: Element | null) => (element?.textContent ?? '').replace(/
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const homeStat = (name: 'Income' | 'Spent') => document.querySelector<HTMLElement>(`[data-return-key="stat-${name.toLowerCase()}"]`)!
 const browserBack = async () => { window.history.back(); await settle() }
 const context = () => document.getElementById('income-context')

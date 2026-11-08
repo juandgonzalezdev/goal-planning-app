@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -29,7 +30,7 @@ const toggleOf = (name: string) => within(regionOf(name)).getByRole('button', { 
 const isOpen = (name: string) => toggleOf(name).getAttribute('aria-expanded') === 'true'
 const heading = (name: string | RegExp) => screen.queryByRole('heading', { name, level: 1 })
 const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
 const question = () => screen.queryByRole('alertdialog', { name: 'Leave without saving?' })
 const inQuestion = (name: string | RegExp) => within(question()!).getByRole('button', { name })
 /** Lets the browser's history moves (they arrive later, as in a browser) and their answers happen. */
@@ -113,16 +114,16 @@ describe('Money: the month and the blocks', () => {
     await fire.click(tab('Money'))
     await openMoneyBlock('Income')
     await openMoneyBlock('Accounts & Savings')
-    expect(within(regionOf('Income')).queryByRole('combobox', { name: 'Month' })).toBeNull()
-    expect(within(regionOf('Accounts & Savings')).queryByRole('combobox', { name: 'Month' })).toBeNull()
+    expect(within(regionOf('Income')).queryByRole('button', { name: /^Choose month:/ })).toBeNull()
+    expect(within(regionOf('Accounts & Savings')).queryByRole('button', { name: /^Choose month:/ })).toBeNull()
     await fire.click(within(regionOf('Income')).getByRole('button', { name: 'About Income' }))
     expect(text(regionOf('Income'))).toContain('Income does not use the Cards & Loans month.')
     const income = text(regionOf('Income'))
     const accounts = text(regionOf('Accounts & Savings'))
     await openMoneyBlock('Cards & Loans')
-    const month = within(regionOf('Cards & Loans')).getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
+    const month = within(regionOf('Cards & Loans')).getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
     expect(month.value).toBe('2026-12')
-    await fire.change(month, { target: { value: '2026-03' } })
+    await chooseMonth('2026-03')
     expect(text(regionOf('Cards & Loans'))).toContain('Monthly Payments · March 2026')
     // Income and Accounts show the same as before; Home and Bills follow the month.
     expect(text(regionOf('Income'))).toBe(income)
@@ -390,15 +391,15 @@ describe('Hiding amounts (unchanged in this stage)', () => {
   it('Money shows amounts as Data and Cards did, also when every Home block hides them', async () => {
     await openAlex()
     await fire.click(tab('Bills'))
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await openMoneyBlockless('All Bills')
-    // All Bills belongs to Bills: Bills' Hide All Amounts hides its usual amounts too.
+    // All Bills belongs to Bills: Bills' Hide amounts hides its usual amounts too.
     expect(text(regionOf('All Bills'))).not.toMatch(/\d,\d\d zł/)
     await fire.click(tab('Money'))
     await fire.click(button('Expand All'))
     expect(text(regionOf('Cards & Loans'))).toMatch(/\d,\d\d zł/)
     await fire.click(tab('Bills'))
-    await fire.click(button('Show All Amounts'))
+    await fire.click(button('Amounts hidden. Show amounts'))
     expect(text(regionOf('All Bills'))).toMatch(/\d,\d\d zł/)
   })
 })

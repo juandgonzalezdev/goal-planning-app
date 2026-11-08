@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -18,7 +19,7 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const addButton = () => within(document.querySelector<HTMLElement>('.shell-header')!).getByRole('button', { name: 'Add' })
 const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
 const browserBack = async () => { window.history.back(); await settle() }
 
 async function openAlex() {
@@ -108,7 +109,7 @@ describe('Each choice opens what already exists', () => {
 
   it('Mark a Bill as Paid: this month’s bills to pay; Back finds Home on its month', async () => {
     await openAlex()
-    await fire.change(monthSelect(), { target: { value: '2026-08' } })
+    await chooseMonth('2026-08')
     await addFromHome('Mark a Bill as Paid')
     expect(shownScreen()).toBe('bills')
     expect(monthSelect().value).toBe('2026-12')

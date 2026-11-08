@@ -27,14 +27,14 @@ export const AMOUNTS_NOTICE_MS = 2000
  * The eye above the Home areas: one tap hides every amount, the next
  * shows them all again. Like the eye of each area, it shows the state:
  * open while amounts show, crossed out while all are hidden. Its name is
- * still Hide All Amounts / Show All Amounts. After a tap, a short
+ * includes the visible state and next action. After a tap, a short
  * "Amounts hidden" or "Amounts visible" appears under it, over the page
  * (nothing moves), and screen readers hear it once.
  */
 export function HomeAmountsEye() {
   const { hidden, setAll } = useAmountVisibility()
   const allHidden = allAreasHidden(hidden)
-  const label = allHidden ? 'Show All Amounts' : 'Hide All Amounts'
+  const label = allHidden ? 'Amounts hidden. Show amounts' : 'Hide amounts'
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
@@ -45,10 +45,10 @@ export function HomeAmountsEye() {
 
   return (
     <span className="amounts-eye">
-      <button type="button" className={`icon-button tool-button has-tip${allHidden ? ' is-hidden' : ''}`} aria-label={label}
+      <button type="button" className={`button-small tool-button contextual-privacy${allHidden ? ' is-hidden' : ''}`} aria-label={label}
         onClick={() => { setAll(!allHidden); setNotice(allHidden ? 'Amounts visible' : 'Amounts hidden') }}>
         <Icon name={allHidden ? 'eyeOff' : 'eye'} size={20} />
-        {!notice && <IconTip label={label} />}
+        <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>
       </button>
       <span className={`amounts-notice${notice ? ' is-shown' : ''}`} role="status">{notice}</span>
     </span>
@@ -60,8 +60,8 @@ export function AllAmountsToggle() {
   const { hidden, setAll } = useAmountVisibility()
   const allHidden = allAreasHidden(hidden)
   return (
-    <button type="button" className="button-small align-start" onClick={() => setAll(!allHidden)}>
-      <Icon name={allHidden ? 'eye' : 'eyeOff'} size={16} /> {allHidden ? 'Show All Amounts' : 'Hide All Amounts'}
+    <button type="button" className="button-small align-start contextual-privacy" aria-label={allHidden ? 'Amounts hidden. Show amounts' : 'Hide amounts'} onClick={() => setAll(!allHidden)}>
+      <Icon name={allHidden ? 'eyeOff' : 'eye'} size={16} /> <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>
     </button>
   )
 }

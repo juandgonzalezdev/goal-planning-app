@@ -14,6 +14,8 @@ type Props = {
   className?: string
   /** A text button with a plus (+ Add) instead of the three dots; `label` is then its visible name. */
   text?: boolean
+  /** Contextual toolbar action: visible label and layout icon, without Add styling. */
+  contextual?: boolean
 }
 
 /**
@@ -23,7 +25,7 @@ type Props = {
  * Space chooses one. It closes when an option is chosen, on Escape, or
  * on a tap outside.
  */
-export function MenuButton({ label, options, className = '', text = false }: Props) {
+export function MenuButton({ label, options, className = '', text = false, contextual = false }: Props) {
   const { open, setOpen, close, rootRef, buttonRef } = usePopover()
   const menuRef = useRef<HTMLUListElement>(null)
   const firstFocus = useRef<'first' | 'last'>('first')
@@ -64,10 +66,10 @@ export function MenuButton({ label, options, className = '', text = false }: Pro
 
   return (
     <div className={`menu-root ${className}`} ref={rootRef}>
-      {text
-        ? <button ref={buttonRef} type="button" className="button-small button-small-primary" aria-haspopup="menu" aria-expanded={open}
+      {text || contextual
+        ? <button ref={buttonRef} type="button" className={`button-small ${text ? 'button-small-primary' : 'contextual-options'}`} aria-haspopup="menu" aria-expanded={open}
           aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>
-          <Icon name="plus" size={16} /> <span className="menu-text">{label}</span>
+          <Icon name={text ? 'plus' : 'plan'} size={16} /> <span className="menu-text">{label}</span>
         </button>
         : <button ref={buttonRef} type="button" className="icon-button tool-button has-tip" aria-label={label} aria-haspopup="menu" aria-expanded={open}
           aria-controls={open ? `${id}-menu` : undefined} onClick={() => (open ? close() : openWith('first'))} onKeyDown={onButtonKeyDown}>

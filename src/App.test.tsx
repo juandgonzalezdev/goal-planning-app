@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -28,8 +29,8 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 // Intl writes amounts with no-break spaces; compare them as plain spaces.
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const stat = (label: string) => text(screen.getByText(label).parentElement)
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 
 const householdDemo = () => ({ data: createDemoHousehold(), today: DEMO_TODAY })
 
@@ -283,14 +284,14 @@ describe('Home', () => {
   it('moves through the twelve months of the year with the month picker', async () => {
     await openDemo()
     expect(monthSelect().value).toBe('2026-10')
-    expect([...monthSelect().options].map(o => o.value)).toEqual(['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'])
     await fire.click(button('Previous month'))
     expect(monthSelect().value).toBe('2026-09')
     await fire.click(button('Next month'))
     await fire.click(button('Next month'))
     expect(monthSelect().value).toBe('2026-11')
     await pickMonth('2026-12')
-    expect((button('Next month') as HTMLButtonElement).disabled).toBe(true)
+    await fire.click(button('Next month'))
+    expect(monthSelect().value).toBe('2027-01')
   })
 
   it('lists what is still owed on each card and loan inside Cards & Loans', async () => {
@@ -942,7 +943,7 @@ describe('Hiding amounts on Home', () => {
   it('hides every amount with one button, with a mask that never shows the number of digits', async () => {
     const { storage } = await createIndividualSpace()
     await openAccountsWithBalance()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     expect(home()).not.toMatch(amount)
     // Each text piece on its own: two masks in neighbouring table cells are still two masks.
     const pieces = [...document.querySelectorAll('[data-screen="home"] *')].flatMap(element => [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent ?? ''))
@@ -960,7 +961,7 @@ describe('Hiding amounts on Home', () => {
     cleanup()
     await start(storage)
     expect(home()).not.toMatch(amount)
-    await fire.click(button('Show All Amounts'))
+    await fire.click(button('Amounts hidden. Show amounts'))
     expect(home()).toMatch(amount)
 
     async function openAccountsWithBalance() {
@@ -976,7 +977,7 @@ describe('Hiding amounts on Home', () => {
   it('does not change the saved data', async () => {
     await createIndividualSpace()
     const before = (await saved())
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await fire.click(button('Show amounts in Money & Goals'))
     expect((await saved())).toEqual(before)
   })

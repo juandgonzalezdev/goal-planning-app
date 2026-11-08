@@ -234,16 +234,16 @@ export function HomeScreen(props: Props) {
       <div className="home-month-bar" data-sticky-bar>
         <div className="home-bar-row">
           <MonthSwitch months={months} value={month} onChange={onMonthChange} />
-          {!customizing && <div className="home-tools" ref={optionsRef}>
+        </div>
+      </div>
+          {!customizing && <div className="home-contextual-tools" ref={optionsRef}>
             <HomeAmountsEye />
-            <MenuButton label="Home options" options={[
+            <MenuButton label="Home options" contextual options={[
               { label: 'Expand All', onSelect: () => { onLayoutChange(setAllOpen(layout, true)); setAnnouncement('All parts open.') } },
               { label: 'Collapse All', onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All parts closed.') } },
               { label: 'Customize Home', onSelect: () => customize(true) },
             ]} />
           </div>}
-        </div>
-      </div>
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
         <p className="muted-note" id="customize-home-help">Drag an area by its handle, or use Move up and Move down. Nothing else changes.</p>
         <span className="inline-actions">

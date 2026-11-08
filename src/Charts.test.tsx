@@ -113,7 +113,7 @@ describe('Income & Spending by month (History › Year Overview)', () => {
     await openAlex()
     await fire.click(tab('History'))
     await fire.click(button(/^Year Overview/))
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     expect(screen.getByText('Chart hidden with the amounts')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Show as Table' })).toBeNull()
     expect(document.querySelector('.history-overview .pair-bars, .history-overview .legend-expected')).toBeNull()

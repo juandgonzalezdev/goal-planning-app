@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
@@ -19,8 +20,8 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const toggleOf = (name: string) => regionOf(name).querySelector<HTMLButtonElement>('.block-toggle')!
 const bodyOf = (name: string) => regionOf(name).querySelector('.block-body')!
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const screenText = (name: string) => text(document.querySelector(`[data-screen="${name}"]`))
 const areas = () => [...document.querySelectorAll<HTMLElement>('[data-home-area]')].map(element => element.dataset.homeArea)
 const amount = /\d,\d\d zł/
@@ -76,12 +77,14 @@ describe('One month for Home, Bills, Cards & Loans and their details', () => {
     expect(monthSelect().value).toBe('2026-10')
   })
 
-  it('keeps to the months the space offers', async () => {
+  it('continues beyond the original month choices', async () => {
     await openAlex()
     await pickMonth('2027-01')
-    expect((button('Next month') as HTMLButtonElement).disabled).toBe(true)
+    await fire.click(button('Next month'))
+    expect(monthSelect().value).toBe('2027-02')
     await pickMonth('2026-01')
-    expect((button('Previous month') as HTMLButtonElement).disabled).toBe(true)
+    await fire.click(button('Previous month'))
+    expect(monthSelect().value).toBe('2025-12')
   })
 
   it('never changes a record when the month changes', async () => {
@@ -226,7 +229,7 @@ describe('Home in three areas', () => {
 
   it('hides amounts in closed headers and summaries too, area by area', async () => {
     await openAlex()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     for (const name of PARTS) expect(text(toggleOf(name))).not.toMatch(amount)
     expect(text(toggleOf('Cards & Loans'))).toContain('•••• Remaining Balance')
     await fire.click(button('Show amounts in Money & Goals'))

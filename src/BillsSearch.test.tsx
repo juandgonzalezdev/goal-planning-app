@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import App from './App'
@@ -39,18 +40,18 @@ const openAll = () => fire.click(group('Bills section').getByRole('button', { na
 it('places the selector before the month, preserves monthly view/filter/totals and keeps search across scopes', async () => {
   const { data, before } = await start()
   const section = screen.getByRole('group', { name: 'Bills section' })
-  expect(section.compareDocumentPosition(screen.getByRole('combobox', { name: 'Month' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  await fire.change(screen.getByRole('combobox', { name: 'Month' }), { target: { value: '2026-12' } })
+  expect(section.compareDocumentPosition(screen.getByRole('button', { name: /^Choose month:/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  await chooseMonth('2026-12')
   await fire.click(button('List'))
   await fire.click(group('Show bills by payment').getByRole('button', { name: /^Pending/ }))
   const summary = text(screen.getByRole('region', { name: 'Whole month' }))
   await openAll()
-  expect(screen.queryByRole('combobox', { name: 'Month' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Choose month:/ })).toBeNull()
   await fire.change(search(), { target: { value: '  CAFE  ' } })
   expect(within(all()).getAllByRole('listitem')).toHaveLength(1)
   expect(document.getElementById('bill-search-results')!.textContent).toBe('1 bill found')
   await fire.click(button('This Month'))
-  expect((screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement).value).toBe('2026-12')
+  expect((screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement).value).toBe('2026-12')
   expect(button('List').getAttribute('aria-pressed')).toBe('true')
   expect(group('Show bills by payment').getByRole('button', { name: /^Pending/ }).getAttribute('aria-pressed')).toBe('true')
   expect(text(screen.getByRole('region', { name: 'Whole month' }))).toBe(summary)

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
@@ -50,7 +51,7 @@ it.each([false, true].flatMap(rail => [false, true].map(reduced => [rail, reduce
   const { root, scroll, data, before } = await start(rail, reduced)
   await fire.click(tab('Bills'))
   await fire.click(button('List'))
-  await fire.change(screen.getByRole('combobox', { name: 'Month' }), { target: { value: '2026-12' } })
+  await chooseMonth('2026-12')
   const input = screen.getByRole('searchbox', { name: 'Search bills' }) as HTMLInputElement
   await fire.change(input, { target: { value: 'loan' } })
   const historyLength = window.history.length
@@ -64,7 +65,7 @@ it.each([false, true].flatMap(rail => [false, true].map(reduced => [rail, reduce
   expect(window.history.length).toBe(historyLength)
   expect(screen.getByRole('heading', { level: 1, name: 'Bills' })).toBe(heading)
   expect(input.value).toBe('loan')
-  expect((screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement).value).toBe('2026-12')
+  expect((screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement).value).toBe('2026-12')
   expect(button('List').getAttribute('aria-pressed')).toBe('true')
   expect(data).toEqual(before)
 })

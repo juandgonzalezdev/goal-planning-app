@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -30,7 +31,7 @@ const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Mai
 const question = () => screen.queryByRole('alertdialog', { name: 'Leave without saving?' })
 const inQuestion = (name: string | RegExp) => within(question()!).getByRole('button', { name })
 const shownScreen = () => document.querySelector('[data-screen]')?.getAttribute('data-screen')
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
 const group = (name: string) => within(screen.getByRole('group', { name }))
 /** Lets the browser's history moves (they arrive later, as in a browser) and their answers happen. */
 const moves = () => act(async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setTimeout(resolve, 5)) })
@@ -305,7 +306,7 @@ describe('changes inside a screen', () => {
     const name = change.getAttribute('aria-label')!.replace('Change Amount for December 2026: ', '')
     await fire.click(change)
     await fire.change(screen.getByLabelText(/^Amount for December 2026/), { target: { value: '999' } })
-    await fire.change(monthSelect(), { target: { value: '2026-11' } })
+    await chooseMonth('2026-11')
     expect(question()!.textContent).toContain(`Amount for December 2026: ${name}`)
     await fire.click(inQuestion('Keep Editing'))
     expect(monthSelect().value).toBe('2026-12')
@@ -313,7 +314,7 @@ describe('changes inside a screen', () => {
     await fire.click(button('Save'))
     const line = (month: string) => document.querySelector('.bill-list')!.textContent!.includes('999,00') && month
     expect(line('dec')).toBe('dec')
-    await fire.change(monthSelect(), { target: { value: '2026-11' } })
+    await chooseMonth('2026-11')
     expect(question()).toBeNull()
     expect(document.querySelector('.bill-list')!.textContent).not.toContain('999,00')
   })
@@ -324,12 +325,12 @@ describe('changes inside a screen', () => {
     await fire.click(group('View').getByRole('button', { name: 'List' }))
     await fire.click(screen.getAllByRole('button', { name: /^Change Amount for December 2026: / })[0])
     await fire.change(screen.getByLabelText(/^Amount for December 2026/), { target: { value: '999' } })
-    await fire.change(monthSelect(), { target: { value: '2026-11' } })
+    await chooseMonth('2026-11')
     await fire.click(inQuestion('Discard and Leave'))
     expect(monthSelect().value).toBe('2026-11')
     expect(screen.queryByLabelText(/^Amount for/)).toBeNull()
     expect(document.querySelector('.bill-list')!.textContent).not.toContain('999,00')
-    await fire.change(monthSelect(), { target: { value: '2026-12' } })
+    await chooseMonth('2026-12')
     expect(document.querySelector('.bill-list')!.textContent).not.toContain('999,00')
   })
 

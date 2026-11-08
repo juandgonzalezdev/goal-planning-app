@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
@@ -28,8 +29,8 @@ const openBlock = async (name: string) => { if (name === 'All Bills') await fire
 const summaryOf = (name: string) => text(regionOf(name).querySelector('.block-summary'))
 const lineNames = (name: string) => [...regionOf(name).querySelectorAll('.compact-list > li .item-name')].map(item => text(item).trim())
 const filter = async (block: string, option: RegExp) => await fire.click(within(regionOf(block)).getByRole('button', { name: option }))
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const confirmReset = async () => await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
 
 async function openAlex(storage: Storage = memoryStorage()) {

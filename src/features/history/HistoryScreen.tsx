@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { FoldBlock } from '../../components/FoldBlock'
 import { Icon } from '../../components/Icon'
+import { MonthSwitch } from '../../components/MonthSwitch'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -96,7 +97,9 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
   const open = openMonthsOf(view, filter, groups)
   const narrowed = isNarrowed(filter)
   const accounts = [...data.moneyAccounts.map(a => ({ id: a.id, name: a.name })), ...data.debts.map(d => ({ id: d.id, name: d.name }))]
-  const years = [...new Set(months.map(m => Number(m.slice(0, 4))))]
+  const selectedYear = filter.period.kind === 'year' ? filter.period.year : filter.period.kind === 'month' ? Number(filter.period.month.slice(0, 4)) : Number(month.slice(0, 4))
+  const years = [...new Set([...months.map(m => Number(m.slice(0, 4))), selectedYear])].sort((a, b) => a - b)
+  const periodMonths = [...new Set([...months, ...(filter.period.kind === 'month' ? [filter.period.month] : [])])].sort()
   // A purchase opened from Home is always in sight, even past the first records of its month.
   const focusPlace = focusExpense ? groups.find(g => g.entries.some(e => e.key === `expense:${focusExpense.id}`)) : undefined
   const shownFor = (group: HistoryMonth) => Math.max(shownIn(view, group.month),
@@ -201,7 +204,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
             <select id="filter-period" value={periodValue(filter.period)} onChange={e => change({ period: periodFrom(e.target.value) })}>
               <option value="all">All time</option>
               {years.map(y => <option key={y} value={`year:${y}`}>{y}</option>)}
-              {months.filter(m => m <= today.slice(0, 7)).map(m => <option key={m} value={`month:${m}`}>{formatYearMonth(m)}</option>)}
+              {periodMonths.filter(m => m <= today.slice(0, 7) || (filter.period.kind === 'month' && m === filter.period.month)).map(m => <option key={m} value={`month:${m}`}>{formatYearMonth(m)}</option>)}
             </select>
           </div>
           <div className="form-field">
@@ -209,6 +212,11 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
             <input id="history-search" type="search" value={filter.search} autoComplete="off" onChange={e => change({ search: e.target.value })} />
           </div>
         </div>
+        {filter.period.kind === 'year' && <div className="choice-row" role="group" aria-label="Year">
+          <button type="button" className="button-small" disabled={selectedYear <= 1} onClick={() => change({ period: { kind: 'year', year: selectedYear - 1 } })}>Previous year</button>
+          <span aria-live="polite">{selectedYear}</span>
+          <button type="button" className="button-small" disabled={selectedYear >= 9999} onClick={() => change({ period: { kind: 'year', year: selectedYear + 1 } })}>Next year</button>
+        </div>}
         <div className="history-filter-row">
           <button type="button" className="button-small more-filters-toggle" aria-expanded={view.moreFilters} aria-controls="history-more-filters"
             onClick={() => onViewChange({ ...view, moreFilters: !view.moreFilters })}>
@@ -261,6 +269,7 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
         )}
       </section>
 
+      {filter.period.kind === 'month' && <div className="period-month-bar no-print" data-sticky-bar><MonthSwitch months={months} value={filter.period.month} onChange={month => change({ period: { kind: 'month', month } })} /></div>}
       <p className="print-only history-print-filters">{printFilters}</p>
 
       <section className="history-results" aria-labelledby="history-count">

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -18,8 +19,7 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const regionOf = (name: string) => screen.getByRole('region', { name })
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const pickMonth = async (month: string) => await chooseMonth(month)
 const form = (bill: string, month: string) => screen.getByRole('group', { name: `Mark as paid: ${bill}, ${month}` })
 const inForm = (bill: string, month: string) => within(form(bill, month))
 const spent = () => text(document.querySelector('[data-return-key="stat-spent"]'))

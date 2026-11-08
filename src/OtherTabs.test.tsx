@@ -379,9 +379,14 @@ describe('read-only', () => {
       const done = new Set<string>()
       for (let round = 0; round < 120; round++) {
         const main = document.querySelector('main')!
-        const next = [...main.querySelectorAll<HTMLButtonElement>('button')].find(b => !done.has(`${b.getAttribute('aria-label') ?? ''}|${b.textContent}`))
+        // Calendar navigation is continuous: explore each action once, not every
+        // generated month label, so financial controls are still reached.
+        const key = (b: HTMLButtonElement) => b.closest('.month-carousel')
+          ? b.classList.contains('month-wheel-front') ? 'month-front' : b.getAttribute('aria-label')!
+          : `${b.getAttribute('aria-label') ?? ''}|${b.textContent}`
+        const next = [...main.querySelectorAll<HTMLButtonElement>('button')].find(b => !done.has(key(b)))
         if (!next) break
-        done.add(`${next.getAttribute('aria-label') ?? ''}|${next.textContent}`)
+        done.add(key(next))
         pressed.push(next.textContent ?? '')
         await fire.click(next)
         if (shownScreen() !== name) { await fire.click(button('Go to Home')); await open() }

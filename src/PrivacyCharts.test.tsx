@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -19,8 +20,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const regionOf = (name: string) => screen.getByRole('region', { name })
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const amount = /\d,\d\d zł/
 const labelsIn = (element: Element) => [...element.querySelectorAll('[aria-label]')].map(item => item.getAttribute('aria-label')!.replace(/\u00a0|\u202f/g, ' '))
 const leaks = (element: Element) => element.querySelectorAll('.donut, .bar, .result-bar, .is-negative, .is-positive, .stat-warning, .amount-out, [role="progressbar"]')

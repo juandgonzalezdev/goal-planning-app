@@ -71,7 +71,7 @@ describe('Explore the Demo from Settings', () => {
     const storage = memoryStorage()
     const { writes } = await openApp(undefined, storage)
     // The own space's screen preferences on this device.
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await fire.click(tab('Bills'))
     await fire.click(button('List'))
     const before = await snapshot(storage)
@@ -80,13 +80,13 @@ describe('Explore the Demo from Settings', () => {
     await exploreFromSettings()
     expect(screen.getByText(DEMO)).toBeTruthy()
     // Nothing of the own space in the demo: Alex's preferences (amounts shown), the demo's first Bills view.
-    expect(button('Hide All Amounts')).toBeTruthy()
+    expect(button('Hide amounts')).toBeTruthy()
     await fire.click(tab('Bills'))
     expect(button('Calendar').getAttribute('aria-pressed')).toBe('true')
     // Change the demo: records, screen preferences and choices.
     await fire.click(button('List'))
     await fire.click(tab('Home'))
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await fire.click(button('Settings'))
     await fire.change(field('Appearance'), { target: { value: 'dark' } })
     await startDemoReset()
@@ -94,14 +94,14 @@ describe('Explore the Demo from Settings', () => {
     expect(screen.getByText(DEMO)).toBeTruthy()
     // Reset Demo also puts Alex's screen preferences back.
     await fire.click(button('Go to Home'))
-    expect(button('Hide All Amounts')).toBeTruthy()
-    await fire.click(button('Hide All Amounts'))
+    expect(button('Hide amounts')).toBeTruthy()
+    await fire.click(button('Hide amounts'))
     await exitDemo()
 
     // Back on the own Home, opened again from the store, with its own preferences and Bills view.
     expect(screen.getByText(OWN_HOME)).toBeTruthy()
     expect(screen.getByRole('heading', { level: 1 }).textContent).not.toBe('Your goals, your way.')
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
     await fire.click(tab('Bills'))
     expect(button('List').getAttribute('aria-pressed')).toBe('true')
     expect(writes).toEqual([])
@@ -257,13 +257,13 @@ describe('Explore the Demo from Settings', () => {
     await browserSpaceStore(memoryStorage()).create(robin())
     await openApp()
     await fire.click(button('Previous month'))
-    const ownMonth = (screen.getAllByLabelText('Month').find(element => element.tagName === 'SELECT') as HTMLSelectElement).value
+    const ownMonth = (screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement).value
     expect(ownMonth).toBe('2026-09')
     await exploreFromSettings()
-    const demoMonth = (screen.getAllByLabelText('Month').find(element => element.tagName === 'SELECT') as HTMLSelectElement).value
+    const demoMonth = (screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement).value
     expect(demoMonth).not.toBe(ownMonth)
     await exitDemo()
-    expect((screen.getAllByLabelText('Month').find(element => element.tagName === 'SELECT') as HTMLSelectElement).value).toBe(ownMonth)
+    expect((screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement).value).toBe(ownMonth)
   })
 
   it('opens while the space can only be shown, and leaving it shows that warning again', async () => {

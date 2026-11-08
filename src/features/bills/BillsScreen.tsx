@@ -131,7 +131,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
       {view.scope === 'month' && <>
       <p id="bill-search-results" className="muted-note no-print" aria-live="off">{shown.length} {shown.length === 1 ? 'bill' : 'bills'}{view.query.trim() ? ' found' : ' shown'} in {monthLabel}</p>
       {view.query.trim() && shown.length === 0 && <p className="muted-note no-print">No bills match your search and payment filter in {monthLabel}. Try another name or category, or change the payment filter.</p>}
-      <MonthSwitch months={months} value={month} onChange={changeMonth} />
+      <div className="period-month-bar" data-sticky-bar><MonthSwitch months={months} value={month} onChange={changeMonth} /></div>
 
       <section className="bills-summary" aria-labelledby="bills-summary-title">
         <div className="section-head">

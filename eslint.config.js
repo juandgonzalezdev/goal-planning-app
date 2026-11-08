@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // Review snapshots are immutable copies, not application sources.
+  globalIgnores(['dist', 'review-deliveries/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

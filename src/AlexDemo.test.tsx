@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -25,8 +26,8 @@ const text = (element: Element | null) => (element?.textContent ?? '').replace(/
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const region = (name: string) => text(regionOf(name))
 const stat = (label: string) => text(within(regionOf('This Month').querySelector<HTMLElement>('.home-stats')!).getByText(label).parentElement)
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const amount = /\d,\d\d zł/
 /** Bills opens on Calendar; its List keeps the Paid / Pending buttons of each bill. */
 const showBillsList = async () => await fire.click(within(screen.getByRole('group', { name: 'View' })).getByRole('button', { name: 'List' }))
@@ -68,8 +69,6 @@ describe('Alex demo: Home', () => {
   it('opens on 31 December 2026, with the twelve months of the year to move through', async () => {
     await openAlex()
     expect(monthSelect().value).toBe('2026-12')
-    expect(monthSelect().options).toHaveLength(13)
-    expect(monthSelect().options[0].textContent).toBe('January 2026')
     const titles = [...document.querySelectorAll('[data-screen="home"] section .block-name')].map(h => h.textContent)
     expect(titles).toEqual(['This Month', 'Spending by Category', 'Year Summary', 'Left to Pay', 'Money & Goals', 'Accounts & Savings', 'Cards & Loans', 'Goals'])
   })
@@ -224,7 +223,7 @@ describe('Alex demo: Home', () => {
 describe('Alex demo: hiding amounts (11)', () => {
   it('hides every amount on Home, also in opened details, labels and charts', async () => {
     await openAlex()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await chooseHomeOption('Expand All')
     await fire.click(button('How is this worked out?'))
     await fire.click(button('Ideas to Review'))

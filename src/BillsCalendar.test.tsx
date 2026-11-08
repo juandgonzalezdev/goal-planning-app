@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -23,8 +24,8 @@ const field = (label: string | RegExp) => screen.getByLabelText(label) as HTMLIn
 const type = async (label: string | RegExp, value: string) => await fire.change(field(label), { target: { value } })
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
+const pickMonth = async (month: string) => await chooseMonth(month)
 const group = (name: string) => within(screen.getByRole('group', { name }))
 const showView = async (name: 'Calendar' | 'List') => await fire.click(group('View').getByRole('button', { name }))
 const showFilter = async (name: RegExp) => await fire.click(group('Show bills by payment').getByRole('button', { name }))
@@ -235,9 +236,9 @@ describe('Bills calendar', () => {
     expect(group('View').getByRole('button', { name: 'List' }).getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('hides every amount with Hide All Amounts, on screen and in print, and Home follows', async () => {
+  it('hides every amount with Hide amounts, on screen and in print, and Home follows', async () => {
     await openCalendarDemo()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     const bills = document.querySelector('[data-screen="bills"]')!
     expect(text(bills)).not.toMatch(/\d,\d\d zł/)
     expect(summary('Planned')).toContain('••••')
@@ -246,7 +247,7 @@ describe('Bills calendar', () => {
     await showView('List')
     expect(text(bills)).not.toMatch(/\d,\d\d zł/)
     await fire.click(tab('Home'))
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
   })
 
   it('prints the whole month as a list, whatever the view and filter', async () => {
@@ -813,8 +814,8 @@ describe('Bills day panel', () => {
     expect(scrolledTo).toEqual([])
     await showFilter(/^Paid/)
     expect(dayBar()).toBe('Tue 15 Feb · 1 paid bill')
-    // The bar never shows amounts, so Hide All Amounts has nothing to hide there.
-    await fire.click(button('Hide All Amounts'))
+    // The bar never shows amounts, so Hide amounts has nothing to hide there.
+    await fire.click(button('Hide amounts'))
     expect(dayBar()).toBe('Tue 15 Feb · 1 paid bill')
     expect(button('View day details')).toBeTruthy()
   })

@@ -118,24 +118,37 @@ describe('Home options menu', () => {
     expect(panel.getAttribute('aria-describedby')).toBeTruthy()
     // While customizing, the eye and the menu step aside, as the old buttons did.
     expect(screen.queryByRole('button', { name: 'Home options' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Hide All Amounts' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Hide amounts' })).toBeNull()
     await fire.click(button('Done'))
     expect(document.activeElement).toBe(options())
-    expect(button('Hide All Amounts')).toBeTruthy()
+    expect(button('Hide amounts')).toBeTruthy()
   })
 })
 
 describe('The Home eye', () => {
+  it('places contextual controls after the wheel outside its sticky strip', async () => {
+    await openAlex()
+    const bar = document.querySelector('.home-month-bar')!
+    const tools = document.querySelector('.home-contextual-tools')!
+    expect(bar.contains(button('Hide amounts'))).toBe(false)
+    expect(tools.contains(options())).toBe(true)
+    expect(bar.compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(button('Hide amounts').getAttribute('aria-pressed')).toBeNull()
+    await fire.click(button('Hide amounts'))
+    expect(button('Amounts hidden. Show amounts').textContent).toContain('Amounts hidden')
+    expect(button('Amounts hidden. Show amounts').getAttribute('aria-pressed')).toBeNull()
+    expect(document.querySelector('.shell-header')!.contains(button('Amounts hidden. Show amounts'))).toBe(false)
+  })
   it('hides and shows every amount with one tap, in text, charts, details and accessible names', async () => {
     await openAlex()
     await chooseHomeOption('Expand All')
     expect(homeText()).toMatch(amount)
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     expect(homeText()).not.toMatch(amount)
     expect(homeLabels()).not.toMatch(amount)
     for (const name of AREAS) expect(button(`Show amounts in ${name}`)).toBeTruthy()
-    expect(button('Show All Amounts').classList.contains('is-hidden')).toBe(true)
-    await fire.click(button('Show All Amounts'))
+    expect(button('Amounts hidden. Show amounts').classList.contains('is-hidden')).toBe(true)
+    await fire.click(button('Amounts hidden. Show amounts'))
     expect(homeText()).toMatch(amount)
     for (const name of AREAS) expect(button(`Hide amounts in ${name}`)).toBeTruthy()
   })
@@ -144,11 +157,11 @@ describe('The Home eye', () => {
     await openAlex()
     const status = () => document.querySelector('.amounts-notice')!
     expect(text(status())).toBe('')
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     expect(status().getAttribute('role')).toBe('status')
     expect(text(status())).toBe('Amounts hidden')
     expect(status().classList.contains('is-shown')).toBe(true)
-    await fire.click(button('Show All Amounts'))
+    await fire.click(button('Amounts hidden. Show amounts'))
     expect(text(status())).toBe('Amounts visible')
     await waitFor(() => expect(text(status())).toBe(''), { timeout: 3000 })
     expect(status().classList.contains('is-shown')).toBe(false)
@@ -161,28 +174,30 @@ describe('The Home eye', () => {
     expect(text(regionOf('This Month'))).toMatch(amount)
     expect(button('Show amounts in Money & Goals').classList.contains('is-hidden')).toBe(true)
     // One area hidden is not all of them: the Home eye still hides all.
-    expect(button('Hide All Amounts')).toBeTruthy()
+    expect(button('Hide amounts')).toBeTruthy()
     await fire.click(button('Hide amounts in This Month'))
     await fire.click(button('Hide amounts in Left to Pay'))
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
     await fire.click(button('Show amounts in Money & Goals'))
     expect(text(toggleOf('Accounts & Savings'))).toMatch(amount)
-    expect(button('Hide All Amounts')).toBeTruthy()
+    expect(button('Hide amounts')).toBeTruthy()
   })
 
   it('shows the names of icon buttons on hover and focus, without a second name for screen readers', async () => {
     await openAlex()
-    for (const name of ['Hide All Amounts', 'Home options', 'Hide amounts in This Month', 'Demo options']) {
+    expect(button('Hide amounts').textContent).toContain('Hide amounts')
+    expect(options().textContent).toContain('Home options')
+    for (const name of ['Hide amounts in This Month', 'Demo options']) {
       const tip = button(name).querySelector('.icon-tip')!
       expect(tip.textContent).toBe(name)
       expect(tip.getAttribute('aria-hidden')).toBe('true')
     }
   })
 
-  it('Bills and History keep their own Hide All Amounts button', async () => {
+  it('Bills and History keep their own Hide amounts button', async () => {
     await openAlex()
     await fire.click(tab('Bills'))
-    expect(button('Hide All Amounts').textContent).toContain('Hide All Amounts')
+    expect(button('Hide amounts').textContent).toContain('Hide amounts')
   })
 })
 
@@ -190,8 +205,8 @@ describe('What was typed survives the controls', () => {
   it('keeps a half-typed amount through the eyes, Expand All, Collapse All, Customize Home and moving its area', async () => {
     await openAlex()
     await typeRent('1234')
-    await fire.click(button('Hide All Amounts'))
-    await fire.click(button('Show All Amounts'))
+    await fire.click(button('Hide amounts'))
+    await fire.click(button('Amounts hidden. Show amounts'))
     await fire.click(button('Hide amounts in This Month'))
     await fire.click(button('Show amounts in This Month'))
     await chooseHomeOption('Collapse All')

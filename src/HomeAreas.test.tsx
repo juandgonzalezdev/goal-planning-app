@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -22,8 +23,7 @@ const text = (element: Element | null) => (element?.textContent ?? '').replace(/
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
 const regionOf = (name: string) => screen.getByRole('region', { name })
 const toggleOf = (name: string) => regionOf(name).querySelector<HTMLButtonElement>('.block-toggle')!
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
-const pickMonth = async (month: string) => await fire.change(monthSelect(), { target: { value: month } })
+const pickMonth = async (month: string) => await chooseMonth(month)
 const onHome = () => tab('Home').getAttribute('aria-current') === 'page'
 const shown = () => document.querySelector<HTMLElement>('[data-screen]')?.dataset.screen
 const unpaid = () => [...regionOf('Left to Pay').querySelectorAll('.pay-groups .pay-list li')].map(row => text(row.querySelector('span')).replace(/(Due|Overdue since) .*/, ''))
@@ -352,11 +352,11 @@ describe('Preferences saved by an earlier version', () => {
     // One block of each area hidden: every area, so Bills hides its amounts too.
     storage.setItem('goal-planning-app.hidden-amounts', JSON.stringify(['year', 'left-to-pay', 'debt']))
     await reopen(storage)
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
     await fire.click(tab('Bills'))
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
     await fire.click(tab('History'))
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
   })
 
   it('places each area where its first block was, and opens the parts that were open', async () => {
@@ -379,7 +379,7 @@ describe('Preferences saved by an earlier version', () => {
     storage.setItem('goal-planning-app.hidden-amounts', JSON.stringify(['money']))
     await openAlex(storage)
     expect(button('Hide amounts in Money & Goals')).toBeTruthy()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     expect(JSON.parse(storage.getItem('goal-planning-app.hidden-amounts')!)).toEqual(['money'])
   })
 

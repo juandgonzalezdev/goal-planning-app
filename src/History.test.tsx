@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
@@ -28,7 +29,7 @@ const count = () => text(document.getElementById('history-count'))
 const rowKeys = () => [...document.querySelectorAll('.history-months .history-list > li')].map(li => li.id)
 const overviewToggle = () => button(/^Year Overview/)
 const search = async (value: string) => await fire.change(field('Search by name or note'), { target: { value } })
-const monthSelect = () => screen.getByRole('combobox', { name: 'Month' }) as HTMLSelectElement
+const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
 const confirmReset = async () => await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
 const alex = () => activityLog(createAlexDemo())
 
@@ -103,7 +104,7 @@ describe('History period', () => {
     await fire.change(field('Period'), { target: { value: 'month:2026-03' } })
     await fire.click(tab('Home'))
     expect(monthSelect().value).toBe('2026-12')
-    await fire.change(monthSelect(), { target: { value: '2026-06' } })
+    await chooseMonth('2026-06')
     await fire.click(tab('Bills'))
     await fire.click(tab('History'))
     expect(field('Period').value).toBe('month:2026-03')
@@ -221,7 +222,7 @@ describe('History months', () => {
     await openHistory()
     await fire.click(monthToggle('December 2026'))
     await fire.click(monthToggle('March 2026'))
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await fire.click(tab('Home'))
     await fire.click(tab('History'))
     expect(openMonthNames()).toEqual(['March 2026'])
@@ -266,6 +267,29 @@ describe('History rows', () => {
 })
 
 describe('History navigation', () => {
+  it('navigates continuous periods independently while preserving search and type', async () => {
+    await openHistory()
+    await search('card')
+    await fire.click(button(/^More Filters/))
+    await fire.change(field('Type'), { target: { value: 'bill' } })
+    await fire.click(button('Next year'))
+    expect(field('Period').value).toBe('year:2027')
+    await fire.change(field('Period'), { target: { value: 'month:2026-12' } })
+    await fire.click(button('Next month'))
+    await fire.click(button('Next month'))
+    expect(field('Period').value).toBe('month:2027-02')
+    expect(field('Search by name or note').value).toBe('card')
+    expect(field('Type').value).toBe('bill')
+    await fire.click(tab('Home'))
+    expect(monthSelect().value).toBe('2026-12')
+    await fire.click(tab('Bills'))
+    expect(monthSelect().value).toBe('2026-12')
+    await fire.click(tab('History'))
+    expect(field('Period').value).toBe('month:2027-02')
+    expect(field('Search by name or note').value).toBe('card')
+    expect(field('Type').value).toBe('bill')
+  })
+
   it('opens a bill payment on its own month, and Back keeps the period, search, filters, open months and records shown', async () => {
     await openHistory()
     await search('card')
@@ -370,9 +394,9 @@ describe('History empty states', () => {
 })
 
 describe('History privacy', () => {
-  it('follows Hide All Amounts in rows, the chart, details, the print list and accessible names', async () => {
+  it('follows Hide amounts in rows, the chart, details, the print list and accessible names', async () => {
     await openHistory()
-    await fire.click(button('Hide All Amounts'))
+    await fire.click(button('Hide amounts'))
     await fire.click(overviewToggle())
     await fire.click(screen.getByRole('button', { name: /^July 2026:/ }))
     await fire.change(field('Period'), { target: { value: 'month:2026-12' } })
@@ -388,7 +412,7 @@ describe('History privacy', () => {
     expect(screen.getByText('Chart hidden with the amounts')).toBeTruthy()
     // Shared with Home and Bills.
     await fire.click(tab('Bills'))
-    expect(button('Show All Amounts')).toBeTruthy()
+    expect(button('Amounts hidden. Show amounts')).toBeTruthy()
   })
 })
 

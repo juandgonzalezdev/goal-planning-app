@@ -1845,3 +1845,208 @@ Hash final documental, push y coincidencia main/origin/main/remoto en:
 review-deliveries/ux-01-c/integration-2026-11-06/CLOSURE.md.
 Push no equivale a despliegue: Cloudflare Pages no verificado. Próxima rama
 codex/ux-02-month-selector desde main final, preparada sin implementar UX-02/03.
+
+## UX-02 — selector continuo de meses, entrega local (2026-11-06)
+
+Dirección autoriza implementar UX-02 sobre ae8150a1dc336d035c6e24dadbba1542792b238b,
+rama codex/ux-02-month-selector. MonthSwitch reutilizable: vecinos con profundidad
+leve, mes frontal, navegación continua, cuadrícula 3×4/año directo, teclado,
+gestos horizontales con cancelación y movimiento reducido. Home/Bills/Cards y
+detalles conservan el mes compartido. History mantiene período independiente,
+búsqueda, filtros y guardas, con selector mensual y navegación de años.
+Sin cálculos, payments, almacenamiento, datos, dependencias ni gráficos UX-03.
+El formato YYYY-MM impone extremos técnicos 0001–9999; sin límite nuevo a 2026/27.
+
+Comprobaciones propias: suite completa 1009/1009 en 71 archivos (282,29 s);
+50/50 dirigidas de controles anteriores no se suman. Ajuste posterior localizado
+de pointer capture sobre el botón original para conservar el toque: 8/8 del
+componente después del ajuste. Resultados finales de lint/build y comprobación
+completa adicional en DELIVERY.md; no se atribuye ejecución manual ni visual.
+Audit intentado: ENOTFOUND registry.npmjs.org, no completado; dependencias intactas.
+Aviso conocido del bundle >500 kB. Navegador integrado no conectó al servidor
+local (TIMEOUT); sin captura, Chrome real, Safari/iPhone ni lector real.
+
+Diez archivos exactos en docs/UX_02.md. Índice vacío, ajenos conservados.
+Entrega local sin commit, no fija por hash:
+review-deliveries/ux-02/working-2026-11-06/DELIVERY.md.
+Pendientes revisión de Claude y los diez recorridos manuales en Chrome y
+Safari/iPhone, incluidos temas, zoom, sticky, foco, gestos y VoiceOver.
+Sin preparar, commit, merge, push ni despliegue. Commit requiere autorización.
+
+## UX-02 — correcciones tras Changes requested (2026-11-07)
+
+Codex leyó REVISION.md de la entrega working-2026-11-06 (H1–H9) y recibió el
+resumen de revisión independiente de Juan. El enlace claude.ai/mnt al informe
+independiente no fue accesible; no se afirma lectura de ese texto ni capturas.
+Los informes y la entrega anterior se preservan. Dirección confirma permitir
+períodos futuros también en History; su independencia/filtros se conservan.
+
+Se retira el select oculto y controles duplicados: tres controles, nombres
+completos accesibles y abreviaturas legibles. Panel dialog en portal fuera de la
+barra sticky, scroll acotado, objetivos de al menos 44px. Year admite borrador
+vacío y 1999 sin restaurar dígitos. Escape/foco y clic de teclado tras swipe
+corregidos; CSS consolidado y profundidad reforzada, pendiente de juicio visual.
+Pruebas de pantallas migradas a interacción por diálogo; sin cambios de dominio,
+payments, almacenamiento, datos, dependencias ni UX-03.
+
+Verificación visual propia Chromium: barra 56,8px cerrada/abierta a 390 y 320px;
+Close por encima de navegación a 320×640, panel con botones >=44×44 y sin meses
+recortados. Claro/oscuro y escritorio inspeccionados; Year vacío → 1999 confirmado.
+Capturas y límites en docs/UX_02.md. Scroll horizontal heredado a 320px con
+scrollbar clásico (body min-width320): documentado, no corregido ni atribuido al
+selector. Sin iPhone real, Safari, VoiceOver ni teclado virtual confirmados.
+Los recorridos ★1–3 del informe independiente siguen pendientes; no disponibles
+para lectura exacta ni ejecutados antes de corregir.
+
+Comprobaciones finales propias y manifiesto ampliado por migración de pruebas:
+review-deliveries/ux-02/corrections-2026-11-07/DELIVERY.md.
+Once pruebas nuevas/actualizadas del componente y 23/23 dirigidas finales
+(DemoFromSettings/componente); LeaveForms aislada 23/23 tras timeout de 5s en una
+ejecución anterior, sin afirmar causa. Resultados completos/lint/build en entrega.
+Audit 0 producción y flake MarkPaid en base son comunicados por Juan sobre la
+revisión anterior, no nuevas comprobaciones de Codex ni diagnóstico independiente.
+Sin cambios de dependencias; no se repite audit de ese mismo contenido.
+
+Índice vacío; rama/base ae8150a conservados, ajenos excluidos. Sin commit, merge,
+push ni despliegue. Nueva entrega local sin hash; pendientes revisión de Claude,
+aceptación Safari/iPhone y autorización de commit para entrega fija.
+
+Resultado final propio de las correcciones UX-02: **1012/1012**, 71 archivos,
+275,78 s, salida0. Sustituye la ejecución intermedia1011/1012 cuyo único fallo era
+la consulta del select retirado en DemoFromSettings; helper corregido y verificado.
+Las23/23 dirigidas finales y23/23 de LeaveForms aislada no se suman. Lint/build
+finales salida0; JS725,02kB/gzip202,73kB, aviso conocido>500kB; diff correcto.
+No se repite la suite por este registro documental ni se atribuye manual Safari.
+
+## UX-02 — evaluación integral de composición (2026-11-07)
+
+Dirección solicita auditar/preparar diseño, sin autorizar commit, merge ni push.
+Codex leyó corrections-2026-11-07/REVISION.md: Approved with observations,
+H1–H9/N1/N3 resueltos y O1–O5 bajos. Al empezar,25/25 archivos coincidían por
+SHA-256 con aquella entrega; las1012/1012 del mismo contenido se reutilizan como
+resultados anteriores y de Claude, no como ejecución nueva.
+
+Auditoría propia Chromium: Home escritorio/móvil, menús Home options/+ Add,
+modal, Bills, History, modo oscuro y prototipo original. Evidencia nueva en
+review-deliveries/ux-02/composition-audit-2026-11-07/screenshots/.
+Confirma estiramiento desktop (frontal~838px a1280 con barras clásicas), vecinos
+poco reconocibles, privacidad/opciones al lado de fecha. Settings ya está en
+riel desde1024px y en cabecera móvil; no se presume duplicación en escritorio.
+O3 previo medido: foco en Previous year. No son pruebas Safari/iPhone/VoiceOver.
+
+Correcciones autorizadas independientes: O3 enfoca mes seleccionado tras abrir
+modal y retira autoFocus del año; O4 captura disparador para limpieza del efecto.
+ESLint excluye review-deliveries/** para no volver a analizar snapshots históricos
+inmutables; src mantiene sus reglas. Se preservan copias/informes anteriores.
+Prueba del componente ampliada a12/12 (4,68s), lint --max-warnings=0 y build
+correctos; JS725,06kB/gzip202,74kB, aviso conocido>500kB; diff correcto. Sin suite
+completa nueva, audit nuevo ni cambios de dependencias por este ajuste acotado.
+
+Informe: docs/UX_02_COMPOSITION_EVALUATION.md.
+Brief para Claude: docs/UX_02_PROTOTYPE_BRIEF.md.
+Recomendación A: selector compacto en franja temporal propia; herramientas de Home
+separadas junto al título; + Add y Settings conservados. Alternativa B: ojo global
+en cabecera con análisis de duplicaciones/contexto. No se implementan A/B.
+Dirección debe decidir ubicación/fijeza, dimensiones/alineación y profundidad
+viendo el prototipo. Ruta de prototipo propuesta en brief, pendiente de acuerdo.
+
+O1/O2 y composición pendientes; O5 conservado por compatibilidad contractual.
+History futuro e independiente continúa confirmado. Sin UX-03, finanzas,
+payments, almacenamiento ni nuevos datos. Índice vacío, base/rama conservadas,
+archivos ajenos excluidos. Nueva entrega local composition-audit-2026-11-07,
+no fija por hash. Ninguna autorización de commit, merge, push o publicación.
+
+## UX-02 — Month Wheel v2 + Contextual Controls B (2026-11-08)
+
+Dirección comunica aprobación del Artifact v2 tras probarlo en iPhone y autoriza
+implementación/pruebas, sin commit/merge/push/despliegue. Se consultó el HTML
+exportado de Downloads, se archivó sin modificar en reference/ y se comparó B en
+navegador. Su aprobación en iPhone no valida todavía el producto implementado.
+B contextual sustituye los candidatos A/B anteriores: no ojo en cabecera.
+
+Motor continuo local fuera de React: arrastre proporcional, muestras de velocidad,
+proyección inercial±12, desaceleración/encaje, hold380ms acelerado300→110ms y
+captura/interrupción. Cinco posiciones decorativas, centro19px/año12,5px,
+perspectiva520px, máximo352px. Solo asentamiento solicita el mes; solo valor
+aceptado anuncia. Cancelaciones de seguridad restauran confirmado y guardas
+intactas; detalle de diferencia frente al Lab en docs/UX_02_V2.md. Sin tareas
+tras desmontaje ni sonido/vibración. Sin cálculos, datos, payments, persistencia,
+dependencias ni UX-03.
+
+Home: fila temporal propia fija; debajo privacidad izquierda y Home options con
+texto/icono a la derecha, no sticky. Nombre/Add/Settings visibles a320. Bills e
+History mensual conservan filtros con franja temporal sticky; barra del día
+ajustada para no solaparse. Se elimina min-width heredado de body que causaba
+scroll horizontal con scrollbar; comprobación propia sin overflow a320/390/1280.
+
+Pruebas nuevas de motor con reloj determinista, ciclo de vida con timers simulados,
+modal/foco, guardas y privacidad contextual. Dirigidas finales50/50 en4 archivos,
+23,30s; no sumar con suite completa. La nueva suite completa final, lint estricto,
+build/audit/diff se registran en DELIVERY.md. Los resultados1012 anteriores no
+se atribuyen a esta versión. Audit propio ENOTFOUND, no completado; sin audit fix.
+
+Chromium propio: arrastre December2026→July2027 y hold1500ms September1999→
+March2000, con parada al soltar. Home/Bills comparten mes; History card conserva
+su períodoFebruary2027 mientras Home mantieneMarch2000. Modal enfoca selección,
+salto directo, máscaras y temas claro/oscuro comprobados. Wheel352px a1280,
+347,2px a390 y276,8px a320. Herramientas fuera de sticky y controles>=44px.
+Sin prueba nueva de Safari/iPhone, VoiceOver o teclado virtual; guion en UX_02_V2.
+
+Entrega local nueva, iniciada7nov/cerrada8nov:
+review-deliveries/ux-02/v2-contextual-2026-11-07/DELIVERY.md.
+Informe técnico:docs/UX_02_V2.md. Las entregas/revisiones anteriores se conservan.
+Pendientes Claude Pro, validación manual de Dirección y autorización de commit/
+integración. UX-02 no se declara cerrado. Índice vacío y archivos ajenos excluidos.
+
+Resultado final propio v2: **1034/1034**,73 archivos,248,99s,salida0. Incluye la
+regresión nueva del toque durante el asentamiento imperceptible (falló antes de
+ajustar el umbral al0,15 del Lab). Dirigidas finales50/50,4 archivos,23,30s;
+no se suman. Lint --max-warnings=0 y build finales salida0, JS733,14kB/gzip205,28kB;
+aviso conocido>500kB. Audit salió1 por ENOTFOUND; no es un resultado de0
+vulnerabilidades. Diff correcto y sin cambios de dominio/datos/dependencias.
+Las ejecuciones1033/1033 intermedias quedan sustituidas por esta final; no se
+repite ninguna por el cierre documental ni se atribuyen manuales de iPhone.
+
+## UX-02 v2 — correcciones de revisión, 2026-11-08
+
+Juan solicita M1, B1 y B2 del informe independiente v2-contextual-2026-11-07.
+Codex separa encaje por cancelación táctil de restauración de seguridad, elimina
+el timeout de reconciliación y la pintura intermedia del mes anterior. Privacidad
+usa nombre de acción que incluye el texto visible, sin aria-pressed. Física y
+composición B conservadas; sin cambios financieros, de almacenamiento o datos.
+Regresiones: hold+vertical/cancel, flick interrumpido+scroll, cancel/lostcapture,
+transferencia de captura, trazas visuales y privacidad Home/Bills/History.
+
+Resultados propios finales: dirigidas58/58; suite1042/1042,73 archivos,270,61s,
+salida0. Lint estricto y build salida0, aviso conocido>500kB. MarkPaid pasa;
+el fallo en base comunicado por Claude no se reproduce aquí. Audit ENOTFOUND,
+no completado. Diff e índice comprobados. Detalle y logs en la entrega.
+
+Entrega local sin commit: review-deliveries/ux-02/v2-review-fixes-2026-11-08/.
+Snapshot y diff incremental para comprobación breve de Claude; informe acordado
+en esa carpeta/REVISION.md. Sin nuevos recorridos manuales propios. Pendientes
+Safari/iPhone, VoiceOver y aprobación de Dirección. Sin commit, merge, push ni
+despliegue; UX-02 no cerrado. Entregas anteriores intactas y cambios ajenos fuera.
+
+## UX-02 v2 — cierre técnico autorizado, 2026-11-08
+
+Claude emitió Approved en review-deliveries/ux-02/v2-review-fixes-2026-11-08/REVISION.md;
+Codex leyó el informe y comprobó 41/41 archivos idénticos al snapshot aprobado.
+Dirección autoriza commit, integración en main y push origin main. El cierre
+técnico incluye M1, B1 y B2; la validación de usuario será posterior en Pages.
+Se conservan las entregas y los informes locales, fuera del commit de la app.
+
+Se reutilizan los resultados propios del mismo código y entorno: suite1042/1042,
+dirigidas58/58, lint --max-warnings=0 y build salida0. Solo se añade documentación
+de cierre; no se repite la suite por la integración sin cambios de código.
+Claude comunica1041/1042 por MarkPaid en su entorno, también observado por él
+en la base sin UX-02; aquí MarkPaid pasó. No se modifica dentro de UX-02.
+Audit anterior no completado por ENOTFOUND; aviso conocido de bundle>500kB.
+No se atribuyen pruebas nuevas de Safari/iPhone ni VoiceOver. Pendientes en
+validación de usuario: hold+vertical, flick+toque+scroll, encaje sin parpadeo y
+nombre de privacidad con VoiceOver. Sin despliegue manual: el push autorizado
+a main debe activar el proceso habitual de Cloudflare Pages.
+
+La entrega fijada al commit final y el resultado de Git se registran localmente
+en review-deliveries/ux-02/<commit-final-completo>/DELIVERY.md. Archivos ajenos
+excluidos y conservados sin seguimiento.

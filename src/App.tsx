@@ -587,7 +587,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     for (const element of shell.querySelectorAll('.shell-header, .bottom-nav, [data-sticky-bar]')) observer.observe(element)
     window.addEventListener('resize', measure)
     return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
-  }, [screen, open?.kind])
+  }, [screen, open?.kind, historyView.filter?.period.kind, billsView.scope])
 
   // What happened when the space could not be started: the setup stays as typed.
   const [setupOutcome, setSetupOutcome] = useState<SaveOutcome | null>(null)
