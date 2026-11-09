@@ -17,7 +17,7 @@ import type { SaveOutcome } from './ui/saveOutcome'
 freshDatabaseForEachTest()
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
-const region = () => screen.getByRole('region', { name: 'Your money and goals' })
+const region = () => document.querySelector<HTMLElement>('.goal-rings')!
 const inRings = () => within(region())
 const money = (value: number) => formatAmount(value, 'PLN')
 
@@ -74,7 +74,7 @@ describe('optional Goal Rings on Home', () => {
     await fire.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Home' }))
     expect(inRings().getByRole('heading', { name: 'Goals' })).toBeTruthy()
     cleanup(); render(<App storage={storage} />); await settle(); await fire.click(button('Explore the App'))
-    expect(inRings().getByRole('heading', { name: 'All areas' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /^All areas/, level: 2 })).toBeTruthy()
     await fire.click(button('Settings')); await fire.click(screen.getByRole('checkbox', { name: /Show rings on Home/ })); await fire.click(button('Back'))
     expect(screen.queryByRole('region', { name: 'Your money and goals' })).toBeNull()
   })

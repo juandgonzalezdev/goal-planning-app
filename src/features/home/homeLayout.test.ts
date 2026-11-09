@@ -28,7 +28,7 @@ describe('Home layout', () => {
     expect(normalizeLayout(earlier)).toEqual({ order: ['month', 'left-to-pay', 'money-goals'], open: ['money', 'year'] })
     expect(normalizeLayout({ order: ['goals', 'month', 'year'], open: [] }).order).toEqual(['money-goals', 'month', 'left-to-pay'])
     expect(normalizeLayout({ order: ['left-to-pay'] }).order).toEqual(['left-to-pay', 'month', 'money-goals'])
-    // The earlier first layout (This Month and Left to Pay open) opens no part: their figures always show now.
+    // Legacy area entries open no nested part; This Month keeps its default expansion.
     expect(normalizeLayout({ order: [...HOME_BLOCKS], open: ['month', 'left-to-pay'] })).toEqual(DEFAULT_LAYOUT)
   })
 
@@ -75,4 +75,24 @@ describe('Balance dates on Home', () => {
     expect(balanceDatesText(['2026-08-31', null], '2026-08-31')).toBe('Balances as of 31 Aug 2026 · Some not entered')
     expect(balanceDatesText([null], '2026-08-31')).toBe('No balances entered by 31 Aug 2026')
   })
+})
+
+it('round-trips the independent rings collapse preference while preserving legacy defaults and order',()=>{
+ const legacy=normalizeLayout({version:2,order:['money-goals'],open:['goals']})
+ expect(legacy.ringsOpen??true).toBe(true)
+ const collapsed=setAllOpen(legacy,false)
+ expect(normalizeLayout(layoutToSave(collapsed))).toEqual(collapsed)
+ expect(collapsed.ringsOpen).toBe(false);expect(collapsed.order).toEqual(legacy.order)
+ expect(setAllOpen(collapsed,true).ringsOpen).toBe(true)
+})
+
+it('round-trips This Month folding without changing area order or legacy defaults', () => {
+  const legacy = normalizeLayout({ version: 2, order: ['money-goals'], open: ['year'] })
+  expect(legacy.monthOpen ?? true).toBe(true)
+  const closed = setAllOpen(legacy, false)
+  expect(closed.monthOpen).toBe(false)
+  expect(closed.order).toEqual(legacy.order)
+  expect(normalizeLayout(layoutToSave(closed))).toEqual(closed)
+  expect(setAllOpen(closed, true).monthOpen).toBe(true)
+  expect(normalizeLayout({ version: 2, monthOpen: 'false' }).monthOpen).toBeUndefined()
 })

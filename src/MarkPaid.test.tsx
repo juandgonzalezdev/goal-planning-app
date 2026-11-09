@@ -239,7 +239,7 @@ describe('A loan on its own screen', () => {
     await fire.click(within(question).getByRole('button', { name: 'Keep as Paid' }))
     expect(button('Mark as Not Paid: Small Loan, December 2026')).toBe(document.activeElement)
     await markNotPaid('Small Loan', 'December 2026')
-    expect(screen.getByRole('status').textContent).toContain('Small Loan marked as not paid for December 2026.')
+    expect(within(screen.getByRole('main')).getByRole('status').textContent).toContain('Small Loan marked as not paid for December 2026.')
     await fire.click(button('Mark as Paid: Small Loan, December 2026'))
     const fields = inForm('Small Loan', 'December 2026')
     expect((fields.getByLabelText('Paid on') as HTMLInputElement).value).toBe('2026-12-15')

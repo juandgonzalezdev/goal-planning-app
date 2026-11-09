@@ -1,6 +1,6 @@
 import { AREA_OF, HOME_AREAS, HOME_BLOCKS, type HomeArea, type HomeBlock } from '../../ui/amountVisibility'
 
-/** The five parts of Home that open and close (inside This Month and Money & Goals). This Month's figures and Left to Pay always show. */
+/** The five parts of Home that open and close (inside This Month and Money & Goals). This Month also folds as an area; Left to Pay always shows. */
 export const HOME_SECTIONS = ['categories', 'year', 'money', 'debt', 'goals'] as const satisfies readonly HomeBlock[]
 export type HomeSection = (typeof HOME_SECTIONS)[number]
 
@@ -17,6 +17,10 @@ export const AREA_SECTIONS: Record<HomeArea, HomeSection[]> = {
  * amount, no record and no hidden amount.
  */
 export interface HomeLayout {
+  /** Absent in existing layouts: preserve the previously expanded rings. */
+  ringsOpen?: boolean
+  /** Absent in existing layouts: preserve the expanded This Month area. */
+  monthOpen?: boolean
   order: HomeArea[]
   open: HomeSection[]
 }
@@ -37,18 +41,21 @@ const openSections = (value: unknown) => (Array.isArray(value) ? unique(value.fi
  * - This version (`version: 2`): the three areas and the open parts.
  * - An earlier version (seven blocks): each area takes the place of the
  *   first of its blocks, and a part stays open when its block was open.
- *   This Month and Left to Pay were blocks too; their figures now always show.
+ *   This Month and Left to Pay were blocks too; legacy open entries do not
+ *   override the default area expansion.
  * - Anything else: the first layout.
  */
 export function normalizeLayout(value: unknown): HomeLayout {
   const record = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}
+  const rings = typeof record.ringsOpen === 'boolean' ? { ringsOpen: record.ringsOpen } : {}
+  const month = typeof record.monthOpen === 'boolean' ? { monthOpen: record.monthOpen } : {}
   const order = Array.isArray(record.order) ? record.order : []
-  if (record.version === 2) return { order: complete(unique(order.filter(isArea))), open: openSections(record.open) }
+  if (record.version === 2) return { ...rings, ...month, order: complete(unique(order.filter(isArea))), open: openSections(record.open) }
   return { order: complete(unique(order.filter(isBlock).map(block => AREA_OF[block]))), open: openSections(record.open) }
 }
 
 /** What is saved: the layout, marked as this version's. */
-export const layoutToSave = (layout: HomeLayout) => ({ version: 2, order: layout.order, open: layout.open })
+export const layoutToSave = (layout: HomeLayout) => ({ version: 2, order: layout.order, open: layout.open, ...(layout.ringsOpen === undefined ? {} : { ringsOpen: layout.ringsOpen }), ...(layout.monthOpen === undefined ? {} : { monthOpen: layout.monthOpen }) })
 
 export const isOpen = (layout: HomeLayout, section: HomeSection) => layout.open.includes(section)
 
@@ -57,8 +64,8 @@ export function setOpen(layout: HomeLayout, section: HomeSection, open: boolean)
   return { ...layout, open: open ? [...others, section] : others }
 }
 
-/** Expand All and Collapse All: the five parts. The areas themselves never close. */
-export const setAllOpen = (layout: HomeLayout, open: boolean): HomeLayout => ({ ...layout, open: open ? [...HOME_SECTIONS] : [] })
+/** Expand All and Collapse All: This Month, five parts and the optional rings card. Headers stay visible. */
+export const setAllOpen = (layout: HomeLayout, open: boolean): HomeLayout => ({ ...layout, monthOpen: open, ringsOpen: open, open: open ? [...HOME_SECTIONS] : [] })
 
 /** Puts `area` at position `to` (0 is the top); the others keep their order. */
 export function moveArea(layout: HomeLayout, area: HomeArea, to: number): HomeLayout {

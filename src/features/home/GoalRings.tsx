@@ -24,6 +24,8 @@ const NAMES = { income: 'Income', bills: 'Bills', debts: 'Cards & Loans', goals:
 export const DRAW_GOAL_ON_OPEN = true
 
 type Props = {
+  /** The parent FoldBlock supplies the root heading and landmark. */
+  embedded?: boolean
   data: FinanceData; month: YearMonth; today: CalendarDate; asOf: CalendarDate
   newId: () => string; onChange: (data: FinanceData, base?: number) => Promise<SaveOutcome>
   onOpen: (area: Area) => void
@@ -37,7 +39,7 @@ function bandPath(radius: number) {
   return `M ${200 + x} ${y} A ${radius} ${radius} 0 1 1 ${200 - x} ${y}`
 }
 
-export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, view: controlledView, onViewChange }: Props) {
+export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, view: controlledView, onViewChange, embedded = false }: Props) {
   const [localView, setLocalView] = useState<RingsView>('all')
   const requestedView = controlledView ?? localView
   const view = requestedView.startsWith('goal:') && !data.goals.some(g => g.id === requestedView.slice(5) && g.status === 'active') ? 'goals' : requestedView
@@ -65,6 +67,7 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
   const progress = goal ? goalProgress(goal, data.goalMovements, today) : null
   const selected: Area | null = goal ? 'goals' : AREAS.includes(view as Area) ? view as Area : null
   const time = goal ? goalMonthPosition(goal, today) : null
+  const PanelHeading = embedded ? 'h3' : 'h2'
   const title = goal?.name ?? (selected ? NAMES[selected] : 'All areas')
   const values: Record<Area, string> = {
     income: incomeAmounts.money(income.received), bills: billAmounts.money(bills.leftToPay),
@@ -103,14 +106,14 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
     <span>{NAMES[area]}<small>{notes[area]}</small></span><b>{values[area]}</b>
   </button>
   const actualChange = goal && change?.goalId === goal.id ? change : null
-  return <section className={`block goal-rings${reducedMotion ? ' is-reduced-motion' : ''}`} aria-label="Your money and goals" ref={root} onKeyDown={event => {
+  return <section className={`block goal-rings${reducedMotion ? ' is-reduced-motion' : ''}`} aria-label={embedded ? undefined : 'Your money and goals'} ref={root} onKeyDown={event => {
     if (event.key === 'Escape' && view !== 'all') { event.preventDefault(); event.stopPropagation(); back() }
   }}>
-    <nav className="rings-crumbs" aria-label="Rings navigation">
+    {(!embedded || view !== 'all') && <nav className="rings-crumbs" aria-label="Rings navigation">
       <button type="button" onClick={() => go('all', selected ? areaOrigin.current : 'rings-title')} aria-current={view === 'all' ? 'page' : undefined}>All areas</button>
       {selected && <><span aria-hidden="true">›</span><button type="button" onClick={() => go(selected, goal ? `goal-${goal.id}` : 'rings-title')} aria-current={!goal ? 'page' : undefined}>{NAMES[selected]}</button></>}
       {goal && <><span aria-hidden="true">›</span><span aria-current="page">{goal.name}</span></>}
-    </nav>
+    </nav>}
     {view !== 'all' && <button type="button" className="back-link" onClick={back}>← {form ? 'Close Contribution' : goal ? 'Goals' : 'All areas'}</button>}
     <div className="rings-layout">
       <div className={`rings-stage${goal ? ' is-goal' : ''}${selected ? ' has-selection' : ''}`}>
@@ -145,7 +148,7 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
         </div>}
       </div>
       <div className="rings-panel" key={view}>
-        <h2 className="section-title" tabIndex={-1} data-rings-focus="rings-title">{title}</h2>
+        {(!embedded || view !== 'all') && <PanelHeading className="section-title" tabIndex={-1} data-rings-focus="rings-title">{title}</PanelHeading>}
         {view === 'all' ? <><div className="rings-area-list">{AREAS.map(areaButton)}</div><p className="field-help">Ring sizes don't show amounts. They are places to go.</p></> : goal && progress ? <>
           <dl className="fact-rows"><div><dt>Saved</dt><dd>{money(progress.saved)}</dd></div><div><dt>Target</dt><dd>{money(goal.target)}</dd></div><div><dt>To go</dt><dd>{goal.target === null ? 'No target set' : money(progress.remaining)}</dd></div></dl>
           <p>{goal.deadline ? `By ${formatDate(goal.deadline)}` : 'No deadline'}</p>

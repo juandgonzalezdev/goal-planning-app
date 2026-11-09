@@ -14,7 +14,7 @@ afterEach(() => { cleanup() })
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const text = (element: Element | null) => (element?.textContent ?? '').replace(/\u00a0|\u202f/g, ' ')
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
-const regionOf = (name: string) => screen.getByRole('region', { name })
+const regionOf = (name: string) => screen.getByRole('region', { name, hidden: true })
 const toggleOf = (name: string) => regionOf(name).querySelector<HTMLButtonElement>('.block-toggle')!
 const homeText = () => text(document.querySelector('[data-screen="home"]'))
 const homeLabels = () => [...document.querySelectorAll('[data-screen="home"] [aria-label]')].map(element => element.getAttribute('aria-label')).join(' | ')
@@ -104,10 +104,10 @@ describe('Home options menu', () => {
     expect(menu()).toBeNull()
     expect(document.activeElement).toBe(options())
     expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'true')).toBe(true)
-    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All parts open.')
+    expect(text(document.querySelector('.home-screen .visually-hidden[role="status"]'))).toBe('All parts open.')
     await chooseHomeOption('Collapse All')
     expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'false')).toBe(true)
-    expect(text(document.querySelector('.visually-hidden[role="status"]'))).toBe('All parts closed.')
+    expect(text(document.querySelector('.home-screen .visually-hidden[role="status"]'))).toBe('All parts closed.')
   })
 
   it('Customize Home puts the keyboard on its instructions, and Done puts it back on Home options', async () => {
@@ -117,8 +117,9 @@ describe('Home options menu', () => {
     expect(document.activeElement).toBe(panel)
     expect(panel.getAttribute('aria-describedby')).toBeTruthy()
     // While customizing, the eye and the menu step aside, as the old buttons did.
-    expect(screen.queryByRole('button', { name: 'Home options' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Hide amounts' })).toBeNull()
+    expect(options()).toBeTruthy()
+    expect(document.querySelector('.shell-header')!.contains(options())).toBe(true)
+    expect(button('Hide amounts')).toBeTruthy()
     await fire.click(button('Done'))
     expect(document.activeElement).toBe(options())
     expect(button('Hide amounts')).toBeTruthy()
@@ -126,18 +127,19 @@ describe('Home options menu', () => {
 })
 
 describe('The Home eye', () => {
-  it('places contextual controls after the wheel outside its sticky strip', async () => {
+  it('places privacy and Home options in the global header', async () => {
     await openAlex()
     const bar = document.querySelector('.home-month-bar')!
-    const tools = document.querySelector('.home-contextual-tools')!
+    const tools = document.querySelector('.shell-header')!
     expect(bar.contains(button('Hide amounts'))).toBe(false)
     expect(tools.contains(options())).toBe(true)
-    expect(bar.compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tools.contains(button('Hide amounts'))).toBe(true)
+    expect(document.querySelector('.home-contextual-tools')).toBeNull()
     expect(button('Hide amounts').getAttribute('aria-pressed')).toBeNull()
     await fire.click(button('Hide amounts'))
     expect(button('Amounts hidden. Show amounts').textContent).toContain('Amounts hidden')
     expect(button('Amounts hidden. Show amounts').getAttribute('aria-pressed')).toBeNull()
-    expect(document.querySelector('.shell-header')!.contains(button('Amounts hidden. Show amounts'))).toBe(false)
+    expect(document.querySelector('.shell-header')!.contains(button('Amounts hidden. Show amounts'))).toBe(true)
   })
   it('hides and shows every amount with one tap, in text, charts, details and accessible names', async () => {
     await openAlex()
@@ -194,7 +196,7 @@ describe('The Home eye', () => {
     }
   })
 
-  it('Bills and History keep their own Hide amounts button', async () => {
+  it('Bills uses the single global Hide amounts button', async () => {
     await openAlex()
     await fire.click(tab('Bills'))
     expect(button('Hide amounts').textContent).toContain('Hide amounts')

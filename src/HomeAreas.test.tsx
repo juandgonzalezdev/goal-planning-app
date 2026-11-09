@@ -202,9 +202,9 @@ describe('+ Add', () => {
     await fire.keyDown(document.activeElement!, { key: 'Escape' })
     expect(screen.queryByRole('menu', { name: 'Add' })).toBeNull()
     expect(document.activeElement).toBe(addButton())
-    // It is in the shared header, not in the month bar, and there is one Add Goal on Home: in + Add.
+    // It is in its own action row, not in the month bar, and there is one Add Goal on Home: in + Add.
     expect(document.querySelector('.home-month-bar')!.contains(addButton())).toBe(false)
-    expect(document.querySelector('.shell-header')!.contains(addButton())).toBe(true)
+    expect(document.querySelector('.shell-action-row')!.contains(addButton())).toBe(true)
     expect(screen.queryByRole('button', { name: /Add Goal/ })).toBeNull()
   })
 

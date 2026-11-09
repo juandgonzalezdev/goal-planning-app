@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from '../components/Icon'
 import { IconTip } from '../components/IconTip'
 import { allAreasHidden, AREA_NAMES, useAmountVisibility, VisibilityContext, type AmountVisibility, type BlockAmounts, type HomeArea } from './amountVisibility'
@@ -26,12 +27,12 @@ export const AMOUNTS_NOTICE_MS = 2000
 /**
  * The eye above the Home areas: one tap hides every amount, the next
  * shows them all again. Like the eye of each area, it shows the state:
- * open while amounts show, crossed out while all are hidden. Its name is
+ * open while amounts show, crossed out while all are hidden. Its name
  * includes the visible state and next action. After a tap, a short
  * "Amounts hidden" or "Amounts visible" appears under it, over the page
  * (nothing moves), and screen readers hear it once.
  */
-export function HomeAmountsEye() {
+export function HomeAmountsEye({ compact = false, noticeHost }: { compact?: boolean; noticeHost?: HTMLElement | null }) {
   const { hidden, setAll } = useAmountVisibility()
   const allHidden = allAreasHidden(hidden)
   const label = allHidden ? 'Amounts hidden. Show amounts' : 'Hide amounts'
@@ -45,12 +46,13 @@ export function HomeAmountsEye() {
 
   return (
     <span className="amounts-eye">
-      <button type="button" className={`button-small tool-button contextual-privacy${allHidden ? ' is-hidden' : ''}`} aria-label={label}
+      <button type="button" className={`${compact ? 'icon-button has-tip' : 'button-small'} tool-button contextual-privacy${allHidden ? ' is-hidden' : ''}`} aria-label={label}
         onClick={() => { setAll(!allHidden); setNotice(allHidden ? 'Amounts visible' : 'Amounts hidden') }}>
         <Icon name={allHidden ? 'eyeOff' : 'eye'} size={20} />
-        <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>
+        {compact ? <IconTip label={label} /> : <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>}
       </button>
-      <span className={`amounts-notice${notice ? ' is-shown' : ''}`} role="status">{notice}</span>
+      {noticeHost && notice && createPortal(<span className="control-notice" aria-hidden="true">{notice}</span>, noticeHost)}
+      <span className={`amounts-notice${compact ? ' visually-hidden' : ''}${notice ? ' is-shown' : ''}`} role="status">{notice}</span>
     </span>
   )
 }

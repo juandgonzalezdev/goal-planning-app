@@ -6,7 +6,8 @@ import type { FinanceData, Id } from '../../domain/finance/types'
 import type { BillsChartView } from '../../data/uiPrefs'
 import type { MoneyBlock } from '../money/moneyBlocks'
 import { AREA_NAMES, type HomeArea } from '../../ui/amountVisibility'
-import { HomeAmountsEye } from '../../ui/privacy'
+import { createPortal } from 'react-dom'
+import { FoldBlock } from '../../components/FoldBlock'
 import type { ChangeSpace } from '../../ui/saveOutcome'
 import { formatDate, formatYearMonth } from '../../ui/format'
 import { Icon } from '../../components/Icon'
@@ -34,6 +35,7 @@ export interface HomeSpot { area?: HomeArea; section?: HomeSection; key?: string
 /** What + Add opens: the forms that already exist in Money, History, Bills and Goals. */
 
 type Props = {
+  controlsHost?: HTMLElement | null
   ringsView?: RingsView
   onRingsViewChange?: (view: RingsView) => void
   showRings?: boolean
@@ -193,6 +195,7 @@ export function HomeScreen(props: Props) {
   const control: HomeBlocksControl = {
     layout, customizing, move: (area, to) => move(area, to, to < layout.order.indexOf(area) ? 'up' : 'down'),
     toggle: section => onLayoutChange(setOpen(layout, section, !isOpen(layout, section))),
+    toggleMonth: () => onLayoutChange({ ...layout, monthOpen: !(layout.monthOpen ?? true) }),
     startDrag, dragging: drag?.started ? drag.area : null, dropTarget, name,
   }
 
@@ -236,31 +239,30 @@ export function HomeScreen(props: Props) {
           <MonthSwitch months={months} value={month} onChange={onMonthChange} />
         </div>
       </div>
-          {!customizing && <div className="home-contextual-tools" ref={optionsRef}>
-            <HomeAmountsEye />
-            <MenuButton label="Home options" contextual options={[
-              { label: 'Expand All', onSelect: () => { onLayoutChange(setAllOpen(layout, true)); setAnnouncement('All parts open.') } },
-              { label: 'Collapse All', onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All parts closed.') } },
-              { label: 'Customize Home', onSelect: () => customize(true) },
+          {props.controlsHost && createPortal(<div ref={optionsRef}>
+            <MenuButton label="Home options" icon="plan" options={[
+              { label: 'Expand All', disabled: customizing, onSelect: () => { onLayoutChange(setAllOpen(layout, true)); setAnnouncement('All parts open.') } },
+              { label: 'Collapse All', disabled: customizing, onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All parts closed.') } },
+              { label: 'Customize Home', disabled: customizing, onSelect: () => customize(true) },
             ]} />
-          </div>}
+          </div>, props.controlsHost)}
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
         <p className="muted-note" id="customize-home-help">Drag an area by its handle, or use Move up and Move down. Nothing else changes.</p>
         <span className="inline-actions">
-          <button type="button" className="button-small" onClick={() => { onLayoutChange({ order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement('Home layout reset: This Month, Left to Pay, then Money & Goals, with every part closed.') }}>Reset Layout</button>
+          <button type="button" className="button-small" onClick={() => { onLayoutChange({ ...DEFAULT_LAYOUT, order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement(props.showRings ? 'Home layout reset. All areas will be open; other parts closed.' : 'Home layout reset. All parts closed.') }}>Reset Layout</button>
           <button type="button" className="button-small button-small-primary" onClick={() => customize(false)}>Done</button>
         </span>
       </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
       {!customizing && guide}
-      {props.showRings && <GoalRings view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
+      {props.showRings && <FoldBlock title="All areas" summary="Money and goal details" expanded={!customizing && (layout.ringsOpen ?? true)} onToggle={customizing ? undefined : () => onLayoutChange({ ...layout, ringsOpen: !(layout.ringsOpen ?? true) })} className="home-rings-fold"><GoalRings embedded view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
         onChange={(next, base) => props.onChange(() => next, base)}
         onOpen={area => {
           const spot: HomeSpot = { key: 'rings-open' }
           if (area === 'income') props.onOpenIncome(month, spot)
           else if (area === 'debts') props.onOpenMoneyBlock('debts', spot)
           else props.onOpen(area, spot)
-        }} />}
+        }} /></FoldBlock>}
       <HomeBlocksContext.Provider value={control}>
         <div className={`home-blocks${customizing ? ' is-customizing' : ''}${drag?.started ? ' is-dragging' : ''}`} ref={blocksRef}>
           {layout.order.map(area => <div key={area} className="home-block-slot">{areas[area]}</div>)}

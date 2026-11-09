@@ -57,23 +57,34 @@ export function HomeAreaFrame({ area, period, actions, children }: AreaProps) {
   const count = control.layout.order.length
   const titleId = `home-area-${area}`
   const drop = control.dropTarget?.area === area ? ` drop-${control.dropTarget.side}` : ''
+  const arrange = control.customizing && (
+    <div className="block-arrange">
+      <span className="drag-handle" aria-hidden="true" title={`Drag to move ${name}`} onPointerDown={event => control.startDrag(area, event)}>
+        <Icon name="grip" size={20} />
+      </span>
+      <small className="block-position">{index + 1} of {count}</small>
+      <span className="inline-actions">
+        <button type="button" className="button-small" data-move="up" aria-label={`Move up: ${name}`} disabled={index <= 0}
+          onClick={() => control.move(area, index - 1)}><Icon name="chevronUp" size={16} /> Move up</button>
+        <button type="button" className="button-small" data-move="down" aria-label={`Move down: ${name}`} disabled={index >= count - 1}
+          onClick={() => control.move(area, index + 1)}><Icon name="chevronDown" size={16} /> Move down</button>
+      </span>
+    </div>
+  )
+  if (area === 'month') return (
+    <FoldBlock title={name} period={period} summary={null}
+      expanded={!control.customizing && (control.layout.monthOpen ?? true)}
+      onToggle={control.customizing ? undefined : control.toggleMonth}
+      before={arrange} actions={!control.customizing && <><EyeToggle area={area} name={name} />{actions}</>}
+      className={`home-area${control.dragging === area ? ' is-dragging' : ''}${drop}`}
+      dataset={{ 'data-home-area': area }}>
+      <div className="area-body">{children}</div>
+    </FoldBlock>
+  )
   return (
     <section className={`block home-area${area === 'money-goals' ? ' is-balances' : ''}${control.dragging === area ? ' is-dragging' : ''}${drop}`}
       aria-labelledby={`${titleId}-name`} data-home-area={area}>
-      {control.customizing && (
-        <div className="block-arrange">
-          <span className="drag-handle" aria-hidden="true" title={`Drag to move ${name}`} onPointerDown={event => control.startDrag(area, event)}>
-            <Icon name="grip" size={20} />
-          </span>
-          <small className="block-position">{index + 1} of {count}</small>
-          <span className="inline-actions">
-            <button type="button" className="button-small" data-move="up" aria-label={`Move up: ${name}`} disabled={index <= 0}
-              onClick={() => control.move(area, index - 1)}><Icon name="chevronUp" size={16} /> Move up</button>
-            <button type="button" className="button-small" data-move="down" aria-label={`Move down: ${name}`} disabled={index >= count - 1}
-              onClick={() => control.move(area, index + 1)}><Icon name="chevronDown" size={16} /> Move down</button>
-          </span>
-        </div>
-      )}
+      {arrange}
       <div className="section-head area-head">
         <h2 className="section-title area-title" id={titleId} tabIndex={-1}>
           <span className="block-name" id={`${titleId}-name`}>{name}</span>

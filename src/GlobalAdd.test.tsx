@@ -9,7 +9,7 @@ import { addFromHome } from './test/homeControls'
 
 freshDatabaseForEachTest()
 
-// + Add in the shared header (Rumbo de diseño, item 6): on every tab, outside the month bar, and only
+// + Add in its own action row (Rumbo de diseño, item 6): on every tab, outside the month bar, and only
 // once (Home has no second one). Each choice opens the form or place that already exists; the
 // choices that need something (accounts, goals, income, a bill to pay) show only when they apply.
 // Back, or Cancel on a form it opened, goes back to where it was used, with the keyboard on + Add.
@@ -17,7 +17,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
-const addButton = () => within(document.querySelector<HTMLElement>('.shell-header')!).getByRole('button', { name: 'Add' })
+const addButton = () => within(document.querySelector<HTMLElement>('.shell-action-row')!).getByRole('button', { name: 'Add' })
 const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')
 const monthSelect = () => screen.getByRole('button', { name: /^Choose month:/ }) as HTMLButtonElement
 const browserBack = async () => { window.history.back(); await settle() }
@@ -41,7 +41,7 @@ async function createOwnSpace() {
   await fire.click(button('Create My Space'))
 }
 
-describe('+ Add in the header', () => {
+describe('+ Add in the action row', () => {
   it('is on every tab, once, and not on a detail screen', async () => {
     await openAlex()
     for (const name of ['Home', 'Bills', 'Goals', 'Money', 'History']) {

@@ -7,6 +7,7 @@ export interface HomeBlocksControl {
   layout: HomeLayout
   customizing: boolean
   toggle: (section: HomeSection) => void
+  toggleMonth: () => void
   move: (area: HomeArea, to: number) => void
   /** Starts dragging an area by its handle (Customize Home only). */
   startDrag: (area: HomeArea, event: PointerEvent<HTMLElement>) => void
@@ -19,5 +20,5 @@ export interface HomeBlocksControl {
 
 export const HomeBlocksContext = createContext<HomeBlocksControl>({
   layout: { ...DEFAULT_LAYOUT, open: [...HOME_SECTIONS] }, customizing: false,
-  toggle: () => {}, move: () => {}, startDrag: () => {}, dragging: null, dropTarget: null, name: area => area,
+  toggle: () => {}, toggleMonth: () => {}, move: () => {}, startDrag: () => {}, dragging: null, dropTarget: null, name: area => area,
 })

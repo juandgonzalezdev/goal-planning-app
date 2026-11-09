@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react'
 import { isSpaceScreen, isTab, shownScreen, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
 import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
@@ -10,6 +10,8 @@ import { recoveryFile, recoveryFileName } from './data/recovery'
 import { downloadFile } from './ui/download'
 import { BottomNav } from './components/BottomNav'
 import { Icon } from './components/Icon'
+import { IconTip } from './components/IconTip'
+import { ThemeToggle } from './components/ThemeToggle'
 import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
@@ -49,7 +51,7 @@ import { SIDEBAR_QUERY, useMediaQuery } from './ui/useMediaQuery'
 import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
-import { AmountVisibilityProvider } from './ui/privacy'
+import { HomeAmountsEye, AmountVisibilityProvider } from './ui/privacy'
 import { HOME_AREAS, hiddenAreasFrom, savedHiddenNames, type HomeArea } from './ui/amountVisibility'
 import { AuthPreview } from './features/welcome/AuthPreview'
 import { Welcome } from './features/welcome/Welcome'
@@ -316,7 +318,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   }, [notice, dismissNotice])
 
   // Appearance: the open space's choice, or the device's setting before a space is open.
+  const brandDescriptionId = useId()
+  const [controlFeedbackHost, setControlFeedbackHost] = useState<HTMLDivElement | null>(null)
+  const [homeControlsHost, setHomeControlsHost] = useState<HTMLDivElement | null>(null)
+  const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const theme = open?.data.preferences.theme ?? 'system'
+  const dark = theme === 'dark' || ((theme === 'system' || theme === 'day-night') && systemDark)
   useEffect(() => { document.documentElement.dataset.theme = theme === 'day-night' ? 'system' : theme }, [theme])
 
   // After each move, focus goes to the new screen's title so keyboard and
@@ -353,6 +360,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       const keyed = key ? root?.querySelector<HTMLElement>(`[data-return-key="${key}"]`) : null
       const target = usable(keyed?.matches('button') ? keyed : keyed?.querySelector<HTMLElement>('button'))
         ?? usable(section ? root?.querySelector<HTMLElement>('.block-toggle') : null)
+        ?? usable(area ? home?.querySelector<HTMLElement>(`[data-home-area="${area}"] > .block-head .block-toggle`) : null)
         ?? usable(area ? home?.querySelector<HTMLElement>(`#home-area-${area}`) : null)
         ?? home?.querySelector<HTMLElement>('.area-title')
       target?.focus({ preventScroll: true })
@@ -914,26 +922,28 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   if (showNav && currentTab !== null && (navContext.tab !== currentTab || navContext.entries[contextKey] !== currentTab)) {
     setNavContext({ tab: currentTab, entries: { ...navContext.entries, [contextKey]: currentTab } })
   }
-  // Wide screens: the tabs become a sidebar, with the logo on top and Settings at the end (not in the header too).
+  // Wide screens: destinations become a sidebar; identity and global controls stay in the header.
   const sidebar = useMediaQuery(SIDEBAR_QUERY) && showNav
   const brand = (
-    <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} onClick={goToStart}>
+    <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} aria-describedby={brandDescriptionId} title={subtitle} onClick={goToStart}>
       <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
-      <span className="shell-brand-name">Goal Planning<small>{subtitle}</small></span>
+      <span className="shell-brand-name"><span className="shell-brand-title">Goal Planning</span><small id={brandDescriptionId}>{subtitle}</small></span>
     </button>
   )
   const helpButton = <button type="button" className="nav-settings" aria-current={screen === 'help' ? 'page' : undefined} onClick={() => openGuide()}><Icon name="help" size={18} /> Help</button>
-  const settingsButton = sidebar
-    ? <button type="button" className="nav-settings" aria-current={screen === 'settings' ? 'page' : undefined} onClick={() => go('settings')}><Icon name="settings" size={18} /> Settings</button>
-    : <button type="button" className="icon-button" aria-label="Settings" onClick={() => go('settings')}><Icon name="settings" size={20} /></button>
+  const settingsButton = <button type="button" className="icon-button has-tip" aria-label="Settings" aria-current={screen === 'settings' ? 'page' : undefined} onClick={() => go('settings')}><Icon name="settings" size={20} /><IconTip label="Settings" /></button>
 
   return (
     <div className={`shell${showNav ? ' has-nav' : ''}${sidebar ? ' has-sidebar' : ''}`} data-direction={direction} ref={shellRef}>
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus() }}>Skip to content</a>
       <header className="shell-header">
-        {!sidebar && brand}
-        {open && isTab(screen) && <div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div>}
-        {open && screen !== 'settings' && !sidebar && settingsButton}
+        {brand}
+        {open && <div className="shell-utilities" role="group" aria-label="Global controls">
+          <AmountVisibilityProvider value={visibility}><HomeAmountsEye compact noticeHost={controlFeedbackHost} /></AmountVisibilityProvider>
+          <ThemeToggle key={space.generation} dark={dark} noticeHost={controlFeedbackHost} onChange={next => space.update(data => ({ ...data, preferences: { ...data.preferences, theme: next ? 'dark' : 'light' } }))} />
+          {screen === 'home' && <div className="header-home-options" ref={setHomeControlsHost} />}
+          {settingsButton}
+        </div>}
       </header>
       {open?.kind === 'demo' && (
         <DemoBanner asking={confirmReset} onAskingChange={setConfirmReset} onReset={resetDemo} onExit={() => exitDemo()}
@@ -985,8 +995,9 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       <UnsavedChangesContext.Provider value={unsaved.registry}>
       <LeaveGuardContext.Provider value={leaveGuard}>
       <GuideContext.Provider value={open ? openGuide : null}>
-      {sidebar && <BottomNav current={currentTab} onSelect={selectTab} rail top={brand} bottom={<>{helpButton}{settingsButton}</>} />}
+      {sidebar && <BottomNav current={currentTab} onSelect={selectTab} rail bottom={helpButton} />}
       <main id="main-content" tabIndex={-1} className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
+        {open && isTab(screen) && <div className="shell-action-row"><div className="control-feedback" ref={setControlFeedbackHost} /><div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div></div>}
         {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
           <Opening onRetry={() => void space.reload()} />
@@ -1008,7 +1019,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         {open && <Fragment key={space.generation}>
           {shows('home') && <div className="screen" data-screen="home">
             <AmountVisibilityProvider value={visibility}>
-              <HomeScreen ringsView={ringsLocation?.generation === space.generation ? ringsLocation.view : 'all'} onRingsViewChange={view => setRingsLocation({ generation: space.generation, view })} showRings={showRings} newId={newId} data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
+              <HomeScreen controlsHost={homeControlsHost} ringsView={ringsLocation?.generation === space.generation ? ringsLocation.view : 'all'} onRingsViewChange={view => setRingsLocation({ generation: space.generation, view })} showRings={showRings} newId={newId} data={open.data} months={months} month={month} onMonthChange={changeMonth} today={space.today}
                 chartView={shownChartView} onChartViewChange={changeChartView} layout={homeLayout} onLayoutChange={changeHomeLayout}
                 showAllBills={showAllBills} onShowAllBillsChange={changeShowAllBills}
                 onChange={space.update} onOpen={(next, spot) => fromHome(spot, () => { if (next === 'bills') setBillsView(view => ({ ...view, scope: 'month' })); navigation.go(next) })}

@@ -16,7 +16,7 @@ import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { barPercent } from '../../ui/chart'
 import { SPENDING_COLORS } from '../../ui/chartColors'
 import { formatDate, formatLongDate, formatShortYearMonth, formatYearMonth } from '../../ui/format'
-import { AllAmountsToggle, HiddenChart } from '../../ui/privacy'
+import { HiddenChart } from '../../ui/privacy'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useWriteBlocked } from '../../app/writeStatus'
 import { useLeaveGuard } from '../../app/unsavedChanges'
@@ -182,7 +182,6 @@ export function HistoryScreen({ data, months, month, today, newId, focusId, view
     <div className="tab-screen history-screen">
       <div className="screen-top">
         <h1 className="tab-title">History</h1>
-        <span className="no-print"><AllAmountsToggle /></span>
       </div>
       <p className="muted-note">Only what was recorded, newest first. Nothing here is estimated.</p>
       <div className="inline-actions no-print">

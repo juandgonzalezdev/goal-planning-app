@@ -11,7 +11,6 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { useAllAmounts, type BlockAmounts } from '../../ui/amountVisibility'
 import { formatDate, formatLongDate, formatYearMonth } from '../../ui/format'
 import { parseMoneyInput } from '../../ui/moneyInput'
-import { AllAmountsToggle } from '../../ui/privacy'
 import { isKept, outcomeText, type ChangeSpace } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
 import { LeftToPayMessage } from '../home/LeftToPay'
@@ -113,14 +112,13 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
     <div className="tab-screen bills-screen">
       <div className="screen-top">
         <h1 className="tab-title">Bills</h1>
-        <button type="button" className="button-small button-small-primary" onClick={onAddBill}><Icon name="plus" size={16} /> Add Bill</button>
+        <button type="button" className="button-small bills-add" onClick={onAddBill}><Icon name="plus" size={16} /> Add Bill</button>
       </div>
       <div className="bills-scope-toolbar no-print">
         <div className="segmented" role="group" aria-label="Bills section">
           <button type="button" aria-pressed={view.scope === 'month'} className={view.scope === 'month' ? 'is-active' : ''} onClick={() => setShown({ scope: 'month' })}>This Month</button>
           <button type="button" aria-pressed={view.scope === 'all'} className={view.scope === 'all' ? 'is-active' : ''} onClick={() => setShown({ scope: 'all' })}>All Bills</button>
         </div>
-        <AllAmountsToggle />
       </div>
       <div className="bills-search no-print">
         <label className="form-field" htmlFor="bill-search">Search bills

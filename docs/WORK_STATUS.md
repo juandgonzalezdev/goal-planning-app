@@ -2050,3 +2050,170 @@ a main debe activar el proceso habitual de Cloudflare Pages.
 La entrega fijada al commit final y el resultado de Git se registran localmente
 en review-deliveries/ux-02/<commit-final-completo>/DELIVERY.md. Archivos ajenos
 excluidos y conservados sin seguimiento.
+
+## UX-02.1 — implementación para revisión, 2026-11-08
+
+Base4c1db7c5300fbd4d4fbb82ab93cc0b55a47fe25f; rama nueva
+codex/ux-02-1-header-controls. Alcance consolidado de Dirección: cabecera con
+privacidad, tema, Home options solo Home y Settings; Add en fila propia derecha
+debajo de Demo y encima del mes; All areas participa en Collapse/Expand All.
+Identidad y Settings también en cabecera desktop, sin controles duplicados.
+FoldBlock conserva interior montado/inert al contraer. ringsOpen opcional en
+la preferencia HomeLayout existente, sin clave paralela ni cambios de datos.
+Theme usa preferences.theme/space.update existentes; conserva System y aislamiento
+de Demo. MonthSwitch/motor/GoalRings/cálculos permanecen intactos.
+
+Resultados nuevos propios: dirigidas131/131 en11archivos,55,40s; completa1047/1047
+en74archivos,276,69s; lint estricto y build salida0 (aviso conocido>500kB).
+Primera suite1046/1047 por consulta global de status en MarkPaid ahora ambigua:
+reproducida y acotada a main sin cambiar el comportamiento ni afirmación del
+payment. No es el fallo Pending comunicado por Claude anteriormente.
+Audit con red:10moderadas en herramientas de desarrollo; producción0. Paquetes y
+lockfile sin cambios; sin audit fix. Intento restringido inicial ENOTFOUND superado
+al consultar el registro con acceso de red. No se suman dirigidas y completa.
+
+Chromium propio: matriz20casos320/375/390/430/1280, claro/oscuro, Demo/normal con
+datos ficticios. Overflow0 y centrado<0,001px en reposo; botones44x44. Cabecera
+104,8px a320 y64–64,8px desde375; Demo y Add se desplazan, cabecera y mes sticky.
+Add con scroll interno verificado a320x640, última opción accesible sobre nav.
+Collapse All, apertura individual, teclado/menús, privacidad, cinco pestañas y
+búsqueda independiente de History comprobados por Codex. Capturas y mediciones
+en la entrega. Hubo bloqueo temporal de uso del navegador; tras la hora indicada
+de reintento se completó en la misma superficie. Safari/iPhone, VoiceOver, teclado
+virtual y safe areas físicas pendientes; no se atribuyen manuales a Juan.
+
+Entrega independiente sin commit: review-deliveries/ux-02-1/working-2026-11-08/.
+Informe técnico docs/UX_02_1.md. Claude escribe solo REVISION.md en esa carpeta.
+Pendientes revisión y autorización posterior de Dirección. Sin commit, merge,
+push ni despliegue. main, origin/main y rama UX-02v2 conservan4c1db7c; índice
+vacío. Archivos ajenos y revisiones previas preservados y excluidos.
+
+## UX-02.1 — segunda entrega tras Changes required, 2026-11-08
+
+Dirección autoriza las correcciones I1–I4 y M1–M9, incluidas I2 (logo solo por
+debajo de375) e I4 (Add Bill superior secundario). Misma rama
+codex/ux-02-1-header-controls y base4c1db7c5300fbd4d4fbb82ab93cc0b55a47fe25f.
+No se reinicia el incremento ni se modifica la entrega/revisión original.
+
+I1: truncamiento seguro y descripción completa de la marca. I2: cabecera de
+una fila64px en320, iconos44x44. I3: FoldBlock como único h2/landmark; modo
+embedded de GoalRings elimina miga/título raíz duplicados y usa h3 de detalles,
+sin tocar cálculos ni anillos. I4: Add Bill superior secundario44px; Add global
+permanece principal en fila propia. M1–M9: hover condicionado, tooltips/avisos
+separados, ThemeToggle con confirmación solo tras aceptación real, resumen
+neutral y Reset coherente, pruebas reales de privacidad, limpieza CSS acotada
+y evidencias nuevas. ringsOpen y la persistencia existente se conservan.
+
+Pruebas nuevas propias finales: dirigidas177/177 (15 archivos,79,83s); suite
+1058/1058 (76 archivos,285,70s); lint estricto y build salida0. Aviso conocido de
+bundle>500kB. La suite intermedia1057/1058 y tests de entrada de80 caracteres
+quedan sustituidos por las ejecuciones finales sobre versión estabilizada. La
+validación existente admite40 por miembro (el input HTML dice80); se probó
+40 individual y83 en Duo sin alterar validadores. No hay fallos pendientes de
+tests en esta ejecución, ni cambios de pagos/dominio para resolverlos.
+Audit de entrega anterior reutilizado por dependencias/entorno sin cambios:
+producción0, herramientas de desarrollo10 moderadas; no se afirma ejecución
+nueva ni se aplica audit fix. Índice vacío; main y UX-02 v2 intactos.
+
+Chromium propio:20 casos de5 anchos320/375/390/430/1280,2 temas, Demo y espacio
+ficticio Duo máximo83. Overflow0, centrado<0,001px; texto separado>=6px de
+utilidades desde375. Capturas tras transiciones verificadas: pliegue0px cerrado,
+647,9px abierto igual al interior;1h2 raíz. Menús320x640, scroll, nombres
+completos accesibles, confirmaciones y privacidad Bills/History comprobados.
+32 capturas nuevas inventariadas y revisadas, sin miniaturas pequeñas; registro
+del navegador sin errores/warnings. No se atribuye emulación táctil al navegador
+de ratón: hover:none se trata por guardas CSS y falta validación real iPhone.
+
+Nueva carpeta: review-deliveries/ux-02-1/review-fixes-2026-11-08/. Contiene
+snapshot, diff acumulado e incremental, SHA, tablas I1–I4/M1–M9 y recorrido.
+Claude escribe solo REVISION.md en esa carpeta. Informe original preservado
+en working-2026-11-08/REVISION.md. Pendientes Safari/iPhone, VoiceOver, texto
+grande, zoom y safe areas físicos. UX-03 no se implementa. Sin commit, merge,
+push ni despliegue; Dirección revisará antes de autorizar cualquier integración.
+
+
+## UX-02.1-F1 — pliegue completo de This Month, 2026-11-09
+
+Dirección comunica Approved with observations de Claude; Codex leyó
+review-deliveries/ux-02-1/review-fixes-2026-11-08/SECOND_REVIEW.md.
+Juan confirma validación real satisfactoria en Safari/iPhone de cabecera,
+rueda/hold/inercia, privacidad entre pestañas, temas, Add, Customize y navegación;
+la única incidencia comunicada es que Collapse All deja This Month abierto.
+Estas son confirmaciones recibidas de Juan, no pruebas de dispositivo de Codex.
+
+Causa: HomeAreaFrame mantenía su resumen mensual fuera de los cinco estados de
+bloques y de ringsOpen. This Month reutiliza FoldBlock con cabecera compacta,
+mes/año y el único ojo de área. monthOpen opcional en la preferencia HomeLayout
+existente comparte las acciones colectivas y la apertura individual; ausencia
+conserva abierto. Interior montado, inert/aria-hidden al cerrar. Sin clave nueva,
+sin cambios financieros, de IndexedDB, backup, física de rueda o anillos UX-03.
+Retorno a Home incorpora la nueva cabecera como destino de foco si está cerrada.
+El giro del chevron CSS se limita a su propia cabecera para no girar las flechas
+de categorías/año cerrados cuando su padre está abierto (verificado en navegador).
+Customize conserva orden y estado: no añade controles nuevos de visibilidad;
+Show rings on Home en Settings sigue independiente de Expand All.
+
+Resultados propios: suite final1059/1059 en76 archivos,286,90s,salida0;
+dirigidas iniciales76/76 en5 archivos,42,98s y regresión focalizada final1/1,
+10,88s (no sumar). Lint estricto y build verificados salida0 tras ajustar CSS;
+CSS86,17kB/gzip16,18 y JS735,93kB/gzip206,24, aviso conocido>500kB.
+Diff correcto e índice vacío. La primera completa1058/1059 falló únicamente por
+la consulta de clase antigua en App.test, corregida; los intentos intermedios de
+fixtures/consultas quedan en logs. La regresión falla con HomeAreaFrame original
+y pasa corregida. MarkPaid pasa en esta ejecución, sin declararlo resuelto.
+Avisos jsdom scrollTo/navigation conservados. Audit previo reutilizado, sin
+nueva ejecución ni cambios de dependencias. El último ajuste CSS se verifica en
+navegador; la suite cubre la misma lógica React y pruebas finales, no layout.
+
+Chromium propio con datos ficticios:16 casos320/375/390/430 × claro/oscuro ×
+abierto/cerrado, overflow0; cuerpos This Month/All areas0px plegados. Botón>=48,6px,
+Enter/Space y foco visible; cambio December2026→January2027 conserva pliegue y
+actualiza cabecera. Privacidad global activada plegado conserva máscaras al
+abrir. Capturas y mediciones en la entrega; viewport incluye scrollbar desktop.
+No se ejecutan nuevas pruebas de Safari/iPhone físico ni VoiceOver; F1 requiere
+revisión independiente y confirmación manual de Juan. No se declara resuelto el
+MarkPaid intermitente observado por Claude anteriormente.
+
+Entrega local sin commit: review-deliveries/ux-02-1/f1-2026-11-09/DELIVERY.md.
+Incluye snapshot acumulado27 archivos, diff F1 de11 archivos y su base anterior,
+SHA, logs y capturas. Claude escribe solo REVISION.md en esa carpeta.
+Rama codex/ux-02-1-header-controls, base/HEAD4c1db7c5300fbd4d4fbb82ab93cc0b55a47fe25f,
+índice vacío. Cambios previos y archivos ajenos preservados; sin commit, merge,
+push ni despliegue. UX-03 no iniciado; UX-02.1 pendiente de revisión de F1.
+
+
+## UX-02.1 y F1 — cierre e integración autorizados, 2026-11-09
+
+Dirección autoriza expresamente commit, integración fast-forward en main y push
+GitHub exclusivamente del incremento aprobado. Codex leyó SECOND_REVIEW.md e
+INDEPENDENT_REVIEW.md de ux-02-1: Approved with observations. Los27 archivos
+coinciden exactamente con el snapshot F1; solo se añade documentación de cierre.
+
+Dirección confirma validación real en Safari/iPhone de cabecera, rueda fluida,
+inercia/interrupción, hold, privacidad global, temas, navegación y controles;
+también Collapse All, Expand All y apertura individual de This Month. F1 queda
+validada. Son confirmaciones recibidas, no pruebas físicas ejecutadas por Codex.
+No se amplía la confirmación a VoiceOver, zoom o texto grande sin recorrido expreso.
+
+Comprobaciones propias nuevas de cierre solicitadas por Dirección: suite completa
+1059/1059 en76 archivos,282,77s; dirigidas101/101 en8 archivos,54,22s (no sumar).
+Lint estricto y build de producción correctos. MarkPaid pasa en ambas ejecuciones;
+la intermitencia histórica no se considera resuelta. Avisos jsdom scrollTo/navigation
+conocidos; sin fallos. Build:CSS86,17kB/gzip16,18 y JS735,93kB/gzip206,24; aviso
+conocido>500kB. git diff --check correcto. Logs en la entrega local de cierre.
+Solo cambian documentos después de estas comprobaciones: no se repite la suite
+por preparar el commit y registrar la integración del mismo código.
+
+Se conservan las observaciones no bloqueantes F1-O1–O4 y O1–O4 de SECOND_REVIEW,
+detalladas en docs/UX_02_1.md: ojo en segunda fila a320px, textos/comentario y
+consultas de pruebas, semántica de All areas, avisos fuera de vista y nombre
+concatenado. MarkPaid histórico no se declara resuelto. UX-03 no se inicia.
+No cambian finanzas, datos, dependencias, física de rueda ni aislamiento Demo.
+
+Alcance exacto:27 archivos del MANIFEST de la entrega F1. Archivos ajenos y
+review-deliveries preservados y excluidos del commit. Base comprobada y tras fetch:
+main/origin-main/HEAD4c1db7c5300fbd4d4fbb82ab93cc0b55a47fe25f, sin novedades remotas.
+El hash final, integración, push y estado de publicación se registran en
+review-deliveries/ux-02-1/<commit-final-completo>/DELIVERY.md y GIT_STATUS.md,
+fuera del commit de la app. No se ejecuta despliegue manual; Cloudflare solo
+se declara publicado si hay evidencia adicional al push.

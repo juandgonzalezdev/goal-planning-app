@@ -274,7 +274,7 @@ describe('Home', () => {
   it('answers its questions in three areas, each with its parts in order', async () => {
     await openDemo()
     const main = document.querySelector('main')!
-    const areas = [...main.querySelectorAll('[data-screen="home"] [data-home-area]')].map(s => s.querySelector('.area-title .block-name')?.textContent)
+    const areas = [...main.querySelectorAll('[data-screen="home"] [data-home-area]')].map(s => s.querySelector('.section-title .block-name')?.textContent)
     expect(areas).toEqual(['This Month', 'Left to Pay', 'Our Money & Goals'])
     const parts = [...main.querySelectorAll('[data-screen="home"] [data-home-block]')].map(s => s.querySelector('.block-name')?.textContent)
     expect(parts).toEqual(['Spending by Category', 'Year Summary', 'Accounts & Savings', 'Cards & Loans', 'Goals'])
