@@ -3,7 +3,7 @@ import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { markPaid } from './test/bills'
 import { addFromHome, chooseHomeOption } from './test/homeControls'
@@ -35,7 +35,7 @@ const JANUARY = ['Gym Membership', 'Transit Pass', 'Music Streaming', 'Utilities
   'Credit Card Payment', 'Student Loan', 'Rent (studio)', 'Phone & Internet']
 
 async function openAlex(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   return { storage, ...result }
@@ -43,7 +43,7 @@ async function openAlex(storage: Storage = memoryStorage()) {
 
 /** Welcome → Create Account → Welcome Setup → Home, as one person. */
 async function createOwnSpace(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-21'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button(/Create Account/))
   await fire.click(button(/Continue Without an Account/))
@@ -57,7 +57,7 @@ async function createOwnSpace(storage: Storage = memoryStorage()) {
 
 async function reopen(storage: Storage) {
   cleanup()
-  render(<App getToday={() => '2026-10-21'} storage={storage} />)
+  render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
   await settle()
 }
 

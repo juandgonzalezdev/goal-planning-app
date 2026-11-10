@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { createAlexDemo } from './data/fixtures/demoAlex'
 import { activityLog, filterActivity, NO_FILTER } from './domain/finance/history'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabase, settle, storedSpace, freshDatabaseForEachTest } from './test/space'
 import { openCardsAndLoans } from './test/money'
 import { startDemoReset } from './test/homeControls'
@@ -34,7 +34,7 @@ const confirmReset = async () => await fire.click(within(screen.getByRole('group
 const alex = () => activityLog(createAlexDemo())
 
 async function openHistory(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   await fire.click(tab('History'))
@@ -332,7 +332,7 @@ describe('History navigation', () => {
   })
 
   it('opens a purchase chosen on Home on its month, ready to change, even past the first page', async () => {
-    render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
+    render(<App getToday={() => '2026-10-25'} storage={classicHome()} />)
     await settle()
     await fire.click(button('Explore the App'))
     const december = filterActivity(alex(), { ...NO_FILTER, period: { kind: 'month', month: '2026-12' }, type: 'spending' })
@@ -352,7 +352,7 @@ describe('History navigation', () => {
 
 describe('History empty states', () => {
   it('tells apart nothing recorded yet, nothing in the period and nothing matching', async () => {
-    render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('History'))
@@ -372,7 +372,7 @@ describe('History empty states', () => {
   })
 
   it('offers All Time when the period has nothing', async () => {
-    render(<App getToday={() => '2027-02-10'} storage={memoryStorage()} />)
+    render(<App getToday={() => '2027-02-10'} storage={classicHome()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))

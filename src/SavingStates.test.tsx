@@ -6,7 +6,7 @@ import { browserSpaceStore } from './app/useSpace'
 import type { SpaceStore } from './data/spaceStore'
 import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData } from './test/space'
 
 /*
@@ -34,7 +34,7 @@ function robin(name = 'Robin'): FinanceData {
 }
 
 async function start(store?: SpaceStore, storage: Storage = memoryStorage()) {
-  render(<App getToday={() => TODAY} storage={storage} createStore={store ? () => store : undefined} />)
+  render(<App getToday={() => TODAY} storage={classicHome(storage)} createStore={store ? () => store : undefined} />)
   await settle()
 }
 
@@ -57,7 +57,7 @@ describe('opening', () => {
     const held = heldStore()
     await held.store.create(robin())
     held.hold()
-    render(<App getToday={() => TODAY} storage={memoryStorage()} createStore={() => held.store} />)
+    render(<App getToday={() => TODAY} storage={classicHome()} createStore={() => held.store} />)
     await step()
     expect(screen.getByText('Opening your space…')).toBeTruthy()
     expect(welcome()).toBeNull()
@@ -72,7 +72,7 @@ describe('opening', () => {
     try {
       const held = heldStore()
       held.hold()
-      render(<App getToday={() => TODAY} storage={memoryStorage()} createStore={() => held.store} />)
+      render(<App getToday={() => TODAY} storage={classicHome()} createStore={() => held.store} />)
       await act(async () => { vi.advanceTimersByTime(5000) })
       expect(screen.getByText('This is taking longer than usual.')).toBeTruthy()
       expect(button('Try Again')).toBeTruthy()

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { STORAGE_KEY } from './data/localStore'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage, storedKeys } from './test/memoryStorage'
 import { fire, refuseWrites, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { markPaid } from './test/bills'
 import { openCardsAndLoans } from './test/money'
@@ -35,7 +35,7 @@ const pickMonth = async (month: string) => await chooseMonth(month)
 const householdDemo = () => ({ data: createDemoHousehold(), today: DEMO_TODAY })
 
 async function start(storage: Storage = memoryStorage()) {
-  const rendered = render(<App getToday={() => TODAY} storage={storage} createDemo={householdDemo} />)
+  const rendered = render(<App getToday={() => TODAY} storage={classicHome(storage)} createDemo={householdDemo} />)
   await settle()
   return { storage, ...rendered }
 }
@@ -246,7 +246,8 @@ describe('Demo', () => {
     await showBillsList()
     await markPaid('Furniture Loan', 'November 2026')
     expect(stat('Left to Pay')).toContain('5300,98 zł')
-    expect(storage.length).toBe(0)
+    // Only the classic-Home choice this test made before opening: the demo wrote nothing.
+    expect(storedKeys(storage)).toEqual(['goal-planning-app.home-rings'])
 
     await fire.click(button('Exit Demo'))
     expect(heading('Your goals, your way.')).toBeTruthy()
@@ -695,7 +696,8 @@ describe('Goals & Savings Pots', () => {
     await openGoals()
     await fire.click(button(/^Trip to Japan/))
     await saveMovement('Add', '100')
-    expect(storage.length).toBe(0)
+    // Only the classic-Home choice this test made before opening: the demo wrote nothing.
+    expect(storedKeys(storage)).toEqual(['goal-planning-app.home-rings'])
   })
 })
 

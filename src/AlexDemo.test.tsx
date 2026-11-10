@@ -6,7 +6,7 @@ import App from './App'
 import { browserSpaceStore, useSpace } from './app/useSpace'
 import { createSpaceData } from './domain/finance/space'
 import { STORAGE_KEY } from './data/localStore'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage, storedKeys } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
 import { markPaid } from './test/bills'
 import { openCardsAndLoans } from './test/money'
@@ -47,7 +47,7 @@ async function backHome() {
 /** Opens the demo on Home. Most tests look inside the Home blocks, so they open all of them (Expand All). */
 async function openAlex(storage: Storage = memoryStorage(), { expanded = true } = {}) {
   // The device date is in October; the demo keeps its own date.
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   if (expanded) await chooseHomeOption('Expand All')
@@ -63,7 +63,8 @@ describe('Alex demo: Home', () => {
     expect(about).toContain('Alex and all the information in this demo are invented')
     expect(about).toContain('Changes are not saved')
     expect(button('Reset Demo')).toBeTruthy()
-    expect(storage.length).toBe(0)
+    // Only the classic-Home choice this test made before opening: the demo wrote nothing.
+    expect(storedKeys(storage)).toEqual(['goal-planning-app.home-rings'])
   })
 
   it('opens on 31 December 2026, with the twelve months of the year to move through', async () => {

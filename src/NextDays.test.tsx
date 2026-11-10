@@ -3,7 +3,7 @@ import { chooseMonth } from './test/monthPicker'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome } from './test/memoryStorage'
 import { fire, settle, freshDatabaseForEachTest } from './test/space'
 import { markNotPaid } from './test/bills'
 
@@ -25,7 +25,7 @@ const groups = () => [...area().querySelectorAll('.pay-group-title')].map(text)
 const shownScreen = () => document.querySelector('main [data-screen]')?.getAttribute('data-screen')
 
 async function openAlex() {
-  render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
+  render(<App getToday={() => '2026-10-25'} storage={classicHome()} />)
   await settle()
   await fire.click(button('Explore the App'))
 }

@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage, storedKeys } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { chooseHomeOption } from './test/homeControls'
 
@@ -28,7 +28,7 @@ const AREAS = ['This Month', 'Left to Pay', 'Money & Goals']
 const PARTS = ['Spending by Category', 'Year Summary', 'Accounts & Savings', 'Cards & Loans', 'Goals']
 
 async function openAlex(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   return { storage, ...result }
@@ -273,7 +273,8 @@ describe('Demo strip', () => {
     expect(button('Hide amounts in Money & Goals')).toBeTruthy()
     expect(document.activeElement).toBe(demoOptions())
     // The demo never writes to this device.
-    expect(storage.length).toBe(0)
+    // Only the classic-Home choice this test made before opening: the demo wrote nothing.
+    expect(storedKeys(storage)).toEqual(['goal-planning-app.home-rings'])
     expect(await storedData()).toBeNull()
   })
 

@@ -59,25 +59,31 @@ async function contribute(effect: 'Savings I already have' | 'New savings' = 'Sa
 }
 
 describe('optional Goal Rings on Home', () => {
-  it('is off by default, Settings enables it above the existing areas, and remembers the choice', async () => {
+  // UX-04.1: Ring-first is the default for a device that never chose; turning it off is an explicit, remembered choice.
+  it('is on by default above More for the month, Settings turns it off for the classic Home, and the choice is remembered', async () => {
     const storage = memoryStorage()
     render(<App storage={storage} />)
     await settle(); await fire.click(button('Explore the App'))
-    expect(screen.queryByRole('region', { name: 'Your money and goals' })).toBeNull()
-    await fire.click(button('Settings'))
-    const setting = screen.getByRole('checkbox', { name: /Show rings on Home/ }) as HTMLInputElement
-    expect(setting.checked).toBe(false)
-    await fire.click(setting); await fire.click(button('Back'))
-    expect(region().compareDocumentPosition(screen.getByRole('region', { name: 'This Month' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(storage.getItem('goal-planning-app.home-rings')).toBe('yes')
+    const ring = () => screen.queryByRole('radiogroup', { name: 'Select an area' })
+    expect(ring()).toBeTruthy()
+    expect(region().compareDocumentPosition(button(/^More for December/)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(storage.getItem('goal-planning-app.home-rings')).toBeNull()
     await fire.click(inRings().getByRole('radio', { name: /^Select Goals,/ })); await fire.click(button('View Goals details'))
     await fire.click(inRings().getByRole('button', { name: 'Open Goals' }))
     await fire.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Home' }))
     expect(inRings().getByRole('heading', { name: 'Goals' })).toBeTruthy()
+    await fire.click(button('Settings'))
+    const setting = screen.getByRole('checkbox', { name: /Show rings on Home/ }) as HTMLInputElement
+    expect(setting.checked).toBe(true)
+    await fire.click(setting); await fire.click(button('Back'))
+    expect(storage.getItem('goal-planning-app.home-rings')).toBe('no')
+    expect(ring()).toBeNull()
+    expect(screen.getByRole('region', { name: 'Left to Pay' })).toBeTruthy()
     cleanup(); render(<App storage={storage} />); await settle(); await fire.click(button('Explore the App'))
-    expect(screen.getByRole('heading', { name: /^All areas/, level: 2 })).toBeTruthy()
+    expect(ring()).toBeNull()
     await fire.click(button('Settings')); await fire.click(screen.getByRole('checkbox', { name: /Show rings on Home/ })); await fire.click(button('Back'))
-    expect(screen.queryByRole('region', { name: 'Your money and goals' })).toBeNull()
+    expect(storage.getItem('goal-planning-app.home-rings')).toBe('yes')
+    expect(ring()).toBeTruthy()
   })
 
   it('uses the existing leave guard before closing a typed Contribution with Escape', async () => {

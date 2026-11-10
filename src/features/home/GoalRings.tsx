@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react'
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { useLeaveGuard } from '../../app/unsavedChanges'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
@@ -34,6 +34,23 @@ type Props = {
   newId: () => string; onChange: (data: FinanceData, base?: number) => Promise<SaveOutcome>
   onOpen: (area: Area) => void
   view?: RingsView; onViewChange?: (view: RingsView) => void
+  /**
+   * Ring-first Home: the card shown under the ring for the selected area, instead of View details and Open.
+   * The centre still opens the details (UX-03); the card only adds the area's next step.
+   */
+  card?: (context: RingCardContext) => ReactNode
+}
+
+/** What the Ring-first card can ask of the ring it belongs to. */
+export type RingCardContext = {
+  area: Area
+  /** The same details the centre opens. */
+  openDetails: () => void
+  /** A goal's detail inside the ring, where Add Contribution already is. */
+  openGoal: (id: string) => void
+  select: (area: Area) => void
+  /** Brings the ring back into view after a change made from the card, so the update (and any Pulse) is seen. */
+  revealRing: () => void
 }
 
 const ease = (x: number) => 1 - (1 - x) ** 3
@@ -192,7 +209,12 @@ function FourSections({ areas, selected, month, spaceId, reduced, canCelebrate, 
   </div>
 }
 
-export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, view: controlledView, onViewChange, embedded = false, selection, onSelectionChange }: Props) {
+/** Renders the Ring-first card as an element, so its handlers (which use the ring's refs) only run on events. */
+function CardSlot({ render, context }: { render: (context: RingCardContext) => ReactNode; context: RingCardContext }) {
+  return <>{render(context)}</>
+}
+
+export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, view: controlledView, onViewChange, embedded = false, selection, onSelectionChange, card }: Props) {
   const [localView, setLocalView] = useState<RingsView>('all')
   const requestedView = controlledView ?? localView
   const view = requestedView.startsWith('goal:') && !data.goals.some(g => g.id === requestedView.slice(5) && g.status === 'active') ? 'goals' : requestedView
@@ -225,10 +247,11 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
     goals: amounts.hidden ? 'Amounts hidden' : goalsProgress.percent === null ? 'No goals with a target yet' : `${Math.round(goalsProgress.percent)}% saved`,
   }
   const coverage = debtProgress.unverifiedCount ? `${debtProgress.unverifiedCount} ${debtProgress.unverifiedCount === 1 ? 'debt' : 'debts'} without a linked bill` : ''
-  const selectRing = (area: Area) => {
+  // Choosing another section closes a payment being reviewed in the Ring-first card: ask first when something was typed.
+  const selectRing = (area: Area) => guard(f => area !== ringSelection && !!f.tag?.startsWith('ring-card:'), () => {
     setLocalSelection(area); onSelectionChange?.(area)
     if (view !== 'all') { setLocalView('all'); onViewChange?.('all') }
-  }
+  })
   const occurrences = billsForMonth(data, month)
   const bills = summarizeBills(occurrences)
   const cards = summarizeCards(data, month, asOf)
@@ -248,11 +271,12 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
     debts: `Remaining Balance${cards.missingBalanceCount ? ' · Some balances unknown' : ''}`,
     goals: `Savings allocation · by ${formatDate(asOf)}`,
   }
-  const go = (next: RingsView, focus = 'rings-title') => guard(f => f.tag === 'rings-contribution', () => {
-    if (view === next && !form) { root.current?.querySelector<HTMLElement>(`[data-rings-focus="${CSS.escape(focus)}"]`)?.focus(); return }
-    focusTo.current = focus
+  // A change of view closes the Contribution form, and any payment being reviewed in the Ring-first card.
+  const go = (next: RingsView, focus = 'rings-title', withForm = false) => guard(f => f.tag === 'rings-contribution' || !!f.tag?.startsWith('ring-card:'), () => {
+    if (view === next && !form && !withForm) { root.current?.querySelector<HTMLElement>(`[data-rings-focus="${CSS.escape(focus)}"]`)?.focus(); return }
+    focusTo.current = withForm ? 'form' : focus
     if (next !== view) setChange(null)
-    setForm(false); setNotice(''); setLocalView(next); onViewChange?.(next)
+    setForm(withForm); setNotice(''); setLocalView(next); onViewChange?.(next)
   })
   useLayoutEffect(() => {
     if (!focusTo.current) return
@@ -291,7 +315,7 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
     return [area,item]
   })) as Record<Area,AreaPresentation>
   const actualChange = goal && change?.goalId === goal.id ? change : null
-  return <section className={`block goal-rings has-four-sections${reducedMotion ? ' is-reduced-motion' : ''}`} aria-label={embedded ? undefined : 'Your money and goals'} ref={root} onKeyDown={event => {
+  return <section className={`block goal-rings has-four-sections${card ? ' is-ring-first' : ''}${reducedMotion ? ' is-reduced-motion' : ''}`} aria-label={embedded ? undefined : 'Your money and goals'} ref={root} onKeyDown={event => {
     if (event.key === 'Escape' && view !== 'all') { event.preventDefault(); event.stopPropagation(); back() }
   }}>
     {!embedded && <nav className="rings-crumbs" aria-label="Rings navigation">
@@ -313,7 +337,10 @@ export function GoalRings({ data, month, today, asOf, newId, onChange, onOpen, v
       </div> : <FourSections key={`${data.space.id}:${month}`} areas={presentations} selected={ringSelection} month={month} spaceId={data.space.id} reduced={reducedMotion} canCelebrate={view==='all'} onSelect={selectRing} onDetails={openArea}/>}
       <div className="rings-panel">
         {(!embedded || view !== 'all') && <PanelHeading className="section-title" tabIndex={-1} data-rings-focus="rings-title">{title}</PanelHeading>}
-        {view === 'all' ? <>
+        {view === 'all' && card ? <CardSlot render={card} context={{
+          area: ringSelection, openDetails: () => openArea(ringSelection, `area-${ringSelection}`), openGoal: id => go(`goal:${id}`, 'rings-title', true), select: selectRing,
+          revealRing: () => root.current?.querySelector('.four-stage')?.scrollIntoView?.({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' }),
+        }} /> : view === 'all' ? <>
           {coverage && ringSelection!=='debts' && <p className="field-help">Partial coverage: {coverage}; excluded from tracked payments.</p>}
           <div className="rings-actions">
             <button type="button" className="button-small" aria-label={`View ${NAMES[ringSelection]} details`} data-rings-focus="details" onClick={() => openArea(ringSelection, `area-${ringSelection}`)}>View details</button>

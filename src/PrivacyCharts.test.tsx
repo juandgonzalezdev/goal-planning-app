@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { ALEX_DEMO_TODAY, createAlexDemo } from './data/fixtures/demoAlex'
 import { buildReport } from './report/report'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome } from './test/memoryStorage'
 import { fire, settle, freshDatabaseForEachTest } from './test/space'
 import { chooseHomeOption, openHomePart } from './test/homeControls'
 
@@ -27,7 +27,7 @@ const labelsIn = (element: Element) => [...element.querySelectorAll('[aria-label
 const leaks = (element: Element) => element.querySelectorAll('.donut, .bar, .result-bar, .is-negative, .is-positive, .stat-warning, .amount-out, [role="progressbar"]')
 
 async function openAlex() {
-  render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
+  render(<App getToday={() => '2026-10-25'} storage={classicHome()} />)
   await settle()
   await fire.click(button('Explore the App'))
 }

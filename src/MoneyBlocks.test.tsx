@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { STORAGE_KEY } from './data/localStore'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { chooseHomeOption, startDemoReset } from './test/homeControls'
 
@@ -34,7 +34,7 @@ const pickMonth = async (month: string) => await chooseMonth(month)
 const confirmReset = async () => await fire.click(within(screen.getByRole('group', { name: 'Reset demo?' })).getByRole('button', { name: 'Reset Demo' }))
 
 async function openAlex(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   return { storage, ...result }
@@ -124,7 +124,7 @@ describe('Money blocks', () => {
 
   it('remembers open blocks while moving around, separately for the demo and the own space', async () => {
     const storage = memoryStorage()
-    const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+    const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
     await fire.click(button('Explore the App'))
     await fire.click(tab('Money'))
@@ -147,7 +147,7 @@ describe('Money blocks', () => {
 
     // A new session starts with every block closed (nothing is kept between sessions).
     result.unmount()
-    render(<App getToday={() => '2026-10-25'} storage={storage} />)
+    render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
     await fire.click(tab('Money'))
     for (const name of BLOCKS) expect(isOpen(name)).toBe(false)
@@ -316,7 +316,7 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
   })
 
   it('focuses Add Account after deleting the last account', async () => {
-    render(<App getToday={() => '2026-10-25'} storage={memoryStorage()} />)
+    render(<App getToday={() => '2026-10-25'} storage={classicHome()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))
@@ -356,7 +356,7 @@ describe('All Bills (in Bills), Cards & Loans, Accounts, Goals', () => {
   })
 
   it('keeps one working Add action per empty Money section and contextual help', async () => {
-    render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome()} />)
     await settle()
     await createOwnSpace()
     await fire.click(tab('Money'))

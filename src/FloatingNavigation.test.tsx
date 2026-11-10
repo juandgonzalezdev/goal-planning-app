@@ -5,7 +5,7 @@ import App from './App'
 import { createLocalStore } from './data/localStore'
 import { createDemoHousehold } from './data/fixtures/demoHousehold'
 import { BottomNav } from './components/BottomNav'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabaseForEachTest, settle } from './test/space'
 
 freshDatabaseForEachTest()
@@ -15,7 +15,7 @@ const nav = () => screen.getByRole('navigation', { name: 'Main navigation' })
 const tab = (name: string) => within(nav()).getByRole('button', { name })
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 async function openDemo() {
-  render(<App storage={memoryStorage()} getToday={() => '2026-11-05'} />)
+  render(<App storage={classicHome()} getToday={() => '2026-11-05'} />)
   await settle()
   await fire.click(button('Explore the App'))
 }
@@ -153,7 +153,7 @@ it.each(['bill', 'debt', 'goal', 'emergency', 'new-goal'])('starts at Home consi
   const storage = memoryStorage()
   createLocalStore(storage).save(createDemoHousehold())
   window.history.replaceState({ screen: destination, chain: 'cold-visit', idx: 1 }, '')
-  render(<App storage={storage} getToday={() => '2026-11-05'} />)
+  render(<App storage={classicHome(storage)} getToday={() => '2026-11-05'} />)
   await settle()
   expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeTruthy()
   expect(tab('Home').getAttribute('aria-current')).toBe('page')

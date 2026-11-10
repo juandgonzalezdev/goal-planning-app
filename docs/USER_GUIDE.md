@@ -269,6 +269,8 @@ An amount typed for one month is only ever saved for that month. If you choose a
 
 ## 7. Reading Home
 
+Home starts with the ring and the card of the selected section (see **Ring-first Home** at the end of this guide). Everything below is inside **More for [month]**, which opens and closes. If you turn off **Show rings on Home** in Settings, Home shows the classic layout described here, with Left to Pay as its own area.
+
 Home has three areas, in this order: **This Month**, **Left to Pay** and **Money & Goals**. The areas are always shown. Inside This Month and Money & Goals there are parts that open and close, and show a short summary when they're closed. At first, every part is closed.
 
 | Area | What it shows | Parts inside |
@@ -597,7 +599,7 @@ History lists everything you recorded, grouped by month and day, newest first.
 - **The eye** hides or shows every amount on Home. Its name is **Hide All Amounts** or **Show All Amounts**, and a short message says "Amounts hidden" or "Amounts visible". When everything is hidden, the eye is crossed out.
 - **Home options** (the ⋯ button) has:
   - **Expand All** and **Collapse All**, to open or close every part of every area.
-  - **Customize Home**: drag an area by its handle, or use **Move up** and **Move down**. **Reset Layout** goes back to This Month, Left to Pay, then Money & Goals, with every part closed. It doesn't show or hide any amount. **Done** finishes.
+  - **Customize Home** (classic Home only; with the ring, the areas inside More for [month] keep the order you saved): drag an area by its handle, or use **Move up** and **Move down**. **Reset Layout** goes back to This Month, Left to Pay, then Money & Goals, with every part closed. It doesn't show or hide any amount. **Done** finishes.
 
 Each area also has its own eye (for example **Hide amounts in Left to Pay**), to hide the amounts of that area and of every part inside it, including the short summary a part shows when it's closed.
 
@@ -721,15 +723,40 @@ These don't exist in the app today:
 | **Not entered / Unknown** | Information you haven't given. It is never treated as 0. |
 
 
-### Interactive rings on Home (optional)
+### Ring-first Home
 
-Enable **Show rings on Home** in Settings. The ring has four sections: Income
+Home shows the ring first, with one card under it (beside it on a computer) for
+the section you chose. It is on unless you turned off **Show rings on Home** in
+Settings; that choice is remembered on this device, and turning it off brings
+back the classic Home with Left to Pay. Below the card, **More for [month]**
+holds This Month (with Spending by Category and Year Summary) and Money & Goals.
+**Expand All** and **Collapse All** open and close it; the ring always stays.
+
+The ring has four sections: Income
 at the top, Bills on the right, Cards & Loans at the bottom and Goals on the left.
 Each fills clockwise and shows its name inside. Tap a section, or use the arrow
-keys, to change the centre; tap the centre or press Enter to see its details.
+keys, to change the centre and the card; tap the centre or press Enter to see its details.
 **Open Income/Bills/Cards & Loans/Goals** opens the section.
-**View … details** keeps you in Home, with goal details and Contribution available.
+**View details** keeps you in Home, with goal details and Contribution available.
 Bills starts selected; your last selection is remembered on this device.
+
+**The Bills card** shows how many bills of the month are paid and the next step:
+the next bill to pay, with its expected amount and due date, and **Review payment**.
+**Other bills to pay** lists the rest, each with its own Review payment, and
+**Paid bills** lists what was already paid. Review payment checks the amount
+actually paid, the date (today, unless you change it), the account and, for a
+linked loan, the optional interest from your statement. It is saved with the
+same rules as Mark as Paid: the Remaining Balance doesn't change and the payment
+is counted once. **Cancel** changes nothing. With amounts hidden, the expected
+amount is kept without showing it; show the amounts to check or change it.
+When every bill is paid, the card says **All bills paid!**, how many were paid
+and **Paid this month**. A month without bills says **No bills this month**,
+which is not the same as all paid, and offers **Add Bill**.
+
+**The other cards** say where Income, Cards & Loans and Goals stand and suggest
+a next step that opens what already exists: Open Income to record income, Show
+in Bills for a linked card or loan payment, and Add a Contribution (inside the
+goal's details). They have no payment or income actions of their own yet.
 
 Bills counts bills paid; Cards & Loans counts payments recorded in linked bills
 for the selected month. Unlinked debts have unknown payment status and are
@@ -744,8 +771,9 @@ and Cards & Loans keep their counts while hiding money. Rings without data
 remain selectable, with an empty section and no percentage. Without expected
 income, the centre shows the income received this month instead of a share.
 
-When **Mark as Paid** pays the last bill of a month, the rings play a short
-pulse from the centre (no movement with Reduce Motion). If the rings are not
+When **Review payment** or **Mark as Paid** pays the last bill of a month, the rings play a short
+pulse from the centre (no movement with Reduce Motion), only after the payment
+is saved; after paying from the card, Home brings the ring back into view. If the rings are not
 showing, a separate note says **All bills for {month} are paid.** next to the
 usual confirmation. This happens once per month on this device; it is not
 saved with your data or your backup.

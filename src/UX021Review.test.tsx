@@ -5,14 +5,13 @@ import App from './App'
 import { memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, freshDatabaseForEachTest } from './test/space'
 import { MEMBER_NAME_MAX_LENGTH } from './domain/finance/space'
-import { chooseHomeOption } from './test/homeControls'
 
 freshDatabaseForEachTest()
 afterEach(cleanup)
 const button = (name: string | RegExp) => screen.getByRole('button', { name })
 const tab = (name: string) => within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name })
-const card = () => screen.getByRole('region', { name: 'All areas' })
-const toggle = () => card().querySelector<HTMLButtonElement>('.block-toggle')!
+const card = () => screen.getByRole('region', { name: 'December 2026 at a glance' })
+const toggle = () => button(/^More for December/)
 const amount = /\d[,.]\d{2}\s*zł/
 const main = () => screen.getByRole('main')
 const text = () => main().textContent ?? ''
@@ -59,31 +58,24 @@ describe('UX-02.1 independent review regressions', () => {
     expect((await storedData())?.space.name).toHaveLength(83)
   })
 
-  it('has one All areas heading/landmark, with genuine detail headings and neutral collapsed text', async () => {
+  // UX-04.1 Ring-first: one landmark for the ring and its card, genuine detail headings, and More (not the ring) folds.
+  it('has one at-a-glance heading/landmark for the ring, with genuine detail headings, and only More folds', async () => {
     await demo()
-    expect(within(card()).getAllByRole('heading', { name: /^All areas/, level: 2 })).toHaveLength(1)
+    expect(within(card()).getAllByRole('heading', { name: 'December 2026 at a glance', level: 2 })).toHaveLength(1)
     expect(within(card()).queryByRole('navigation', { name: 'Rings navigation' })).toBeNull()
     expect(within(card()).queryByRole('region', { name: 'Your money and goals' })).toBeNull()
     await fire.click(within(card()).getByRole('radio', { name: /^Select Bills,/ })); await fire.click(within(card()).getByRole('button', { name: 'View Bills details' }))
     const heading = within(card()).getByRole('heading', { name: 'Bills', level: 3 })
     expect(document.activeElement).toBe(heading)
+    expect(toggle().textContent).toContain('This Month, Spending by Category, Year Summary, Money & Goals')
     await fire.click(toggle())
-    expect(toggle().textContent).toContain('Money and goal details')
-    expect(toggle().textContent).not.toContain('December')
-    expect(card().querySelector('[inert]')).toBeTruthy()
-    await fire.click(toggle())
+    expect(toggle().getAttribute('aria-expanded')).toBe('true')
+    expect(card().querySelector('[inert]')).toBeNull()
     expect(within(card()).getByRole('heading', { name: 'Bills', level: 3 })).toBeTruthy()
+    await fire.click(within(card()).getByRole('button', { name: '← All areas' }))
     await fire.click(within(card()).getByRole('radio', { name: /^Select Goals,/ })); await fire.click(within(card()).getByRole('button', { name: 'View Goals details' }))
     await fire.click(within(card()).getByRole('button', { name: /^Trip to Japan/ }))
     expect(within(card()).getByRole('heading', { name: 'Trip to Japan', level: 3 })).toBeTruthy()
-    await fire.click(toggle())
-    expect(toggle().textContent).toContain('Money and goal details')
-    await chooseHomeOption('Customize Home')
-    await fire.click(button('Reset Layout'))
-    expect(document.querySelector('.home-screen > [role="status"]')?.textContent).toBe('Home layout reset. All areas will be open; other parts closed.')
-    await fire.click(button('Done'))
-    expect(toggle().getAttribute('aria-expanded')).toBe('true')
-    expect(document.activeElement).toBe(button('Home options'))
   })
 
   it('masks and restores Bills and History through the single global privacy control across tabs', async () => {

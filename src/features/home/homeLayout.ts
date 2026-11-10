@@ -26,6 +26,8 @@ export interface HomeLayout {
   ringsOpen?: boolean
   /** Absent in existing layouts: preserve the expanded This Month area. */
   monthOpen?: boolean
+  /** Ring-first Home: whether More for [Month] is open. Absent: closed, so the ring and its card come first. */
+  moreOpen?: boolean
   order: HomeArea[]
   open: HomeSection[]
 }
@@ -54,16 +56,17 @@ export function normalizeLayout(value: unknown): HomeLayout {
   const record = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}
   const rings = typeof record.ringsOpen === 'boolean' ? { ringsOpen: record.ringsOpen } : {}
   const month = typeof record.monthOpen === 'boolean' ? { monthOpen: record.monthOpen } : {}
+  const more = typeof record.moreOpen === 'boolean' ? { moreOpen: record.moreOpen } : {}
   const selection = ['income', 'bills', 'debts', 'goals'].includes(record.ringSelection as string) ? { ringSelection: record.ringSelection as RingArea } : {}
   const months = Array.isArray(record.celebratedBillMonths) ? unique(record.celebratedBillMonths.filter(isYearMonth)) : []
   const celebrated = months.length ? { celebratedBillMonths: months } : {}
   const order = Array.isArray(record.order) ? record.order : []
-  if (record.version === 2) return { ...rings, ...month, ...selection, ...celebrated, order: complete(unique(order.filter(isArea))), open: openSections(record.open) }
+  if (record.version === 2) return { ...rings, ...month, ...more, ...selection, ...celebrated, order: complete(unique(order.filter(isArea))), open: openSections(record.open) }
   return { order: complete(unique(order.filter(isBlock).map(block => AREA_OF[block]))), open: openSections(record.open) }
 }
 
 /** What is saved: the layout, marked as this version's. */
-export const layoutToSave = (layout: HomeLayout) => ({ version: 2, order: layout.order, open: layout.open, ...(layout.ringsOpen === undefined ? {} : { ringsOpen: layout.ringsOpen }), ...(layout.monthOpen === undefined ? {} : { monthOpen: layout.monthOpen }), ...(layout.ringSelection === undefined ? {} : { ringSelection: layout.ringSelection }), ...(layout.celebratedBillMonths?.length ? { celebratedBillMonths: layout.celebratedBillMonths } : {}) })
+export const layoutToSave = (layout: HomeLayout) => ({ version: 2, order: layout.order, open: layout.open, ...(layout.ringsOpen === undefined ? {} : { ringsOpen: layout.ringsOpen }), ...(layout.monthOpen === undefined ? {} : { monthOpen: layout.monthOpen }), ...(layout.moreOpen === undefined ? {} : { moreOpen: layout.moreOpen }), ...(layout.ringSelection === undefined ? {} : { ringSelection: layout.ringSelection }), ...(layout.celebratedBillMonths?.length ? { celebratedBillMonths: layout.celebratedBillMonths } : {}) })
 
 /**
  * Celebrated months only grow while the same space stays open: a change made from an older copy of the
@@ -83,8 +86,8 @@ export function setOpen(layout: HomeLayout, section: HomeSection, open: boolean)
   return { ...layout, open: open ? [...others, section] : others }
 }
 
-/** Expand All and Collapse All: This Month, five parts and the optional rings card. Headers stay visible. */
-export const setAllOpen = (layout: HomeLayout, open: boolean): HomeLayout => ({ ...layout, monthOpen: open, ringsOpen: open, open: open ? [...HOME_SECTIONS] : [] })
+/** Expand All and Collapse All: This Month, five parts, the classic rings card and Ring-first's More. Headers stay visible. */
+export const setAllOpen = (layout: HomeLayout, open: boolean): HomeLayout => ({ ...layout, monthOpen: open, ringsOpen: open, moreOpen: open, open: open ? [...HOME_SECTIONS] : [] })
 
 /** Puts `area` at position `to` (0 is the top); the others keep their order. */
 export function moveArea(layout: HomeLayout, area: HomeArea, to: number): HomeLayout {

@@ -9,9 +9,10 @@ import { AREA_NAMES, type HomeArea } from '../../ui/amountVisibility'
 import { createPortal } from 'react-dom'
 import { FoldBlock } from '../../components/FoldBlock'
 import type { ChangeSpace } from '../../ui/saveOutcome'
-import { formatDate, formatYearMonth } from '../../ui/format'
+import { formatDate, formatYearMonth, monthName } from '../../ui/format'
 import { Icon } from '../../components/Icon'
 import { GoalRings, type RingsView } from './GoalRings'
+import { RingCard } from './RingCard'
 import { LeftToPay } from './LeftToPay'
 import { MonthSummary } from './MonthSummary'
 import { SpendingByCategory } from './SpendingByCategory'
@@ -71,6 +72,8 @@ type Props = {
   onEmergencyLater: () => void
   /** Getting Started, above the areas while it is shown (not while customizing). */
   guide?: ReactNode
+  /** Add Bill, as + Add does (Ring-first: the Bills card of a month without bills). */
+  onAddBill?: () => void
 }
 
 /** A drag only starts after the finger or mouse moves this far, so a tap on the handle moves nothing. */
@@ -243,7 +246,8 @@ export function HomeScreen(props: Props) {
             <MenuButton label="Home options" icon="plan" options={[
               { label: 'Expand All', disabled: customizing, onSelect: () => { onLayoutChange(setAllOpen(layout, true)); setAnnouncement('All parts open.') } },
               { label: 'Collapse All', disabled: customizing, onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All parts closed.') } },
-              { label: 'Customize Home', disabled: customizing, onSelect: () => customize(true) },
+              // Ring-first Home has no area order to change: its areas are inside More for [Month], in the saved order.
+              ...(props.showRings ? [] : [{ label: 'Customize Home', disabled: customizing, onSelect: () => customize(true) }]),
             ]} />
           </div>, props.controlsHost)}
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
@@ -255,19 +259,37 @@ export function HomeScreen(props: Props) {
       </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
       {!customizing && guide}
-      {props.showRings && <FoldBlock title="All areas" summary="Money and goal details" expanded={!customizing && (layout.ringsOpen ?? true)} onToggle={customizing ? undefined : () => onLayoutChange({ ...layout, ringsOpen: !(layout.ringsOpen ?? true) })} className="home-rings-fold"><GoalRings embedded selection={layout.ringSelection} onSelectionChange={ringSelection => onLayoutChange({ ...layout, ringSelection })} view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
-        onChange={(next, base) => props.onChange(() => next, base)}
-        onOpen={area => {
-          const spot: HomeSpot = { key: 'rings-open' }
-          if (area === 'income') props.onOpenIncome(month, spot)
-          else if (area === 'debts') props.onOpenMoneyBlock('debts', spot)
-          else props.onOpen(area, spot)
-        }} /></FoldBlock>}
-      <HomeBlocksContext.Provider value={control}>
+      {props.showRings ? <>
+        {/* Ring-first Home (UX-04.1): the ring and the card of the selected section first, everything else in More. */}
+        <section className="home-ring-first" aria-labelledby="home-ring-first-title">
+          <h2 id="home-ring-first-title" className="visually-hidden">{formatYearMonth(month)} at a glance</h2>
+          <GoalRings embedded selection={layout.ringSelection} onSelectionChange={ringSelection => onLayoutChange({ ...layout, ringSelection })} view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
+            onChange={(next, base) => props.onChange(() => next, base)}
+            onOpen={area => {
+              const spot: HomeSpot = { key: 'rings-open' }
+              if (area === 'income') props.onOpenIncome(month, spot)
+              else if (area === 'debts') props.onOpenMoneyBlock('debts', spot)
+              else props.onOpen(area, spot)
+            }}
+            card={context => <RingCard key={`${data.space.id}:${month}:${context.area}`} context={context} data={data} month={month} today={today} asOf={asOf} onChange={props.onChange}
+              onOpenBills={() => props.onOpen('bills', { key: 'ring-card-open' })} onAddBill={() => props.onAddBill?.()}
+              onOpenIncome={() => props.onOpenIncome(month, { key: 'ring-card-open' })} onOpenDebts={() => props.onOpenMoneyBlock('debts', { key: 'ring-card-open' })}
+              onOpenGoals={() => props.onOpen('goals', { key: 'ring-card-open' })} />} />
+        </section>
+        <FoldBlock title={`More for ${monthName(month)}`} summary="This Month, Spending by Category, Year Summary, Money & Goals" expanded={layout.moreOpen ?? false}
+          onToggle={() => onLayoutChange({ ...layout, moreOpen: !(layout.moreOpen ?? false) })} className="home-more">
+          <HomeBlocksContext.Provider value={control}>
+            <div className="home-blocks" ref={blocksRef}>
+              {/* Left to Pay is the Bills card now; This Month and Money & Goals keep their saved order, eyes and parts. */}
+              {layout.order.filter(area => area !== 'left-to-pay').map(area => <div key={area} className="home-block-slot">{areas[area]}</div>)}
+            </div>
+          </HomeBlocksContext.Provider>
+        </FoldBlock>
+      </> : <HomeBlocksContext.Provider value={control}>
         <div className={`home-blocks${customizing ? ' is-customizing' : ''}${drag?.started ? ' is-dragging' : ''}`} ref={blocksRef}>
           {layout.order.map(area => <div key={area} className="home-block-slot">{areas[area]}</div>)}
         </div>
-      </HomeBlocksContext.Provider>
+      </HomeBlocksContext.Provider>}
     </div>
   )
 }

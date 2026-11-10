@@ -80,7 +80,7 @@ it('validates the saved selection and preserves it through folding and layout no
   expect(normalizeLayout({ version: 2, ringSelection: 'goal:private-id' }).ringSelection).toBeUndefined()
 })
 
-it('keeps the own selection and saved preferences byte for byte while using Demo and folding rings', async () => {
+it('keeps the own selection and saved preferences byte for byte while using Demo and folding More', async () => {
   const storage = memoryStorage()
   // Demo is the public invented fixture; it must never write the real layout.
   storage.setItem('goal-planning-app.home-rings', 'yes')
@@ -89,10 +89,11 @@ it('keeps the own selection and saved preferences byte for byte while using Demo
   render(<App storage={storage} />); await settle()
   await fire.click(screen.getByRole('button', { name: 'Explore the App' }))
   await fire.click(screen.getByRole('radio', { name: /^Select Goals,/ }))
-  await fire.click(screen.getByRole('button', { name: 'All areas' }))
-  const body = document.querySelector('.home-rings-fold .block-body')!
-  expect(body.hasAttribute('inert')).toBe(true)
-  await fire.click(screen.getByRole('button', { name: /^All areas/ }))
+  // Ring-first: More for the month folds (the ring always shows); the demo's layout is never written.
+  await fire.click(screen.getByRole('button', { name: /^More for December/ }))
+  expect(document.querySelector('.home-more .block-body')!.hasAttribute('inert')).toBe(false)
+  await fire.click(screen.getByRole('button', { name: /^More for December/ }))
+  expect(document.querySelector('.home-more .block-body')!.hasAttribute('inert')).toBe(true)
   expect(screen.getByRole('radio', { name: /^Select Goals,/ }).getAttribute('aria-checked')).toBe('true')
   await fire.click(within(document.querySelector('.goal-rings') as HTMLElement).getByRole('button', { name: 'Open Goals' }))
   await fire.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Home' }))

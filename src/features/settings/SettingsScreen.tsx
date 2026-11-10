@@ -99,7 +99,7 @@ export function SettingsScreen({ showRings = false, onShowRingsChange, data, isD
         </dl>
         <p className="field-help">Chosen when the space was created. Amounts are never converted.</p>
         <div className="form-stack">
-          {onShowRingsChange && <label className="effect-option"><input type="checkbox" checked={showRings} onChange={event => onShowRingsChange(event.target.checked)} /><span><b>Show rings on Home</b><small>Optional map of your money and goals, on this device.</small></span></label>}
+          {onShowRingsChange && <label className="effect-option"><input type="checkbox" checked={showRings} onChange={event => onShowRingsChange(event.target.checked)} /><span><b>Show rings on Home</b><small>The four-section ring and its card come first on Home, on this device. Turn it off for the classic Home.</small></span></label>}
           <LanguageSelect />
           <ThemeSelect value={data.preferences.theme} onChange={theme => void changeTheme(theme)} />
         </div>

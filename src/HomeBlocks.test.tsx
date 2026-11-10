@@ -3,7 +3,7 @@ import { chooseMonth } from './test/monthPicker'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, settle, storedData, storedSpace, freshDatabaseForEachTest } from './test/space'
 import { openCardsAndLoans } from './test/money'
 import { chooseHomeOption, startDemoReset } from './test/homeControls'
@@ -29,7 +29,7 @@ const amount = /\d,\d\d zł/
 const PARTS = ['Spending by Category', 'Year Summary', 'Accounts & Savings', 'Cards & Loans', 'Goals']
 
 async function openAlex(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   return { storage, ...result }
@@ -37,7 +37,7 @@ async function openAlex(storage: Storage = memoryStorage()) {
 
 /** Welcome → Create Account → Welcome Setup → Home, as one person. */
 async function createOwnSpace(storage: Storage = memoryStorage()) {
-  const result = render(<App getToday={() => '2026-10-21'} storage={storage} />)
+  const result = render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button(/Create Account/))
   await fire.click(button(/Continue Without an Account/))
@@ -239,9 +239,10 @@ describe('Home in three areas', () => {
     expect(text(regionOf('Left to Pay'))).not.toMatch(amount)
   })
 
+  // The classic Home (rings turned off). Ring-first's More for the month is covered in HeaderControls and RingFirst.
   it('opens and closes This Month and the five parts at once; compact headers stay', async () => {
     const storage = memoryStorage()
-    storage.setItem('goal-planning-app.home-rings', 'yes')
+    storage.setItem('goal-planning-app.home-rings', 'no')
     await openAlex(storage)
     await chooseHomeOption('Expand All')
     expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'true')).toBe(true)
@@ -254,7 +255,7 @@ describe('Home in three areas', () => {
     expect(within(regionOf('This Month')).queryByRole('button', { name: /^Income/ })).toBeNull()
     expect(screen.getByRole('button', { name: /^This Month/ })).toBe(toggleOf('This Month'))
     expect(text(toggleOf('This Month'))).toContain('December 2026')
-    expect(toggleOf('All areas').getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('region', { name: 'All areas' })).toBeNull()
     await fire.click(toggleOf('This Month'))
     expect(toggleOf('This Month').getAttribute('aria-expanded')).toBe('true')
     expect(bodyOf('This Month').hasAttribute('inert')).toBe(false)
@@ -266,7 +267,6 @@ describe('Home in three areas', () => {
     await fire.click(button('Hide amounts in This Month'))
     await chooseHomeOption('Expand All')
     expect(toggleOf('This Month').getAttribute('aria-expanded')).toBe('true')
-    expect(toggleOf('All areas').getAttribute('aria-expanded')).toBe('true')
     expect(text(regionOf('This Month'))).not.toMatch(amount)
     expect(button('Show amounts in This Month')).toBeTruthy()
     await fire.click(toggleOf('This Month'))
@@ -366,7 +366,7 @@ describe('Customize Home', () => {
     const spaceId = (await storedData())!.space.id
     expect(JSON.parse(storage.getItem('goal-planning-app.home-layout')!)).toEqual({ spaceId, layout: { version: 2, order: ['left-to-pay', 'month', 'money-goals'], open: ['year'], monthOpen: false } })
     cleanup()
-    render(<App getToday={() => '2026-10-21'} storage={storage} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
     await settle()
     expect(areas()).toEqual(['left-to-pay', 'month', 'money-goals'])
     expect(toggleOf('This Month').getAttribute('aria-expanded')).toBe('false')
@@ -379,13 +379,13 @@ describe('Customize Home', () => {
     const spaceId = (await storedData())!.space.id
     storage.setItem('goal-planning-app.home-layout', JSON.stringify({ spaceId, layout: { version: 2, order: ['money-goals', 'money-goals', 'nope'], open: 'all' } }))
     cleanup()
-    render(<App getToday={() => '2026-10-21'} storage={storage} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
     await settle()
     expect(areas()).toEqual(['money-goals', 'month', 'left-to-pay'])
     expect(PARTS.every(name => toggleOf(name).getAttribute('aria-expanded') === 'false')).toBe(true)
     storage.setItem('goal-planning-app.home-layout', '{not json')
     cleanup()
-    render(<App getToday={() => '2026-10-21'} storage={storage} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome(storage)} />)
     await settle()
     expect(areas()).toEqual(['month', 'left-to-pay', 'money-goals'])
   })

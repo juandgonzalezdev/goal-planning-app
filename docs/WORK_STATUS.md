@@ -2369,3 +2369,24 @@ UX-01 A–C en `UX_01_A.md`, `UX_01_B.md` y `UX_01_C.md`. El enlace de la propue
 Observación para Juan: la tabla §9 de PRODUCT_VISION describe el estado aprobado
 el 10-11, con UX-03 «Implemented locally». No se ha modificado; actualizarla
 queda a su decisión. `brand/` sigue sin seguimiento. No hay cambios funcionales.
+
+## UX-04.1 Ring-first Home (A+C), implementación en rama, 2026-11-10
+
+Juan aprobó la dirección A+C, «Card with Next Step», y autorizó implementarla en una
+rama propia, `feature/ux-04-1-ring-first-home`, creada desde `main` = `baf0d86`. No hay
+merge, push a main ni despliegue.
+
+Cambios:
+- Home empieza con el anillo de UX-03 y una tarjeta para la sección elegida. El resto
+  queda en «More for [Month]»: This Month, Spending by Category, Year Summary y Money &
+  Goals.
+- La tarjeta de Bills tiene el flujo completo: siguiente factura, Review payment (que
+  reutiliza Mark as Paid con la fecha de hoy), otras pendientes, facturas pagadas,
+  todo pagado y mes sin facturas.
+- Income, Cards & Loans y Goals muestran su siguiente paso con acciones que ya
+  existían.
+- El anillo aparece por defecto, salvo que el dispositivo guardara «no».
+- No cambian las reglas financieras, el backup, el restore ni el modelo de datos.
+
+Detalle, archivos, pruebas y limitaciones en [UX_04_1.md](UX_04_1.md). Las
+confirmaciones manuales de Juan siguen pendientes.

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { Opening, SKELETON_AFTER_MS } from './features/welcome/Opening'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome, memoryStorage } from './test/memoryStorage'
 import { fire, settle, freshDatabaseForEachTest } from './test/space'
 
 freshDatabaseForEachTest()
@@ -21,7 +21,7 @@ const guide = () => screen.queryByRole('region', { name: 'Getting Started' })
 const steps = () => [...guide()!.querySelectorAll('.guide-steps li')].map(item => item.className.replace(/^is-/, '').replace(' is-current', '*'))
 
 async function openAlex(storage: Storage = memoryStorage()) {
-  render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button('Explore the App'))
   return storage
@@ -29,7 +29,7 @@ async function openAlex(storage: Storage = memoryStorage()) {
 
 /** Welcome → Create Account → Welcome Setup → Home, as one person. */
 async function createOwnSpace(storage: Storage = memoryStorage()) {
-  render(<App getToday={() => '2026-10-25'} storage={storage} />)
+  render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
   await settle()
   await fire.click(button(/Create Account/))
   await fire.click(button(/Continue Without an Account/))
@@ -139,7 +139,7 @@ describe('Getting Started', () => {
     expect(steps()).toEqual(['skipped', 'skipped', 'skipped', 'to-do*', 'to-do', 'to-do'])
     // The progress is kept on this device for this space, never in the space's data.
     cleanup()
-    render(<App getToday={() => '2026-10-25'} storage={storage} />)
+    render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
     expect(text(guide())).toContain('What do you pay regularly?')
     await fire.click(within(guide()!).getByRole('button', { name: 'Hide this guide' }))
@@ -187,7 +187,7 @@ describe('Getting Started', () => {
 
 describe('After a confirmed save', () => {
   it('says what a Contribution and a Withdrawal did, and shows Goal reached once', async () => {
-    render(<App getToday={() => '2026-10-21'} storage={memoryStorage()} createDemo={() => ({ data: createDemoHousehold(), today: DEMO_TODAY })} />)
+    render(<App getToday={() => '2026-10-21'} storage={classicHome()} createDemo={() => ({ data: createDemoHousehold(), today: DEMO_TODAY })} />)
     await settle()
     await fire.click(button('Explore the App'))
     await fire.click(tab('Goals'))

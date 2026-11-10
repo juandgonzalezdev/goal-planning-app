@@ -7,7 +7,7 @@ import { markBillPaid, billsForMonth, summarizeBills } from './domain/finance/bi
 import { activityLog } from './domain/finance/history'
 import { createDemoHousehold } from './data/fixtures/demoHousehold'
 import { fire, freshDatabaseForEachTest, settle } from './test/space'
-import { memoryStorage } from './test/memoryStorage'
+import { classicHome } from './test/memoryStorage'
 
 freshDatabaseForEachTest()
 beforeEach(() => window.history.replaceState(null, ''))
@@ -29,7 +29,7 @@ function fixture(empty = false) {
 }
 async function start(empty = false, data = fixture(empty)) {
   const before = structuredClone(data)
-  render(<App storage={memoryStorage()} createDemo={() => ({ data, today: '2026-11-05' })} getToday={() => '2026-11-05'} />)
+  render(<App storage={classicHome()} createDemo={() => ({ data, today: '2026-11-05' })} getToday={() => '2026-11-05'} />)
   await settle()
   await fire.click(button('Explore the App'))
   await fire.click(within(nav()).getByRole('button', { name: 'Bills' }))

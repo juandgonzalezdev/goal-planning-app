@@ -1044,7 +1044,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenMoneyBlock={(block, spot) => fromHome(spot, () => showMoneyBlock(block))} onOpenGoal={(id, spot) => fromHome(spot, () => showGoal(id))}
                 onOpenIncome={(forMonth, spot) => fromHome(spot, () => showIncomeFor(forMonth))} onOpenSpent={(forMonth, spot) => fromHome(spot, () => showSpentFor(forMonth))}
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}
-                onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))}
+                onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAddBill={() => addFrom('bill')}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 guide={guideShown(open.data, guideProgress) && <GettingStarted data={open.data} progress={guideProgress} isDemo={open.kind === 'demo'}
                   onAction={guideAction} onSkip={step => changeGuide(skipStep(guideProgress, step))} onHide={() => changeGuide({ ...guideProgress, hidden: true })} />} />

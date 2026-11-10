@@ -7,7 +7,7 @@ import { Field } from '../../components/Field'
 import { isBillDueIn, markBillPaid, validatePayment, type BillOccurrence, type PaymentError } from '../../domain/finance/bills'
 import type { FinanceData } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
-import { formatDate, formatYearMonth } from '../../ui/format'
+import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
 import { suggestedPaidOn } from './payment'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
@@ -42,6 +42,12 @@ type Props = {
   onCancel: () => void
   /** Where the form belongs, so the app knows which form a change of view would close. */
   tag?: string
+  /**
+   * `mark` (Bills, Left to Pay): Mark as Paid, dated on the due date once it has passed.
+   * `review` (Ring-first Home): Review payment, dated today, with the expected amount and due date first.
+   * Both save the same payment with the same rules.
+   */
+  variant?: 'mark' | 'review'
 }
 
 /**
@@ -50,7 +56,8 @@ type Props = {
  * (or Not sure) and, for a loan, the interest from the statement, as one
  * change. It never changes a Remaining Balance and never guesses interest.
  */
-export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange, onSaved, onCancel, tag }: Props) {
+export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange, onSaved, onCancel, tag, variant = 'mark' }: Props) {
+  const review = variant === 'review'
   const celebration = useContext(BillCelebrationContext)
   const { bill, month } = occurrence
   const monthLabel = formatYearMonth(month)
@@ -61,7 +68,7 @@ export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange
   // One Daily Spending account comes chosen; with none at all, Not sure is the only choice.
   const firstAccount = daily.length === 1 ? daily[0].id : accounts.length === 0 ? NOT_SURE : ''
   const keepHidden = hidden && occurrence.amount !== null
-  const [form, setForm] = useState({ amount: keepHidden ? '' : amountText(occurrence.amount), paidOn: suggestedPaidOn(occurrence, today), paidFrom: firstAccount, interest: '' })
+  const [form, setForm] = useState({ amount: keepHidden ? '' : amountText(occurrence.amount), paidOn: review ? today : suggestedPaidOn(occurrence, today), paidFrom: firstAccount, interest: '' })
   const [errors, setErrors] = useState<Partial<Record<'amount' | 'paidOn' | 'paidFrom' | 'interest' | 'form', string>>>({})
   const [refusal, setRefusal] = useState('')
   const [sending, setSending] = useState(false)
@@ -110,11 +117,20 @@ export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange
   }
 
   return (
-    <div className="form-stack edit-box mark-paid" role="group" aria-label={`Mark as paid: ${bill.name}, ${monthLabel}`}>
-      <p className="mark-paid-title"><b>Mark as Paid</b> <small>{bill.name} · {monthLabel} · due {formatDate(occurrence.dueDate)}</small></p>
+    <div className={`form-stack edit-box mark-paid${review ? ' is-review' : ''}`} role="group" aria-label={`${review ? 'Review payment' : 'Mark as paid'}: ${bill.name}, ${monthLabel}`}>
+      {review
+        ? <>
+          <p className="mark-paid-title"><b>Review payment</b> <small>{bill.name} · {monthLabel}</small></p>
+          <dl className="review-facts">
+            <div><dt>Expected</dt><dd>{keepHidden ? 'Hidden' : occurrence.amount === null ? 'Not known yet' : formatAmount(occurrence.amount, data.space.currency)}</dd></div>
+            <div><dt>Due</dt><dd>{formatDate(occurrence.dueDate)}</dd></div>
+            {debt && <div><dt>Linked to</dt><dd>{debt.name}</dd></div>}
+          </dl>
+        </>
+        : <p className="mark-paid-title"><b>Mark as Paid</b> <small>{bill.name} · {monthLabel} · due {formatDate(occurrence.dueDate)}</small></p>}
       {keepHidden
-        ? <p className="muted-note">Amount: hidden with the amounts. The amount for {monthLabel} is kept. Show the amounts to change it.</p>
-        : <Field id={`${prefix}-amount`} label={`Amount (${data.space.currency})`} inputMode="decimal" value={form.amount} onChange={change('amount')} error={errors.amount}
+        ? <p className="muted-note">{review ? <>Amount: hidden with the amounts. The expected amount for {monthLabel} is kept. Show the amounts to check or change it.</> : <>Amount: hidden with the amounts. The amount for {monthLabel} is kept. Show the amounts to change it.</>}</p>
+        : <Field id={`${prefix}-amount`} label={review ? `Amount paid (${data.space.currency})` : `Amount (${data.space.currency})`} inputMode="decimal" value={form.amount} onChange={change('amount')} error={errors.amount}
           help={`If you change it, only ${monthLabel} changes.`} />}
       <Field id={`${prefix}-date`} label="Paid on" type="date" max={today} value={form.paidOn} onChange={change('paidOn')} error={errors.paidOn} help="Can’t be after today." />
       <div className="form-field">
@@ -132,11 +148,11 @@ export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange
       </div>
       {isLoan && <Field id={`${prefix}-interest`} label={`Interest in this payment (optional, ${data.space.currency})`} inputMode="decimal" value={form.interest} onChange={change('interest')}
         error={errors.interest} help="From your statement. Without it, interest isn’t counted in Spent, and the app doesn’t guess it." />}
-      {debt && <p className="field-help">Paying doesn’t change the Remaining Balance. Update it from your statement.</p>}
+      {debt && <p className="field-help">Paying doesn’t change the Remaining Balance. Update it from your statement.{review ? ' This payment is counted once, in Bills.' : ''}</p>}
       {errors.form && <p className="field-error" role="alert">{errors.form}</p>}
       {refusal && <p className="field-error" role="alert">{refusal}</p>}
       <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => { if (!blocked && !sending) void save() }}>{sending ? 'Saving…' : 'Save as Paid'}</button>
+        <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => { if (!blocked && !sending) void save() }}>{sending ? 'Saving…' : review ? 'Confirm Payment' : 'Save as Paid'}</button>
         <button type="button" className="button-small" onClick={onCancel}>Cancel</button>
       </div>
     </div>
