@@ -36,7 +36,7 @@ Cómo funcionan el guardado, las otras pestañas, la recuperación y la demo:
 | `src/styles/` | CSS global: `tokens.css` (colores, radios, espacios, modo oscuro), `base.css`, `app.css` (armazón y bienvenida), `finance.css` (pestañas, Home, formularios, Goals, Alex). | |
 | `src/report/` | Informe PDF: `pdf.ts` (escritor PDF mínimo, sin dependencias) y `report.ts` (contenido del informe). | Sin React. |
 | `src/test/` | Ayudas para pruebas: `memoryStorage.ts`, `space.ts` (base de datos nueva en cada prueba, almacén retenido para simular un guardado lento, lectura de lo guardado), `homeControls.ts`, `money.ts` (abrir un bloque de Money o Cards & Loans) y `bills.ts` (Mark as Paid y Mark as Not Paid con su formulario). | |
-| `docs/` | Esta documentación. El manual de uso para quien usa la app es [`USER_GUIDE.md`](USER_GUIDE.md) (en inglés). | Si cambia un texto, un control o una regla visible, revisar también el manual. |
+| `docs/` | Esta documentación. El manual de uso para quien usa la app es [`USER_GUIDE.md`](USER_GUIDE.md) (en inglés). La visión de producto y los principios de diseño están en [`PRODUCT_VISION.md`](PRODUCT_VISION.md). | Si cambia un texto, un control o una regla visible, revisar también el manual. |
 | `public/` | `favicon.svg`. | |
 
 ### Pantallas por carpeta

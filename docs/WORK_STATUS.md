@@ -2312,3 +2312,60 @@ Pendiente:
 - riesgos de persistencia de HomeLayout (DELIVERY.md).
 
 No hay confirmaciones manuales nuevas de Juan.
+
+Integración posterior, con autorización expresa de Juan: el commit `7800dac`
+entra en `main` por fast-forward y se publica con `git push origin main`.
+`main` y `origin/main` coinciden. No se ha comprobado la publicación en
+Cloudflare Pages.
+
+## Project Cleanup 01, fases A y C, 2026-11-10
+
+Juan autorizó las fases A y C, sin commit, push, merge ni deploy, y sin cambios
+funcionales.
+
+- A: `PRODUCT_VISION.md` pasa a `docs/PRODUCT_VISION.md` con el mismo
+  contenido, y PROJECT_MAP lo enlaza. `.gitignore` ignora además `review-deliveries/`,
+  `*.tmp`, `*.temp`, `*.diff` y `*.zip` de la raíz, `/results*.json`, las salidas de
+  pruebas y herramientas (`coverage/`, `test-results/`, `playwright-report/`,
+  `*.tsbuildinfo`, `.eslintcache`, `.vite/`) y `Thumbs.db` y `desktop.ini`.
+  Comprobación: ningún archivo con seguimiento coincide con las reglas, y solo
+  `review-deliveries/` y `results.json` pasan a estar ignorados.
+- C: 252 archivos auxiliares salen del repositorio hacia
+  `C:\Projects\goal-planning-archive\cleanup-01-2026-11-10\`, con un inventario
+  de SHA-256, origen y destino (`inventario.tsv` e `INVENTARIO.md`):
+  - 9 resúmenes;
+  - 34 parches y mbox;
+  - 113 logs;
+  - 1 `.bak` de `src/`;
+  - `rumbo-01-08/`, con 95 archivos.
+
+  Los 252 hashes coinciden y no se omitió ningún original.
+- Sin cambios: `brand/rumbo/` (fase B) y `review-deliveries/`, incluidos sus tres
+  zip de revisión. WORK_STATUS cita dos de ellos, y Juan decidió conservar los tres.
+- Copia de seguridad: `goal-planning-archive-2026-11-10.zip`, con su `.sha256`,
+  junto al archivo y en OneDrive. Tras extraerlo, los 252 archivos coinciden con
+  el manifiesto, y el SHA-256 del zip original y el de la copia son iguales.
+- D: con autorización de Juan, se eliminan tres archivos locales sin seguimiento.
+  Antes se comprobó que no eran necesarios:
+  - `RESUMEN-01.md`, idéntico a su copia archivada;
+  - `t -- --run`, solo el `git diff --stat` de `0e52d97`;
+  - un archivo con nombre accidental que contenía solo el `git diff --stat` de `a3ec844`.
+
+  Ninguno estaba versionado ni tenía referencias.
+
+Cierre documental: entran en el repositorio `docs/PRODUCT_VISION.md` y cinco
+documentos que estaban sin seguimiento pese a que los citan documentos ya
+versionados:
+- `UX_01_IMPLEMENTATION.md` y `UX_01_TECHNICAL_EVALUATION.md`;
+- `audits/SUBSCRIPTION_MANAGEMENT_TECHNICAL_AUDIT.md` y su anexo
+  `SUBSCRIPTION_INTEGRITY_TESTS.ts.txt`;
+- `ux/SUBSCRIPTION_MANAGEMENT_PROPOSAL.md`.
+
+Son registros con fecha. Lo que describen como pendiente quedó resuelto después:
+la corrección de integridad de pagos está en `audits/PAYMENT_INTEGRITY_FIX.md`, y
+UX-01 A–C en `UX_01_A.md`, `UX_01_B.md` y `UX_01_C.md`. El enlace de la propuesta a
+`review-deliveries/` solo funciona en el equipo local.
+
+Observación para Juan: la tabla §9 de PRODUCT_VISION describe el estado aprobado
+el 10-11, con UX-03 «Implemented locally». No se ha modificado; actualizarla
+queda a su decisión. `brand/` sigue sin seguimiento. No hay cambios funcionales.

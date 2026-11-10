@@ -31,8 +31,30 @@ dist-ssr
 *.orig
 *.rej
 
+*.tmp
+*.temp
+/*.diff
+/*.zip
+
+# Local review packages and their evidence (AGENTS.md, docs/WORKFLOW.md):
+# they stay on this computer and never go into the app's commits.
+/review-deliveries/
+
 # Screenshots taken while testing
 shots/
+
+# Test and tool output
+coverage/
+/test-results/
+/playwright-report/
+/results*.json
+*.tsbuildinfo
+.eslintcache
+.vite/
+
+# Windows system files
+Thumbs.db
+desktop.ini
 
 # Secrets and private data: never commit them
 .env
