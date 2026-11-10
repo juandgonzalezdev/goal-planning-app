@@ -62,9 +62,9 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
   const amounts = useAllAmounts(data.space.currency)
   // What Mark as Paid or Mark as Not Paid just did in the list, for this month. A bill that leaves the
   // list (Pending or Paid chosen) leaves the keyboard on this message.
-  const [paidNote, setPaidNote] = useState<{ month: YearMonth; text: string } | null>(null)
-  const notePaid = (text: string, leaves: boolean) => {
-    setPaidNote({ month, text })
+  const [paidNote, setPaidNote] = useState<{ month: YearMonth; text: string; completion?: string } | null>(null)
+  const notePaid = (text: string, leaves: boolean, completion?: string) => {
+    setPaidNote({ month, text, completion })
     if (leaves) requestAnimationFrame(() => document.getElementById(PAID_NOTE_ID)?.focus())
   }
   // A bill just added from the day panel: the calendar shows its day in this month.
@@ -186,6 +186,7 @@ export function BillsScreen({ data, months, month, today, isDemo, view, onViewCh
       {summary.count > 0 && view.mode === 'list' && (
         <div className="bill-list no-print">
           <p id={PAID_NOTE_ID} className="muted-note" role="status" tabIndex={-1}>{paidNote?.month === month ? paidNote.text : ''}</p>
+          {paidNote?.month === month && paidNote.completion && <p className="muted-note paid-completion" role="status">{paidNote.completion}</p>}
           {shown.length === 0 && <div className="empty-block"><p>No {view.filter} bills in {monthLabel}.</p></div>}
           {groupBillsByDay(shown).map(day => (
             <section key={day.dueDate} className="bill-list-day" aria-labelledby={`bill-date-${day.dueDate}`}>
@@ -336,7 +337,7 @@ const itemTag = (billId: Id) => `${ITEM_TAG}${billId}`
 function BillItem({ data, occurrence, today, amounts, filter, onChange, onPaid, onOpenBill }: {
   data: FinanceData; occurrence: BillOccurrence; today: CalendarDate; amounts: BlockAmounts; filter: BillsFilter; onChange: Props['onChange']
   /** What was saved, and whether the bill leaves the list because of it (Pending or Paid chosen). */
-  onPaid: (message: string, leaves: boolean) => void
+  onPaid: (message: string, leaves: boolean, completion?: string) => void
   onOpenBill: (id: Id) => void
 }) {
   const { bill, month, amount, paid, amountChangedThisMonth } = occurrence
@@ -391,7 +392,7 @@ function BillItem({ data, occurrence, today, amounts, filter, onChange, onPaid, 
       {paid && <small className="paid-detail">{paidText(data, billMonthOf(data, occurrence))}</small>}
       {paying === 'form' && !paid && (
         <MarkPaidForm data={data} occurrence={occurrence} today={today} hidden={amounts.hidden} onChange={onChange} tag={itemTag(bill.id)}
-          onSaved={done => { closePaying(); onPaid(done, filter === 'pending') }} onCancel={closePaying} />
+          onSaved={(done, completion) => { closePaying(); onPaid(done, filter === 'pending', completion) }} onCancel={closePaying} />
       )}
       {paying === 'not-paid' && paid && (
         <ConfirmNotPaid occurrence={occurrence} sending={saver.sending} onCancel={closePaying} onConfirm={() => {

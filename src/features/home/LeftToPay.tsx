@@ -61,7 +61,7 @@ export function LeftToPay({ data, month, today, isDemo, showAll, onShowAllChange
   // Mark as Paid opens its short form under the bill (one at a time). Once saved, the bill leaves the list,
   // and the keyboard goes to the message.
   const [paying, setPaying] = useState<{ month: YearMonth; billId: Id } | null>(null)
-  const [paidNote, setPaidNote] = useState<{ month: YearMonth; text: string } | null>(null)
+  const [paidNote, setPaidNote] = useState<{ month: YearMonth; text: string; completion?: string } | null>(null)
   const focusNote = useRef(false)
   const guard = useLeaveGuard()
   const r = monthResult(data, month, today)
@@ -85,7 +85,7 @@ export function LeftToPay({ data, month, today, isDemo, showAll, onShowAllChange
       </button>
       {paying?.month === month && paying.billId === occurrence.bill.id
         ? <MarkPaidForm data={data} occurrence={occurrence} today={today} hidden={hidden} onChange={onChange} tag={`home-payment:${occurrence.bill.id}`}
-          onSaved={done => { setPaying(null); setPaidNote({ month, text: done }); focusNote.current = true }} onCancel={() => setPaying(null)} />
+          onSaved={(done, completion) => { setPaying(null); setPaidNote({ month, text: done, completion }); focusNote.current = true }} onCancel={() => setPaying(null)} />
         : <div className="pay-row-actions">
           <button type="button" className="text-button" aria-label={`Mark as Paid: ${occurrence.bill.name}, ${formatYearMonth(month)}`}
             onClick={() => guard(form => paying?.month === month && form.tag === `home-payment:${paying.billId}`, () => {
@@ -111,6 +111,7 @@ export function LeftToPay({ data, month, today, isDemo, showAll, onShowAllChange
         <b className="year-total">{money(r.planned.leftToPay)}{status.status === 'amounts-missing' && <small> + unknown</small>}</b>
         <LeftToPayMessage bills={r.planned} month={month} />
         {paidNote?.month === month && <p className="muted-note paid-note" tabIndex={-1} ref={element => { if (element && focusNote.current) { focusNote.current = false; element.focus() } }}><span className="paid-check" aria-hidden="true"><Icon name="check" size={14} /></span>{paidNote.text}</p>}
+        {paidNote?.month === month && paidNote.completion && <p className="muted-note paid-completion" role="status">{paidNote.completion}</p>}
         {all.length > 0 && <p className="muted-note pay-reference">{reference}</p>}
         {all.length > 0 && (
           <div id="left-to-pay-list" className="pay-groups">

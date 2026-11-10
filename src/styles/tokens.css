@@ -21,6 +21,14 @@
   /* v5.9 uses #7b7d8e; slightly darker here so small text meets WCAG AA contrast. */
   --color-text-muted: #6a6b7b;
   --color-progress: #7952b5;
+  --color-ring-track-opacity: .17;
+  --color-ring-label-bg: rgb(255 255 255 / .94);
+  --color-ring-label-text: #1a1926;
+  --color-ring-label-sub: #5d5c6e;
+  --color-ring-income: #9175d3;
+  --color-ring-bills: #7f5cc6;
+  --color-ring-debts: #6a45ae;
+  --color-ring-goals: #4f2f8c;
   --color-progress-new: #b79cf0;
   --color-ring-band: #e4dfed;
   --color-ring-hover: #d2c8e3;
@@ -82,6 +90,14 @@
   --color-text-strong: #ffffff;
   --color-text-muted: #ada9bf;
   --color-progress: #b79cf0;
+  --color-ring-track-opacity: .20;
+  --color-ring-label-bg: rgb(29 27 38 / .92);
+  --color-ring-label-text: #f6f4fb;
+  --color-ring-label-sub: #b7b3c8;
+  --color-ring-income: #e2d6fb;
+  --color-ring-bills: #c9b2f2;
+  --color-ring-debts: #ae90e8;
+  --color-ring-goals: #977ade;
   --color-progress-new: #dac9fa;
   --color-ring-band: #41394e;
   --color-ring-hover: #655578;
@@ -117,6 +133,14 @@
     --color-text-strong: #ffffff;
     --color-text-muted: #ada9bf;
     --color-progress: #b79cf0;
+    --color-ring-track-opacity: .20;
+  --color-ring-label-bg: rgb(29 27 38 / .92);
+  --color-ring-label-text: #f6f4fb;
+  --color-ring-label-sub: #b7b3c8;
+  --color-ring-income: #e2d6fb;
+    --color-ring-bills: #c9b2f2;
+    --color-ring-debts: #ae90e8;
+    --color-ring-goals: #977ade;
     --color-progress-new: #dac9fa;
     --color-ring-band: #41394e;
     --color-ring-hover: #655578;

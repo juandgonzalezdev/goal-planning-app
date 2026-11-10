@@ -78,6 +78,8 @@ export function BillScreen(props: Props) {
   const [payReturn, setPayReturn] = useState(false)
   const closePaying = () => { setPaying(null); setPayReturn(true) }
   const [message, setMessage] = useState('')
+  // "All bills for … are paid." belongs to the payment message that brought it: any later message hides it.
+  const [completion, setCompletion] = useState<{ message: string; text: string } | null>(null)
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
   // Which change is being saved ("Saving…"), and the revision each editor was opened on.
@@ -156,6 +158,7 @@ export function BillScreen(props: Props) {
       {bill.category === 'Subscriptions' && <SubscriptionSection data={data} bill={bill} today={today} onChange={onChange} onMessage={setMessage} />}
       <MonthSwitch months={props.months} value={month} onChange={props.onMonthChange} />
       <p className="muted-note" role="status">{message}</p>
+      {completion && message && completion.message === message && <p className="muted-note paid-completion" role="status">{completion.text}</p>}
 
       <section className="block" aria-labelledby="bill-month">
         <h2 id="bill-month" className="section-title">{monthLabel}</h2>
@@ -180,7 +183,7 @@ export function BillScreen(props: Props) {
             )}
             {payStep === 'form' && !occurrence.paid && (
               <MarkPaidForm data={data} occurrence={occurrence} today={today} onChange={onChange} tag={paymentTag}
-                onSaved={done => { closePaying(); setMessage(done) }} onCancel={closePaying} />
+                onSaved={(done, text) => { closePaying(); setMessage(done); setCompletion(text ? { message: done, text } : null) }} onCancel={closePaying} />
             )}
             {payStep === 'not-paid' && occurrence.paid && (
               <ConfirmNotPaid occurrence={occurrence} sending={sending === 'paid'} onCancel={closePaying} onConfirm={() => {

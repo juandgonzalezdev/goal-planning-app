@@ -2217,3 +2217,98 @@ El hash final, integración, push y estado de publicación se registran en
 review-deliveries/ux-02-1/<commit-final-completo>/DELIVERY.md y GIT_STATUS.md,
 fuera del commit de la app. No se ejecuta despliegue manual; Cloudflare solo
 se declara publicado si hay evidencia adicional al push.
+
+
+## UX-03 — implementación sin integración, 2026-11-09
+
+Base main comprobada 7021c1f8009ce823845e9597bf66aa41fd5031fa. Rama
+codex/ux-03-interactive-progress-rings. Especificación de Dirección autoriza
+implementar y preparar snapshot revisable sin commit. Se leyó el HTML de
+referencia aportado por Juan durante la implementación.
+
+Cuatro progresos derivados, selección separada de detalles/navegación y centro
+dinámico. Bills y Cards & Loans cuentan obligaciones; deudas sin vínculo se
+excluyen del denominador verificable con cobertura parcial explícita. Income
+usa recibido/(recibido+esperado), sin presupuesto fijo. Goals limita cada meta
+a su target y usa registros actuales, con aviso de que no reconstruye historia.
+Privacidad elimina arcos e indicadores monetarios y conserva los de cantidades.
+Selección Bills inicial; campo opcional en HomeLayout existente. Demo solo en
+memoria; sin cambios de registros, almacenamiento financiero ni dependencias.
+Detalles, Contribution, guardas, foco, pliegue y preferencias se conservan.
+
+Resultados propios: suite 1068/1068 en78archivos,281,78s; dirigidas finales
+54/54 en7archivos,19,86s (no sumar). Lint estricto y build correctos; JS739,08kB/
+gzip207,03, CSS87,91kB/gzip16,52, aviso conocido>500kB. Suite antes del ajuste
+CSS de opacidad y retirada de prop de prueba sin efecto; dirigidas/build finales
+sobre contenido resultante. Avisos jsdom conocidos; MarkPaid pasa, no se declara
+resuelta su intermitencia histórica. Audit anterior reutilizado, sin nueva
+ejecución y sin cambios de paquetes. Diff e índice comprobados en la entrega.
+
+Chromium propio:6anchos320/375/390/430/768/1280,2temas,4selecciones; overflow0,
+controles>=53,6px y contexto128px estable en Demo. Privacidad2arcos monetarios
+retirados/2de cantidades conservados; teclado, detalles, navegación, pliegue
+0px/inert, vacíos y cobertura parcial. Movimiento reducido probado con
+matchMedia en tests y CSS en laboratorio, no emulación del sistema. Consola
+final sin errores/warnings. Sin pruebas físicas Safari/iPhone, VoiceOver ni
+emulación táctil; pendientes de Dirección. No hay confirmaciones manuales nuevas.
+
+Informe docs/UX_03.md y paquete review-deliveries/ux-03/working-2026-11-09/.
+Snapshot de trabajo con hashes/diff, no entrega fija por commit. Claude puede
+escribir únicamente REVISION.md en esa carpeta tras el aviso de Juan. Índice
+vacío; archivos ajenos preservados. Sin commit, merge, push ni despliegue.
+
+## UX-03 — correcciones para segunda revisión, 2026-11-09
+
+Se corrigen I1–I4 y M1–M6 sin cambiar monthIncome, Bills ni movimientos:
+Income sin previsión devuelve null; Cards & Loans comunica payments verificables
+y deudas sin factura vinculada; Goals separa ahorro real y contabilizado; Soft
+Focus .45 y escala violeta por tema. Acciones locales >=44px, centro con mayor
+jerarquía y contexto reducido; spoken para importes ocultos y pruebas explícitas
+de privacidad de Goals/This Month. Se conservan D1–D8.
+
+Evidencias y resultados propios finales en
+review-deliveries/ux-03/review-fixes-2026-11-09/DELIVERY.md.
+Primera entrega y revisión preservadas. Paquete de trabajo sin commit, no entrega
+fija por commit. Índice sin preparar; sin merge, push, despliegue ni UX-04.
+Pendiente segunda revisión de Claude (Juan comunica cuándo está lista), después
+Safari/iPhone y VoiceOver reales. Sin nuevas confirmaciones manuales de Juan.
+
+## UX-03 — Anillo en 4 + Pulse, continuación de Claude, 2026-11-10
+
+Juan autorizó a Claude como editor para continuar la implementación interrumpida
+de Codex (decisión en review-deliveries/ux-03/four-sections-pulse-2026-11-10/
+reference/decision.md). La auditoría previa clasificó los 30 fallos en tres grupos.
+Defecto real: nombre accesible duplicado del centro. Error de prueba: «radio» en
+lugar de «button» en UX021Review. Expectativas de la Corona: el resto. LeaveForms
+no se reproduce.
+
+Cambios principales:
+- El centro tiene nombre propio y vuelve el anuncio del título en las vistas de detalle.
+- La celebración de una vez por mes se guarda en HomeLayout por dispositivo, no en
+  FinanceData: types, validate y useSpace vuelven a main.
+- Mark as Paid mantiene su confirmación y añade aparte «All bills for {Month} are
+  paid.» cuando Home no reproduce el pulso.
+- Income sin previsión muestra en el centro lo recibido y «Received this month».
+- Se actualizaron las pruebas al Anillo en 4 y se añadieron las del §12.
+
+Resultados propios: suite 1087/1087 en 80 archivos (265,79 s), lint estricto y
+build correctos (JS 751,74 kB / gzip 211,76 kB). Logs y diff respecto a
+`before/` en la misma carpeta (claude-*.log, claude-changes.diff). Índice vacío;
+HEAD 7021c1f. Sin commit, merge, push ni despliegue.
+
+Decisiones cerradas por Dirección:
+- P3: Bullseye! / All paid / Everything paid for {Month}; desde Bills, aviso
+  separado «All bills for {Month} are paid.».
+- P4: las deudas sin factura vinculada no bloquean; se muestra Partial coverage.
+- P6: como máximo una celebración automática por mes YYYY-MM en el dispositivo.
+- P7: no se muestra «Tap a section to see its details».
+
+El Pulse sigue siendo minimalista y sin dardo, sin animaciones nuevas. El rebote de
+la diana queda pendiente solo de revisión visual.
+
+Pendiente:
+- revisión independiente y prueba manual de Juan;
+- iPhone/Safari y VoiceOver;
+- riesgos de persistencia de HomeLayout (DELIVERY.md).
+
+No hay confirmaciones manuales nuevas de Juan.

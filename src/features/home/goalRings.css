@@ -1,25 +1,28 @@
 .goal-rings { overflow: hidden; }
 .rings-crumbs { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .rings-crumbs button { min-height:44px; background:none; border:0; color:var(--color-text); text-decoration:underline; }
-.rings-layout { display:grid; grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:24px; align-items:start; }
-.rings-stage { width:100%; aspect-ratio:1; position:relative; align-self:start; }
+.rings-layout { display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:12px; align-items:start; }
+.rings-stage { width:100%; max-width:300px; aspect-ratio:1; position:relative; touch-action:pan-y; user-select:none; align-self:start; }
 .rings-stage > svg { position:absolute; inset:0; width:100%; height:100%; }
 .rings-bands { transform-origin:200px 200px; transition:transform 420ms var(--motion-ease),opacity 420ms var(--motion-ease); }
 .is-goal .rings-bands { transform:scale(1.22); opacity:0; pointer-events:none; }
-.rings-band { transition:opacity 420ms var(--motion-ease); }
-.has-selection .rings-band:not(.is-selected):not(.is-hover) { opacity:.42; }
-.rings-band-track,.rings-band-sweep { fill:none; stroke:var(--color-ring-band); stroke-width:34; stroke-linecap:round; }
-.rings-band-sweep { stroke:var(--color-ring-selected); stroke-dasharray:100 100; stroke-dashoffset:100; transition:stroke-dashoffset 700ms var(--motion-ease); }
-.rings-band.is-selected .rings-band-sweep { stroke-dashoffset:0; }
+.rings-band { transition:opacity 180ms var(--motion-ease); }
+.has-selection .rings-band:not(.is-selected):not(.is-hover) { opacity:.45; }
+.rings-band-track,.rings-band-sweep { fill:none; stroke:var(--color-ring-band); stroke-width:24; stroke-linecap:round; transition:stroke-width 180ms var(--motion-ease); }
+.rings-band-sweep { stroke:var(--ring-tone, var(--color-progress)); transition:stroke-width 180ms var(--motion-ease),stroke-dashoffset 260ms var(--motion-ease); }
+.rings-band.is-selected .rings-band-sweep { stroke-width:26; }
+.rings-band.is-selected .rings-band-track { stroke-width:26; }
+.rings-band.is-undefined .rings-band-track { stroke-dasharray:3 6; }
+.rings-hit:active { stroke:var(--color-ring-hover); stroke-opacity:.4; }
 .rings-band.is-hover .rings-band-track { stroke:var(--color-ring-hover); }
-.rings-hit { fill:none; stroke:transparent; stroke-width:42; pointer-events:stroke; cursor:pointer; }
+.rings-hit { fill:none; stroke:transparent; stroke-width:28; pointer-events:stroke; cursor:pointer; }
 .rings-label-hit { fill:transparent; pointer-events:all; cursor:pointer; }
 /* Children set explicit SVG hit testing, so disable them as well as their group. */
 .is-goal .rings-hit, .is-goal .rings-label-hit { pointer-events:none; }
-.rings-band text { text-anchor:middle; dominant-baseline:central; font-size:12px; font-weight:600; fill:var(--color-text); pointer-events:none; }
-.rings-core { position:absolute; width:29%; height:29%; left:35.5%; top:35.5%; border-radius:50%; border:1px solid var(--color-border-strong); background:var(--color-surface); color:var(--color-text); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; cursor:pointer; }
+.rings-label text { text-anchor:middle; dominant-baseline:central; font-size:16px; font-weight:600; fill:var(--color-text); pointer-events:none; }
+.rings-core { position:absolute; inset:29.5%; border:1px solid var(--color-border); border-radius:50%; background:var(--color-accent-soft); color:var(--color-text); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:4px; overflow-wrap:anywhere; pointer-events:none; }
 .rings-core.is-selected { background:var(--color-accent-soft); border-color:var(--color-progress); }
-.rings-core span { font-size:clamp(10px,1.4vw,14px); font-weight:600; }
+.rings-core span { font-size:clamp(12px,1.4vw,16px); font-weight:600; }
 .rings-core small { font-size:10px; max-width:90px; }
 .rings-goal-center { position:absolute; inset:22%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; overflow-wrap:anywhere; }
 .rings-goal-center strong { font-size:clamp(18px,2.5vw,28px); }
@@ -32,11 +35,14 @@
 .rings-panel { min-width:0; display:grid; gap:12px; animation:rings-panel-in 420ms var(--motion-ease); }
 @keyframes rings-panel-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
 .rings-area-list { display:grid; gap:8px; }
+.rings-panel > [aria-label="Select an area"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.rings-panel > [aria-label="Select an area"] .rings-area { border-radius:18px; min-height:52px; gap:6px; padding:8px 10px; font-size:13px; }
+.rings-panel > [aria-label="Select an area"] .rings-area small { font-size:11px; }
 .rings-area { min-height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); color:var(--color-text); text-align:left; cursor:pointer; }
 .rings-area span { min-width:0; overflow-wrap:anywhere; }
 .rings-area small { display:block; color:var(--color-text-muted); font-size:12px; margin-top:4px; }
 .rings-area b { flex-shrink:0; }
-.rings-area.is-selected,.rings-area:hover,.rings-area:focus-visible { background:var(--color-accent-soft); border-color:var(--color-selected-border); }
+.rings-area.is-selected,.rings-area:focus-visible { background:var(--color-accent-soft); border-color:var(--color-selected-border); }
 .rings-main-value { font-size:24px; font-weight:600; }
 .rings-split { height:12px; border-radius:6px; background:var(--color-track); overflow:hidden; }
 .rings-split i { display:block; height:100%; background:var(--color-progress); }
@@ -44,9 +50,91 @@
 .rings-mini .rings-mini-value { stroke:var(--color-progress); }
 .rings-timeline { border-block:1px solid var(--color-border); padding:12px 0; }
 .rings-added { color:var(--color-text); font-weight:600; }
-@media (max-width:700px) { .rings-layout { grid-template-columns:minmax(0,1fr); } .rings-stage { max-width:400px; justify-self:center; } }
+@media (max-width:700px) { .rings-layout { grid-template-columns:minmax(0,1fr); } .rings-stage { max-width:288px; justify-self:center; } }
 @media (prefers-reduced-motion:reduce) {
   .goal-rings *, .goal-rings *::before, .goal-rings *::after { animation:none !important; transition:none !important; }
 }
 
 .goal-rings.is-reduced-motion *, .goal-rings.is-reduced-motion *::before, .goal-rings.is-reduced-motion *::after { animation:none !important; transition:none !important; }
+
+.rings-area:active { transform:scale(.99); }
+.rings-area:focus-visible { outline:2px solid var(--color-progress); outline-offset:3px; }
+.rings-context { overflow-wrap:anywhere; display:grid; gap:8px; }
+.home-rings-fold:not(.is-open) .goal-rings * { animation:none !important; transition:none !important; }
+@media (hover:hover) { .rings-area:hover { background:var(--color-accent-soft); } }
+
+.rings-band.is-pressed .rings-band-track,.rings-band.is-pressed .rings-band-sweep { stroke-width:28; }
+@media (max-width:374px) { .rings-stage { max-width:240px; } .rings-core { gap:4px; font-size:12px; } }
+
+.rings-core-content { display:grid; justify-items:center; gap:4px; max-width:100%; animation:rings-focus-in 180ms var(--motion-ease); }
+.rings-core-content small { font-size:11px; max-width:100%; }
+@keyframes rings-focus-in { from { opacity:.65; transform:scale(.98); } to { opacity:1; transform:scale(1); } }
+
+.goal-rings .button-small { min-height:44px; }
+.rings-core { box-shadow:inset 0 0 0 3px var(--color-surface),0 3px 8px #0002; }
+.rings-core-content > b { font-size:12px; color:var(--color-text-muted); }
+.rings-core-content > span { font-size:clamp(14px,1.6vw,19px); font-weight:800; line-height:1.15; }
+.rings-core-content small span { font-size:inherit; font-weight:inherit; }
+.rings-band-income { --ring-tone:var(--color-ring-income); }
+.rings-band-bills { --ring-tone:var(--color-ring-bills); }
+.rings-band-debts { --ring-tone:var(--color-ring-debts); }
+.rings-band-goals { --ring-tone:var(--color-ring-goals); }
+
+.rings-label.is-selected text { font-weight:800; transform:scale(1.08); }
+.rings-context p { margin:0; }
+.rings-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.rings-actions .button-small { min-height:52px; padding:8px; font-size:13px; scroll-margin-block-end:calc(var(--nav-height) + var(--safe-bottom) + 16px); }
+@media (max-width:374px) { .rings-label text { font-size:18px; } .rings-core-content > span { font-size:13px; } .rings-core-content small { font-size:10px; } }
+
+.rings-label text { transform-box:fill-box; transform-origin:center; transition:transform 180ms var(--motion-ease); }
+
+.rings-panel > [aria-label="Select an area"] .rings-area > span[aria-hidden="true"] { flex:0 0 14px; inline-size:14px; text-align:center; }
+
+/* Approved Four Sections B replaces the concentric overview; goal detail styles above remain. */
+.goal-rings.has-four-sections .rings-layout { grid-template-columns:minmax(0,1fr); gap:10px; }
+.goal-rings .rings-stage.four-stage { width:100%; max-width:340px; aspect-ratio:1; justify-self:center; container-type:inline-size; touch-action:pan-y; -webkit-tap-highlight-color:transparent; }
+.four-stage > svg { overflow:visible; }
+.four-vector .four-section { transform-origin:200px 200px; transform-box:view-box; }
+.four-vector .four-track,.four-vector .four-fill { fill:var(--ring-tone); stroke:none; }
+.four-vector .four-track { opacity:var(--color-ring-track-opacity); transition:opacity 220ms var(--motion-ease); }
+.four-vector .four-fill { opacity:1; transition:opacity 220ms var(--motion-ease); }
+.four-vector .four-section:not(.is-selected) .four-fill { opacity:.30; }
+.four-vector .four-section:not(.is-selected) .four-track { opacity:calc(var(--color-ring-track-opacity) * .55); }
+.four-vector .four-section:not(.is-selected) .four-label { opacity:.62; }
+.four-vector .four-section.is-hidden .four-track { opacity:calc(var(--color-ring-track-opacity) * .9); }
+.four-offset { transition:transform 260ms cubic-bezier(.33,1,.68,1); }
+.four-pop { transform-origin:200px 200px; transform-box:view-box; }
+.four-section.is-pressed .four-pop { transform:scale(.97); }
+.four-label { pointer-events:none; transition:opacity 220ms var(--motion-ease); }
+.four-label rect { fill:var(--color-ring-label-bg); }
+.four-label text { text-anchor:middle; }
+.four-label-name { fill:var(--color-ring-label-text); font-size:17px; font-weight:680; }
+.four-label-value { fill:var(--color-ring-label-sub); font-size:14.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+.four-focus { fill:none; stroke:var(--color-focus); stroke-width:3; opacity:0; }
+.four-controls { position:absolute; inset:0; z-index:2; pointer-events:none; }
+.four-radio { position:absolute; inset:0; width:100%; height:100%; border:0; padding:0; background:transparent; pointer-events:auto; cursor:pointer; transform-origin:50% 50%; touch-action:pan-y; }
+.four-radio:focus-visible { outline:none; }
+.four-stage:has(.four-radio-income:focus-visible) .rings-band-income .four-focus,
+.four-stage:has(.four-radio-bills:focus-visible) .rings-band-bills .four-focus,
+.four-stage:has(.four-radio-debts:focus-visible) .rings-band-debts .four-focus,
+.four-stage:has(.four-radio-goals:focus-visible) .rings-band-goals .four-focus { opacity:1; }
+.goal-rings .four-core { position:absolute; inset:22.169811%; width:auto; height:auto; padding:4%; z-index:3; border:0; box-shadow:none; background:transparent; border-radius:50%; pointer-events:auto; cursor:pointer; container-type:inline-size; }
+.four-core:focus-visible { outline:3px solid var(--color-focus); outline-offset:0; }
+.four-core .four-core-content { display:grid; place-items:center; gap:2px; max-width:100%; animation:none; }
+.four-core .four-name { font-size:clamp(10px,8.5cqw,13px); font-weight:650; color:var(--color-text-muted); letter-spacing:.01em; }
+.four-core .four-value { font-size:clamp(18px,22cqw,38px); font-weight:760; line-height:1.05; letter-spacing:-.5px; color:var(--color-text-strong); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.four-core .four-context { font-size:clamp(10px,8.5cqw,13px); font-weight:400; color:var(--color-text-muted); line-height:1.2; max-width:92%; }
+.four-core .four-pill { margin-top:3px; padding:2px 8px; border-radius:99px; font-size:clamp(10px,7.6cqw,12px); font-weight:650; line-height:1.25; background:var(--color-accent-soft); color:var(--color-accent); }
+.four-core.is-positive .four-pill { background:var(--color-positive-soft); color:var(--color-positive); }
+.four-core.is-warning .four-pill { background:var(--color-warning-soft); color:var(--color-warning-text); }
+.four-core .four-eyebrow { color:var(--color-positive); font-size:clamp(10px,8.5cqw,13px); font-weight:750; }
+.four-glyph { display:block; width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:1.7; color:var(--color-text-muted); }
+.is-positive .four-glyph { color:var(--color-positive); }
+.four-target-dot { fill:currentColor; stroke:none; }
+.four-fx { position:absolute; inset:0; pointer-events:none; z-index:4; }
+@media (prefers-reduced-motion:reduce) { .four-stage *, .four-stage *::before,.four-stage *::after { animation:none !important; transition:none !important; } .four-section.is-pressed .four-pop { transform:none; } }
+.four-stage.is-reduced-motion *, .four-stage.is-reduced-motion *::before,.four-stage.is-reduced-motion *::after { animation:none !important; transition:none !important; }
+.four-stage.is-reduced-motion .four-section.is-pressed .four-pop { transform:none; }
+
+.goal-rings.has-four-sections { overflow:visible; }
+.home-rings-fold.is-open > .block-body > .block-body-inner { overflow:visible; }

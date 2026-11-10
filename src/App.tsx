@@ -1,3 +1,4 @@
+import { BillCelebrationContext, createBillCelebrationChannel } from './app/writeStatus'
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react'
 import { isSpaceScreen, isTab, shownScreen, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
@@ -48,7 +49,7 @@ import { HomeScreen, type HomeSpot } from './features/home/HomeScreen'
 import { ADD_LABELS, addChoices, type AddChoice } from './app/addMenu'
 import { MenuButton, type MenuOption } from './components/MenuButton'
 import { SIDEBAR_QUERY, useMediaQuery } from './ui/useMediaQuery'
-import { DEFAULT_LAYOUT, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
+import { DEFAULT_LAYOUT, keepCelebratedMonths, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { EmergencyScreen } from './features/goals/EmergencyScreen'
 import { HomeAmountsEye, AmountVisibilityProvider } from './ui/privacy'
@@ -99,6 +100,7 @@ type Props = {
  */
 function App({ getToday = todayString, storage = browserStorage(), createDemo = alexDemo, createStore = browserSpaceStore }: Props) {
   // Forms with changes that are not saved: another tab's changes never replace them, and they are never dropped without asking.
+  const [billCelebration] = useState(createBillCelebrationChannel)
   const unsaved = useUnsavedRegistry()
   const space = useSpace(storage, getToday, createDemo, undefined, createStore, unsaved.hasUnsaved)
   // Asking before what was typed is dropped: to open the latest version (or try again), or to close a space erased in another tab.
@@ -504,12 +506,27 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const homeLayout = !open ? DEFAULT_LAYOUT
     : open.kind === 'demo' ? demoLayout
       : ownLayout?.spaceId === open.data.space.id ? ownLayout.layout : normalizeLayout(readHomeLayout(storage, open.data.space.id))
-  const changeHomeLayout = (layout: HomeLayout) => {
+  // The latest layout of the open space (or the demo), so changes made from an older copy keep its celebrated months.
+  const layoutKey = !open ? null : open.kind === 'demo' ? 'demo' : open.data.space.id
+  const latestLayout = useRef<{ key: string | null; layout: HomeLayout }>({ key: null, layout: DEFAULT_LAYOUT })
+  useLayoutEffect(() => { latestLayout.current = { key: layoutKey, layout: homeLayout } })
+  const currentLayout = () => latestLayout.current.key === layoutKey ? latestLayout.current.layout : homeLayout
+  const changeHomeLayout = (requested: HomeLayout) => {
     if (!open) return
+    const layout = keepCelebratedMonths(currentLayout(), requested)
+    latestLayout.current = { key: layoutKey, layout }
     if (open.kind === 'demo') { setDemoLayout(layout); return }
     setOwnLayout({ spaceId: open.data.space.id, layout })
     writeHomeLayout(storage, open.data.space.id, layoutToSave(layout))
   }
+  // Mark paid completing a month: celebrate it once per month on this device. The demo keeps it in memory only.
+  useEffect(() => billCelebration.setClaimer(event => {
+    if (!open || open.data.space.id !== event.spaceId) return false
+    const layout = currentLayout()
+    if (layout.celebratedBillMonths?.includes(event.month)) return false
+    changeHomeLayout({ ...layout, celebratedBillMonths: [...(layout.celebratedBillMonths ?? []), event.month] })
+    return true
+  }))
   const guideProgress = !open ? DEMO_PROGRESS
     : open.kind === 'demo' ? demoGuide
       : ownGuide?.spaceId === open.data.space.id ? ownGuide.progress : readProgress(readGuideProgress(storage, open.data.space.id))
@@ -991,6 +1008,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       )}
       {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
       {leaveQuestion}
+      <BillCelebrationContext.Provider value={billCelebration}>
       <WriteStatusContext.Provider value={writeStatus}>
       <UnsavedChangesContext.Provider value={unsaved.registry}>
       <LeaveGuardContext.Provider value={leaveGuard}>
@@ -1126,6 +1144,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       </LeaveGuardContext.Provider>
       </UnsavedChangesContext.Provider>
       </WriteStatusContext.Provider>
+      </BillCelebrationContext.Provider>
       {showNav && !sidebar && <BottomNav current={currentTab} onSelect={selectTab} />}
       <footer className="shell-footer">
         {!open ? 'Prototype · No account needed · Nothing is sent anywhere'

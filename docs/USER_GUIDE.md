@@ -719,3 +719,33 @@ These don't exist in the app today:
 | **Unassigned savings** | Savings with no goal or purpose yet. |
 | **Estimate** | A calculation of what could happen. It changes nothing. |
 | **Not entered / Unknown** | Information you haven't given. It is never treated as 0. |
+
+
+### Interactive rings on Home (optional)
+
+Enable **Show rings on Home** in Settings. The ring has four sections: Income
+at the top, Bills on the right, Cards & Loans at the bottom and Goals on the left.
+Each fills clockwise and shows its name inside. Tap a section, or use the arrow
+keys, to change the centre; tap the centre or press Enter to see its details.
+**Open Income/Bills/Cards & Loans/Goals** opens the section.
+**View … details** keeps you in Home, with goal details and Contribution available.
+Bills starts selected; your last selection is remembered on this device.
+
+Bills counts bills paid; Cards & Loans counts payments recorded in linked bills
+for the selected month. Unlinked debts have unknown payment status and are
+excluded with a partial coverage note. Remaining Balance is separate. Income
+shows received as a share of received plus still expected income, including
+extra income; it is not a fixed income plan. Goals shows current active goals
+with positive targets, excluding Emergency Fund, and caps each goal at its own
+target. This is not a historical snapshot when you choose a past month.
+
+With amounts hidden, Income and Goals hide their amounts and progress. Bills
+and Cards & Loans keep their counts while hiding money. Rings without data
+remain selectable, with an empty section and no percentage. Without expected
+income, the centre shows the income received this month instead of a share.
+
+When **Mark as Paid** pays the last bill of a month, the rings play a short
+pulse from the centre (no movement with Reduce Motion). If the rings are not
+showing, a separate note says **All bills for {month} are paid.** next to the
+usual confirmation. This happens once per month on this device; it is not
+saved with your data or your backup.

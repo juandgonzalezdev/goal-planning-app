@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { BillCelebrationContext } from '../../app/writeStatus'
+import { completesBillMonth } from '../home/bullseye'
+import { useContext, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { Field } from '../../components/Field'
@@ -31,8 +33,12 @@ type Props = {
   /** The amounts are hidden where the form opens: a known amount is kept without showing it. */
   hidden?: boolean
   onChange: ChangeSpace
-  /** After the payment is kept, with the message to show ("… Saved on this device."). */
-  onSaved: (message: string) => void
+  /**
+   * After the payment is kept, with the message to show ("… Saved on this device."). `completion` is a separate
+   * notice ("All bills for … are paid.") when this payment completed the month for the first time and Home's
+   * rings did not play the pulse; it is never joined to the payment message.
+   */
+  onSaved: (message: string, completion?: string) => void
   onCancel: () => void
   /** Where the form belongs, so the app knows which form a change of view would close. */
   tag?: string
@@ -45,6 +51,7 @@ type Props = {
  * change. It never changes a Remaining Balance and never guesses interest.
  */
 export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange, onSaved, onCancel, tag }: Props) {
+  const celebration = useContext(BillCelebrationContext)
   const { bill, month } = occurrence
   const monthLabel = formatYearMonth(month)
   const debt = bill.debtId ? data.debts.find(item => item.id === bill.debtId) ?? null : null
@@ -83,8 +90,18 @@ export function MarkPaidForm({ data, occurrence, today, hidden = false, onChange
       }
       if (Object.keys(found).length === 0) {
         setSending(true)
-        const outcome = await onChange(current => markBillPaid(current, bill.id, month, fields, today), base).finally(() => setSending(false))
-        if (isKept(outcome)) onSaved(outcomeText(`${bill.name} marked as paid for ${monthLabel}.`, outcome))
+        let completed = false
+        const outcome = await onChange(current => {
+          const next = markBillPaid(current, bill.id, month, fields, today)
+          completed = completesBillMonth(current, next, month)
+          return next
+        }, base).finally(() => setSending(false))
+        if (isKept(outcome)) {
+          // Only after the payment is kept: the month is claimed once on this device, and Home plays the pulse if it is showing.
+          const celebrated = completed ? celebration.publish({ month, spaceId: data.space.id }) : { claimed: false, shown: false }
+          onSaved(outcomeText(`${bill.name} marked as paid for ${monthLabel}.`, outcome),
+            celebrated.claimed && !celebrated.shown ? `All bills for ${monthLabel} are paid.` : undefined)
+        }
         else setRefusal(outcomeText('', outcome))
         return
       }

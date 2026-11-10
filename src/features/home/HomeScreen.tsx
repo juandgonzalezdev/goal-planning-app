@@ -249,13 +249,13 @@ export function HomeScreen(props: Props) {
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>
         <p className="muted-note" id="customize-home-help">Drag an area by its handle, or use Move up and Move down. Nothing else changes.</p>
         <span className="inline-actions">
-          <button type="button" className="button-small" onClick={() => { onLayoutChange({ ...DEFAULT_LAYOUT, order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement(props.showRings ? 'Home layout reset. All areas will be open; other parts closed.' : 'Home layout reset. All parts closed.') }}>Reset Layout</button>
+          <button type="button" className="button-small" onClick={() => { onLayoutChange({ ...DEFAULT_LAYOUT, ringSelection: layout.ringSelection, order: [...DEFAULT_LAYOUT.order], open: [...DEFAULT_LAYOUT.open] }); setAnnouncement(props.showRings ? 'Home layout reset. All areas will be open; other parts closed.' : 'Home layout reset. All parts closed.') }}>Reset Layout</button>
           <button type="button" className="button-small button-small-primary" onClick={() => customize(false)}>Done</button>
         </span>
       </div>}
       <p className="visually-hidden" role="status">{announcement}</p>
       {!customizing && guide}
-      {props.showRings && <FoldBlock title="All areas" summary="Money and goal details" expanded={!customizing && (layout.ringsOpen ?? true)} onToggle={customizing ? undefined : () => onLayoutChange({ ...layout, ringsOpen: !(layout.ringsOpen ?? true) })} className="home-rings-fold"><GoalRings embedded view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
+      {props.showRings && <FoldBlock title="All areas" summary="Money and goal details" expanded={!customizing && (layout.ringsOpen ?? true)} onToggle={customizing ? undefined : () => onLayoutChange({ ...layout, ringsOpen: !(layout.ringsOpen ?? true) })} className="home-rings-fold"><GoalRings embedded selection={layout.ringSelection} onSelectionChange={ringSelection => onLayoutChange({ ...layout, ringSelection })} view={props.ringsView} onViewChange={props.onRingsViewChange} data={data} month={month} today={today} asOf={asOf} newId={props.newId ?? (() => crypto.randomUUID())}
         onChange={(next, base) => props.onChange(() => next, base)}
         onOpen={area => {
           const spot: HomeSpot = { key: 'rings-open' }

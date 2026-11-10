@@ -99,7 +99,13 @@ describe('Mark as Paid on Home', () => {
     await fire.click(fields.getByRole('button', { name: 'Save as Paid' }))
     const area = regionOf('Left to Pay')
     expect(text(area)).toContain('All your December bills are paid.')
-    expect(text(area)).toContain('Phone & Internet marked as paid for December 2026. Demo only: not saved.')
+    // The original confirmation is unchanged; completing the month (rings off, so no pulse) adds its own notice.
+    const confirmation = area.querySelector('.paid-note')!, completion = area.querySelector('.paid-completion')!
+    expect(text(confirmation as HTMLElement)).toBe('Phone & Internet marked as paid for December 2026. Demo only: not saved.')
+    expect(text(completion as HTMLElement)).toBe('All bills for December 2026 are paid.')
+    expect(completion.getAttribute('role')).toBe('status')
+    expect(confirmation.contains(completion) || completion.contains(confirmation)).toBe(false)
+    expect(text(area)).not.toContain('Everything paid for')
     expect(document.activeElement?.textContent).toContain('marked as paid')
     // History shows where it was paid from.
     await fire.click(tab('History'))
@@ -178,6 +184,19 @@ describe('Mark as Paid in the Bills list', () => {
     expect(toggle?.textContent).toBe('✓ Paid')
     expect(screen.getByRole('button', { name: /^Paid.*Gym Membership/ })).toBe(toggle)
   })
+  it('tells a completed month once, apart from the payment message, and not again after Mark as Not Paid and paying again', async () => {
+    await openAlex()
+    await showBillsList()
+    await markPaid('Phone & Internet', 'December 2026')
+    const notes = () => [...document.querySelectorAll('.bill-list > p[role="status"]')].map(note => text(note))
+    expect(notes()).toEqual(['Phone & Internet marked as paid for December 2026. Demo only: not saved.', 'All bills for December 2026 are paid.'])
+    await markNotPaid('Phone & Internet', 'December 2026')
+    expect(document.querySelector('.bill-list .paid-completion')).toBeNull()
+    // Celebrated once per month on this device (the demo remembers it while open): the original confirmation only.
+    await markPaid('Phone & Internet', 'December 2026')
+    expect(notes()).toEqual(['Phone & Internet marked as paid for December 2026. Demo only: not saved.'])
+  })
+
   it('needs an amount when the month’s amount is unknown, and saves it for that month only', async () => {
     await openAlex()
     await showBillsList()

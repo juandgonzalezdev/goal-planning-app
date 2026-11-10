@@ -9,6 +9,7 @@ import { memoryStorage } from './test/memoryStorage'
 import { fire, freshDatabaseForEachTest, settle } from './test/space'
 import { VisibilityContext, type HomeArea } from './ui/amountVisibility'
 import { savingsSummary } from './domain/finance/savings'
+import { monthIncome } from './domain/finance/income'
 import { goalSaved } from './domain/finance/goals'
 import { formatAmount } from './ui/format'
 import type { FinanceData } from './domain/finance/types'
@@ -46,7 +47,7 @@ function mount(hidden: HomeArea[] = [], outcome: SaveOutcome = 'saved', initial 
   return { saved, data: () => last }
 }
 function openBooks() {
-  fireEvent.click(inRings().getByRole('button', { name: /^Open Goals,/ }))
+  fireEvent.click(inRings().getByRole('radio', { name: /^Select Goals,/ })); fireEvent.click(button('View Goals details'))
   fireEvent.click(inRings().getByRole('button', { name: /Books for my child/ }))
 }
 async function contribute(effect: 'Savings I already have' | 'New savings' = 'Savings I already have') {
@@ -69,7 +70,7 @@ describe('optional Goal Rings on Home', () => {
     await fire.click(setting); await fire.click(button('Back'))
     expect(region().compareDocumentPosition(screen.getByRole('region', { name: 'This Month' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(storage.getItem('goal-planning-app.home-rings')).toBe('yes')
-    await fire.click(inRings().getByRole('button', { name: /^Open Goals,/ }))
+    await fire.click(inRings().getByRole('radio', { name: /^Select Goals,/ })); await fire.click(button('View Goals details'))
     await fire.click(inRings().getByRole('button', { name: 'Open Goals' }))
     await fire.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Home' }))
     expect(inRings().getByRole('heading', { name: 'Goals' })).toBeTruthy()
@@ -84,7 +85,8 @@ describe('optional Goal Rings on Home', () => {
     render(<App storage={storage} createDemo={() => ({ data: fixture(), today: '2026-12-31' })} />); await settle(); await fire.click(button('Explore the App'))
     openBooks(); await fire.click(button('Add Contribution'))
     await fire.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
-    await fire.click(region().querySelector('[data-ring-label="income"]')!)
+    // Inside a goal the Four Sections ring is not rendered: no hidden section can be hit while typing.
+    expect(region().querySelector('[data-ring-hit],[data-ring-label],[role="radiogroup"]')).toBeNull()
     expect(screen.queryByRole('alertdialog', { name: 'Leave without saving?' })).toBeNull()
     expect(inRings().getByRole('heading', { name: 'Books for my child' })).toBeTruthy()
     await fire.keyDown(region(), { key: 'Escape' })
@@ -95,27 +97,29 @@ describe('optional Goal Rings on Home', () => {
     expect(button('Add Contribution')).toBeTruthy()
   })
 
-  it.each(['ring', 'label', 'list'])('selects Bills through its %s and keeps Goals in the center', method => {
+  it.each(['ring', 'label', 'list'])('selects Bills through its %s without navigating, then opens details explicitly', method => {
     mount()
-    if (method === 'list') fireEvent.click(inRings().getByRole('button', { name: /^Bills Left to pay/ }))
+    if (method === 'list') fireEvent.click(inRings().getByRole('radio', { name: /^Select Bills,/ }))
     else fireEvent.click(region().querySelector(`[data-ring-${method === 'ring' ? 'hit' : 'label'}="bills"]`)!)
+    expect(region().querySelector('.rings-core')?.textContent).toContain('Bills')
+    expect(inRings().queryByRole('heading', { name: 'Bills' })).toBeNull()
+    fireEvent.click(button('View Bills details'))
     expect(inRings().getByRole('heading', { name: 'Bills' })).toBeTruthy()
-    expect(inRings().getByRole('button', { name: /^Open Goals,/ })).toBeTruthy()
+    expect(region().querySelector('.rings-core')?.textContent).toContain('Bills')
     expect(document.activeElement).toBe(inRings().getByRole('heading', { name: 'Bills' }))
     expect(inRings().getAllByText(/✓ Paid/).length).toBeGreaterThan(0)
     fireEvent.click(button('← All areas'))
     expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('area-bills')
   })
 
-  it.each(['hit', 'label'])('ignores hidden ring %s targets inside a goal, including a typed Contribution', kind => {
+  it.each(['hit', 'label'])('has no ring %s targets inside a goal, including with a typed Contribution', kind => {
     mount(); openBooks()
-    for (const area of ['income', 'bills', 'debts']) {
-      fireEvent.click(region().querySelector(`[data-ring-${kind}="${area}"]`)!)
-      expect(inRings().queryByRole('heading', { name: 'Books for my child' })).toBeTruthy()
-    }
+    // Four Sections is replaced by the goal's own ring: none of its targets exist to be hit by accident.
+    for (const area of ['income', 'bills', 'debts', 'goals']) expect(region().querySelector(`[data-ring-${kind}="${area}"]`)).toBeNull()
+    expect(inRings().queryByRole('radio', { name: /^Select / })).toBeNull()
     fireEvent.click(button('Add Contribution'))
     fireEvent.change(screen.getByLabelText('Amount (PLN)'), { target: { value: '25' } })
-    fireEvent.click(region().querySelector(`[data-ring-${kind}="bills"]`)!)
+    expect(region().querySelector(`[data-ring-${kind}]`)).toBeNull()
     expect(inRings().queryByRole('heading', { name: 'Books for my child' })).toBeTruthy()
     expect((screen.getByLabelText('Amount (PLN)') as HTMLInputElement).value).toBe('25')
   })
@@ -145,7 +149,7 @@ describe('optional Goal Rings on Home', () => {
     expect(region().querySelector('.rings-progress-value')?.getAttribute('stroke-dashoffset')).toBe('50')
     fireEvent.click(button('← Goals'))
     fireEvent.click(button('← All areas'))
-    expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('core')
+    expect(document.activeElement?.getAttribute('data-rings-focus')).toBe('area-goals')
   })
 
   it.each(['New savings', 'Savings I already have'] as const)('explains the unassigned savings effect of %s before saving', effect => {
@@ -184,7 +188,7 @@ describe('optional Goal Rings on Home', () => {
   })
 
   it('keeps calendar months apart from the money percentage and announces breadcrumb navigation', () => {
-    mount(); fireEvent.click(inRings().getByRole('button', { name: /^Goals Of savings/ }))
+    mount(); fireEvent.click(inRings().getByRole('radio', { name: /^Select Goals,/ })); fireEvent.click(button('View Goals details'))
     fireEvent.click(inRings().getByRole('button', { name: /A dated goal/ }))
     expect(inRings().getByText('20%')).toBeTruthy()
     expect(screen.getByLabelText('Time, separate from money progress').textContent).not.toContain('%')
@@ -206,9 +210,18 @@ describe('optional Goal Rings on Home', () => {
   })
 
   it.each([['month', 'Income'], ['left-to-pay', 'Bills']] as const)('respects %s privacy independently', (hidden, area) => {
-    mount([hidden]); fireEvent.click(inRings().getByRole('button', { name: new RegExp(`^${area} `) }))
+    mount(); fireEvent.click(inRings().getByRole('radio', { name: new RegExp(`^Select ${area},`) }))
+    const visible = area === 'Income' ? monthIncome(fixture(), '2026-12').received : 30000
+    // With a forecast the centre shows the received share; the received amount is in the context under it.
+    if (area === 'Income') {
+      expect(region().querySelector('.rings-core .four-pill')?.textContent).not.toBe('No forecast')
+      expect(region().querySelector('.rings-context')?.textContent).toContain(money(visible))
+    }
+    cleanup()
+    mount([hidden]); fireEvent.click(inRings().getByRole('radio', { name: new RegExp(`^Select ${area},`) })); fireEvent.click(button(`View ${area} details`))
     expect(region().querySelector('.rings-panel')?.textContent).not.toMatch(/\d[,\d ]* zł/)
-    expect(region().querySelector('.rings-core')?.textContent).toContain(money(30000))
+    expect(region().querySelector('.rings-core')?.textContent).not.toMatch(/\d[,\d ]* zł|\d%/)
+    if (area === 'Income') expect(region().querySelector('.rings-band-income .rings-band-sweep')).toBeNull()
     if (area === 'Bills') expect(region().querySelector('.rings-split')).toBeNull()
   })
 

@@ -1,3 +1,4 @@
+import type { YearMonth } from '../domain/calendar'
 import { createContext, useContext, useState } from 'react'
 import { isKept, outcomeText, type SaveOutcome } from '../ui/saveOutcome'
 
@@ -63,3 +64,28 @@ export function useSaver() {
   }
   return { save, sending, blocked, refusal, clearRefusal: () => setRefusal('') }
 }
+
+/** Transient notification of a confirmed user payment; never a retained or replayed event. */
+type Completion = { month: YearMonth; spaceId: string }
+type Listener = (event: Completion) => boolean
+/** Claims the month once (true) or reports it was already celebrated (false). */
+type Claimer = (event: Completion) => boolean
+/** `claimed`: first completion of that month; `shown`: Home played the pulse, so no extra text is needed. */
+export type CelebrationResult = { claimed: boolean; shown: boolean }
+export function createBillCelebrationChannel() {
+  const listeners = new Set<Listener>()
+  let claimer: Claimer | null = null
+  return {
+    subscribe(listener: Listener) { listeners.add(listener); return () => { listeners.delete(listener) } },
+    setClaimer(next: Claimer) { claimer = next; return () => { if (claimer === next) claimer = null } },
+    // No retained event: mounting Home, returning from Bills or changing Demo cannot replay a pulse.
+    publish(event: Completion): CelebrationResult {
+      if (claimer && !claimer(event)) return { claimed: false, shown: false }
+      return { claimed: true, shown: [...listeners].some(listener => listener(event)) }
+    },
+  }
+}
+export const BillCelebrationContext = createContext({
+  subscribe: (listener: Listener): (() => void) => { void listener; return () => {} },
+  publish: (event: Completion): CelebrationResult => { void event; return { claimed: true, shown: false } },
+})
