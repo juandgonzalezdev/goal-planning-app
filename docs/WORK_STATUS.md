@@ -2388,5 +2388,9 @@ Cambios:
 - El anillo aparece por defecto, salvo que el dispositivo guardara «no».
 - No cambian las reglas financieras, el backup, el restore ni el modelo de datos.
 
-Detalle, archivos, pruebas y limitaciones en [UX_04_1.md](UX_04_1.md). Las
-confirmaciones manuales de Juan siguen pendientes.
+Detalle, archivos, pruebas y limitaciones en [UX_04_1.md](UX_04_1.md).
+
+Commit local `3a12cbc` en la rama, sin push. Juan confirmó la aceptación manual de
+T1–T11 el 10-11-2026, en Chrome sobre Windows y en Safari del iPhone, en modo claro y
+solo con la Demo. El modo oscuro solo se probó en el recorrido automático en Edge. Siguen
+pendientes de su autorización integrar en `main`, hacer push y publicar.
