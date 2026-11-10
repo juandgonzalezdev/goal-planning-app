@@ -134,7 +134,7 @@ Maintain the previously approved **Bullseye / minimalist Pulse** behavior for co
 
 | Stage | Status | Intent |
 |---|---|---|
-| UX-03: Four-section ring + Bullseye | Implemented locally; manual acceptance incomplete | Finish Chrome/iPhone checks, visibility/animation review, and UX-03-H2 refinement before release decisions. |
+| UX-03: Four-section ring + Bullseye | Implemented and merged into main. Automated checks passed. Manual acceptance remains partially incomplete. | Finish Chrome/iPhone checks, visibility/animation review, and UX-03-H2 refinement before release decisions. |
 | UX-04: Ring-first Experience | **Product direction approved; design phase** | Design and evaluate contextual workflows, beginning with Bills, before issuing implementation tasks. |
 | Shared financial action layer | **Architectural direction approved; implementation not approved** | Make verified operations reusable across UI and future interfaces, without changing their semantics. |
 | UX-05: AI Connected Experience | **Future product direction approved** | Plan provider-independent, permissioned read and prepared-action integrations. |
