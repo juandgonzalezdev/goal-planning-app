@@ -1,4 +1,5 @@
-import { MONTH_NAMES_LONG } from '../ui/format'
+import { monthNamesLong } from '../ui/format'
+import { useT } from '../i18n'
 
 type Props = {
   /** Id of the month list; the year list gets `${id}-year`. A link to the field (an error) focuses the month. */
@@ -23,6 +24,7 @@ type Props = {
  * the device's language, e.g. Spanish on a Spanish Windows).
  */
 export function MonthYearField({ id, label, value, onChange, years, noneLabel, defaultYear, error, help }: Props) {
+  const { t } = useT()
   const year = value ? Number(value.slice(0, 4)) : null
   const month = value ? Number(value.slice(5, 7)) : null
   const yearOptions = year !== null && !years.includes(year) ? [...years, year].sort((a, b) => a - b) : years
@@ -32,13 +34,13 @@ export function MonthYearField({ id, label, value, onChange, years, noneLabel, d
     <fieldset className="form-field month-year-field">
       <legend>{label}</legend>
       <div className="month-year-inputs">
-        <select id={id} aria-label={`${label}: month`} value={month ?? ''} aria-invalid={!!error} aria-describedby={describedBy}
+        <select id={id} aria-label={t('month.fieldMonth', { label })} value={month ?? ''} aria-invalid={!!error} aria-describedby={describedBy}
           onChange={event => (event.target.value === '' ? onChange('') : write(year ?? defaultYear, Number(event.target.value)))}>
           {noneLabel !== undefined && <option value="">{noneLabel}</option>}
-          {MONTH_NAMES_LONG.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+          {monthNamesLong().map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
         </select>
         {value !== '' && (
-          <select id={`${id}-year`} aria-label={`${label}: year`} value={year ?? ''} aria-invalid={!!error} aria-describedby={describedBy}
+          <select id={`${id}-year`} aria-label={t('month.fieldYear', { label })} value={year ?? ''} aria-invalid={!!error} aria-describedby={describedBy}
             onChange={event => write(Number(event.target.value), month ?? 1)}>
             {yearOptions.map(option => <option key={option} value={option}>{option}</option>)}
           </select>

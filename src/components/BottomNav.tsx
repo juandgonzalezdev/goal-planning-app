@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { TABS, type Tab } from '../app/navigation'
 import { Icon, type IconName } from './Icon'
+import { useT, type MessageKey } from '../i18n'
 
-const LABELS: Record<Tab, string> = { home: 'Home', bills: 'Bills', goals: 'Goals', money: 'Money', history: 'History' }
+const LABELS: Record<Tab, MessageKey> = { home: 'nav.home', bills: 'nav.bills', goals: 'nav.goals', money: 'nav.money', history: 'nav.history' }
 const ICONS: Record<Tab, IconName> = { home: 'home', bills: 'receipt', goals: 'target', money: 'wallet', history: 'history' }
 
 /** One persistent navigation: a bottom float on small screens and a compact rail on wide ones. */
@@ -13,6 +14,7 @@ export function BottomNav({ current, onSelect, top, bottom, rail = false }: {
   bottom?: ReactNode
   rail?: boolean
 }) {
+  const { t } = useT()
   const nav = useRef<HTMLElement>(null)
   const destinations = useRef<HTMLDivElement>(null)
 
@@ -95,14 +97,14 @@ export function BottomNav({ current, onSelect, top, bottom, rail = false }: {
   }, [rail])
 
   return (
-    <nav ref={nav} className="bottom-nav" aria-label="Main navigation">
+    <nav ref={nav} className="bottom-nav" aria-label={t('nav.main')}>
       {top}
       <div ref={destinations} className="nav-destinations">
         <span className="nav-indicator" aria-hidden="true" hidden={current === null} />
         {TABS.map(tab => (
           <button key={tab} type="button" aria-current={tab === current ? 'page' : undefined}
             className={`nav-tab${tab === current ? ' is-selected' : ''}`} onClick={() => onSelect(tab)}>
-            <span className="nav-icon"><Icon name={ICONS[tab]} size={22} /></span><span className="nav-label">{LABELS[tab]}</span>
+            <span className="nav-icon"><Icon name={ICONS[tab]} size={22} /></span><span className="nav-label">{t(LABELS[tab])}</span>
           </button>
         ))}
       </div>

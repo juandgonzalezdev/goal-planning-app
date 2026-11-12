@@ -1,6 +1,6 @@
 import { characterCount } from '../goal'
 import type { CurrencyCode } from '../money'
-import type { FinanceData, Owner, Space, SpaceMode, Theme } from './types'
+import type { FinanceData, Language, Owner, Space, SpaceMode, Theme } from './types'
 
 /** Chart colours of the approved design: first member blue, second green, shared purple. */
 export const MEMBER_COLORS = ['#3B82F6', '#10B981'] as const
@@ -17,6 +17,8 @@ export interface SpaceSetup {
   names: string[]
   currency: CurrencyCode
   theme: Theme
+  /** The language chosen on Welcome or in Welcome Setup (English when absent). */
+  language?: Language
 }
 
 export type SetupError = 'name-required' | 'name-too-long' | 'second-name-required' | 'second-name-too-long' | 'mode-not-available'
@@ -62,7 +64,7 @@ export function createSpaceData(setup: SpaceSetup, spaceId = 'my-space'): { stat
     data: {
       schemaVersion: 3,
       space,
-      preferences: { language: 'en', theme: setup.theme, displayCurrency: setup.currency },
+      preferences: { language: setup.language ?? 'en', theme: setup.theme, displayCurrency: setup.currency },
       incomeSources: [], income: [], bills: [], billMonths: [], debts: [], moneyAccounts: [], balances: [], goals: [], goalMovements: [], expenses: [], transfers: [],
     },
   }

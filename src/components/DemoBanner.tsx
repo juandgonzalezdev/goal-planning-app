@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 import { IconTip } from './IconTip'
 import { ResetDemoQuestion } from './ResetDemoConfirm'
 import { usePopover } from './usePopover'
+import { useT } from '../i18n'
 
 type Props = {
   /** True while Reset Demo asks "Reset demo?" (the rest of the banner steps aside). */
@@ -25,7 +26,8 @@ export function DemoBanner({ asking, onAskingChange, onReset, onExit, exitQuesti
   const { open, setOpen, close, rootRef, buttonRef } = usePopover()
   const returnFocus = useRef(false)
   const id = useId()
-  const label = 'Demo options'
+  const { t } = useT()
+  const label = t('demo.options')
 
   useEffect(() => {
     if (!asking && returnFocus.current) { returnFocus.current = false; buttonRef.current?.focus() }
@@ -38,9 +40,9 @@ export function DemoBanner({ asking, onAskingChange, onReset, onExit, exitQuesti
       {asking
         ? <span className="inline-actions"><ResetDemoQuestion onCancel={closeQuestion} onReset={() => { onReset(); closeQuestion() }} /></span>
         : <>
-          <span className="demo-label"><b>Demo</b> · Invented data</span>
+          <span className="demo-label"><b>{t('demo.label')}</b> · {t('demo.invented')}</span>
           <span className="inline-actions demo-actions">
-            <button type="button" className="button-small" onClick={onExit}>Exit Demo</button>
+            <button type="button" className="button-small" onClick={onExit}>{t('demo.exit')}</button>
             <div className="menu-root" ref={rootRef}>
               <button ref={buttonRef} type="button" className="icon-button tool-button banner-tool has-tip" aria-label={label} aria-expanded={open}
                 aria-controls={open ? `${id}-panel` : undefined} onClick={() => (open ? close() : setOpen(true))}>
@@ -48,10 +50,10 @@ export function DemoBanner({ asking, onAskingChange, onReset, onExit, exitQuesti
                 {!open && <IconTip label={label} />}
               </button>
               {open && (
-                <div id={`${id}-panel`} className="popover demo-popover" role="group" aria-label="About the demo">
-                  <p>Alex and all the information in this demo are invented.</p>
-                  <p>Changes are not saved: they last until you leave the demo or reset it.</p>
-                  <button type="button" className="button-small" onClick={() => { setOpen(false); onAskingChange(true) }}>Reset Demo</button>
+                <div id={`${id}-panel`} className="popover demo-popover" role="group" aria-label={t('demo.about')}>
+                  <p>{t('demo.aboutPeople')}</p>
+                  <p>{t('demo.aboutChanges')}</p>
+                  <button type="button" className="button-small" onClick={() => { setOpen(false); onAskingChange(true) }}>{t('demo.reset')}</button>
                 </div>
               )}
             </div>

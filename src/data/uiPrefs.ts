@@ -3,6 +3,9 @@
  * data (they also work in the demo). Reading or writing can fail, for
  * example in a private window; then the default is used.
  */
+import type { Language } from '../domain/finance/types'
+import { isLanguage } from '../i18n/languages'
+
 export type BillsChartView = 'donut' | 'bars'
 
 const CHART_KEY = 'goal-planning-app.bills-chart'
@@ -147,4 +150,36 @@ export function readHomeRings(storage: Storage | null): boolean {
 }
 export function writeHomeRings(storage: Storage | null, shown: boolean): void {
   try { storage?.setItem(RINGS_KEY, shown ? 'yes' : 'no') } catch { /* Session only. */ }
+}
+
+const LANGUAGE_KEY = 'goal-planning-app.language'
+/**
+ * The language chosen on this device (Phase B1). The open space keeps its
+ * own choice in its data (`preferences.language`); this copy is only for
+ * Welcome and Welcome Setup, before a space exists, and for after an erase.
+ * The demo never writes it. Anything unexpected reads as "not chosen".
+ */
+export function readDeviceLanguage(storage: Storage | null): Language | null {
+  try { const value = storage?.getItem(LANGUAGE_KEY); return isLanguage(value) ? value : null } catch { return null }
+}
+export function writeDeviceLanguage(storage: Storage | null, language: Language): void {
+  try { storage?.setItem(LANGUAGE_KEY, language) } catch { /* Not remembered; the language still applies until the page closes. */ }
+}
+
+const LANGUAGE_PREVIEW_KEY = 'goal-planning-app.language-preview'
+/**
+ * Spanish and Polish preview (until Phase B6 turns them on for everyone):
+ * opening the app with `?languages=preview` turns it on for this device,
+ * `?languages=off` turns it off. It only changes what the language list
+ * offers, never a saved choice.
+ */
+export function readLanguagePreview(storage: Storage | null, search: string): boolean {
+  const asked = new URLSearchParams(search).get('languages')
+  try {
+    if (asked === 'preview') storage?.setItem(LANGUAGE_PREVIEW_KEY, 'yes')
+    if (asked === 'off') storage?.removeItem(LANGUAGE_PREVIEW_KEY)
+    return storage?.getItem(LANGUAGE_PREVIEW_KEY) === 'yes'
+  } catch {
+    return asked === 'preview'
+  }
 }

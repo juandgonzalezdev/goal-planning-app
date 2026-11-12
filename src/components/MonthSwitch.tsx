@@ -1,13 +1,15 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { monthsOfYear, type YearMonth } from '../domain/calendar'
-import { formatYearMonth } from '../ui/format'
+import { formatYearMonth, shortMonthName } from '../ui/format'
+import { useT } from '../i18n'
 import { Icon } from './Icon'
 import { indexMonth, monthIndex, MonthWheelMotion, wheelSlot, WHEEL_MIN, WHEEL_MAX } from './monthWheel'
 
 /** Visual motion stays local; only a settled, owner-accepted month updates content. */
 export function MonthSwitch({ value, onChange }: { months: YearMonth[]; value: YearMonth; onChange: (month: YearMonth) => void }) {
   const id = useId()
+  const { t } = useT()
   const root = useRef<HTMLDivElement>(null)
   const items = useRef<HTMLDivElement>(null)
   const controller = useRef<MonthWheelMotion | null>(null)
@@ -22,7 +24,7 @@ export function MonthSwitch({ value, onChange }: { months: YearMonth[]; value: Y
   const [yearDraft, setYearDraft] = useState(value.slice(0, 4))
   const validYear = /^\d{1,4}$/.test(yearDraft) && Number(yearDraft) >= 1 && Number(yearDraft) <= 9999
   const gridYear = validYear ? Number(yearDraft) : Number(value.slice(0, 4))
-  const short = (month: YearMonth) => formatYearMonth(month).split(' ')[0].slice(0, 3)
+  const short = shortMonthName
 
   useLayoutEffect(() => {
     latest.current = { value, onChange }
@@ -115,7 +117,7 @@ export function MonthSwitch({ value, onChange }: { months: YearMonth[]; value: Y
     return { x: (event.clientX - rect.left) * scale, y: (event.clientY - rect.top) * scale, t: event.timeStamp || performance.now() }
   }
   return <>
-    <div ref={root} className="month-picker month-carousel" role="group" aria-label="Month" onKeyDown={event => {
+    <div ref={root} className="month-picker month-carousel" role="group" aria-label={t('month.group')} onKeyDown={event => {
       const motion = controller.current
       motion?.keyboard()
       if (event.key === 'Escape') { motion?.halt(); setExpanded(false); return }
@@ -151,23 +153,23 @@ export function MonthSwitch({ value, onChange }: { months: YearMonth[]; value: Y
       if (event.pointerType === 'mouse' && pointerId.current !== null && event.buttons === 0) { pointerId.current = null; controller.current?.halt() }
     }} onContextMenu={event => { if (pointerId.current !== null) event.preventDefault() }}>
       <div className="month-drum" aria-hidden="true"><div className="month-lens" /><div className="month-faces" ref={items} /></div>
-      <button type="button" className="month-zone month-previous" aria-label="Previous month" disabled={value === '0001-01'} onClick={() => controller.current?.step(-1)}><Icon name="chevronLeft" size={18} /></button>
-      <button type="button" ref={trigger} className="month-zone month-wheel-front" value={value} aria-label={'Choose month: ' + formatYearMonth(value)} aria-haspopup="dialog" aria-expanded={expanded} aria-controls={id} onClick={open}><span className="sr-only">{formatYearMonth(value)}</span></button>
-      <button type="button" className="month-zone month-next" aria-label="Next month" disabled={value === '9999-12'} onClick={() => controller.current?.step(1)}><Icon name="chevronRight" size={18} /></button>
+      <button type="button" className="month-zone month-previous" aria-label={t('month.previous')} disabled={value === '0001-01'} onClick={() => controller.current?.step(-1)}><Icon name="chevronLeft" size={18} /></button>
+      <button type="button" ref={trigger} className="month-zone month-wheel-front" value={value} aria-label={t('month.chooseValue', { month: formatYearMonth(value) })} aria-haspopup="dialog" aria-expanded={expanded} aria-controls={id} onClick={open}><span className="sr-only">{formatYearMonth(value)}</span></button>
+      <button type="button" className="month-zone month-next" aria-label={t('month.next')} disabled={value === '9999-12'} onClick={() => controller.current?.step(1)}><Icon name="chevronRight" size={18} /></button>
       <span className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
     </div>
-    {expanded && createPortal(<dialog ref={dialog} id={id} className="month-grid-panel" aria-label="Choose month" onCancel={event => { event.preventDefault(); setExpanded(false) }} onKeyDown={event => {
+    {expanded && createPortal(<dialog ref={dialog} id={id} className="month-grid-panel" aria-label={t('month.choose')} onCancel={event => { event.preventDefault(); setExpanded(false) }} onKeyDown={event => {
       event.stopPropagation()
       if (event.key === 'Escape') { event.preventDefault(); setExpanded(false) }
     }}>
       <div className="month-year-row">
-        <button type="button" className="button-small" aria-label="Previous year" disabled={!validYear || gridYear <= 1} onClick={() => setYearDraft(String(gridYear - 1))}>‹</button>
-        <label>Year<input type="number" inputMode="numeric" min="1" max="9999" value={yearDraft} aria-invalid={!validYear} aria-describedby={id + '-year-help'} onChange={event => setYearDraft(event.target.value)} /></label>
-        <button type="button" className="button-small" aria-label="Next year" disabled={!validYear || gridYear >= 9999} onClick={() => setYearDraft(String(gridYear + 1))}>›</button>
+        <button type="button" className="button-small" aria-label={t('month.previousYear')} disabled={!validYear || gridYear <= 1} onClick={() => setYearDraft(String(gridYear - 1))}>‹</button>
+        <label>{t('month.year')}<input type="number" inputMode="numeric" min="1" max="9999" value={yearDraft} aria-invalid={!validYear} aria-describedby={id + '-year-help'} onChange={event => setYearDraft(event.target.value)} /></label>
+        <button type="button" className="button-small" aria-label={t('month.nextYear')} disabled={!validYear || gridYear >= 9999} onClick={() => setYearDraft(String(gridYear + 1))}>›</button>
       </div>
-      <p id={id + '-year-help'} className="muted-note">{validYear ? 'Choose a month.' : 'Enter a year from 1 to 9999.'}</p>
+      <p id={id + '-year-help'} className="muted-note">{validYear ? t('month.chooseHelp') : t('month.yearHelp')}</p>
       <div className="month-grid">{monthsOfYear(gridYear).map(month => <button type="button" key={month} className="button-small" disabled={!validYear} aria-label={formatYearMonth(month)} aria-pressed={month === value} onClick={() => { choose(month); setExpanded(false) }}>{short(month)}</button>)}</div>
-      <button type="button" className="button-small month-close" onClick={() => setExpanded(false)}>Close</button>
+      <button type="button" className="button-small month-close" onClick={() => setExpanded(false)}>{t('common.close')}</button>
     </dialog>, document.body)}
   </>
 }

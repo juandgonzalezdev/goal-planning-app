@@ -41,7 +41,7 @@ Every prominent feature should contribute to at least one outcome while minimizi
 - Keep full detail/editing screens available; do not hide necessary complexity behind ambiguous gestures.
 - Design mobile-first, with enough simplicity to inform a future smartwatch experience. A native watch app is **not** an approved near-term build.
 - Avoid clutter, excessive menus, unexplained icons, hover-only controls, and inaccessible touch targets.
-- Preserve simple, natural English in the application UI; written development discussions may be in Spanish.
+- Use simple, natural wording in the application UI in English (default), Spanish and Polish; written development discussions may be in Spanish.
 
 ### 4.2 Natural Interaction
 

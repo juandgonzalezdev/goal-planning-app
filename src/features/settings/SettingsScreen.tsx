@@ -4,7 +4,9 @@ import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { Icon } from '../../components/Icon'
 import { ResetDemoConfirm } from '../../components/ResetDemoConfirm'
 import { ownerColor } from '../../domain/finance/space'
-import type { FinanceData, Theme } from '../../domain/finance/types'
+import type { FinanceData, Language, Theme } from '../../domain/finance/types'
+import { useT, type MessageKey } from '../../i18n'
+import { LANGUAGE_NAMES } from '../../i18n/languages'
 import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSetup'
 import { HelpTip } from '../../components/HelpTip'
@@ -13,7 +15,7 @@ import type { CalendarDate } from '../../domain/goalTime'
 import { ExchangeSection } from './ExchangeSection'
 import { ReportSection } from './ReportSection'
 
-const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
+const MODE_NAMES = { individual: 'mode.individual', duo: 'mode.duo', group: 'mode.group' } as const satisfies Record<string, MessageKey>
 
 type Props = {
   showRings?: boolean
@@ -32,6 +34,11 @@ type Props = {
   /** Help & Guide: the guide, Getting Started and the Monthly Check-in. */
   onOpenHelp: () => void
   onThemeChange: (theme: Theme) => Promise<SaveOutcome>
+  /** The language shown and its change (the own space saves it; the demo keeps it in memory). */
+  language?: Language
+  onLanguageChange?: (language: Language) => Promise<SaveOutcome>
+  /** Spanish and Polish can be chosen before Phase B6 (preview on this device). */
+  languagePreview?: boolean
   onErase: () => Promise<EraseOutcome>
   /** False while the own space can only be shown: Erase waits until it can be opened as usual. */
   canErase?: boolean
@@ -43,13 +50,23 @@ type Props = {
   demoQuestion?: ReactNode
 }
 
-const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
-  'failed': 'This browser did not allow erasing. Nothing was changed.',
-  'read-only': 'This browser cannot erase it right now. Nothing was changed.',
-  'busy': 'Still saving the last change. Try again in a moment.',
+const ERASE_TEXT: Partial<Record<EraseOutcome, MessageKey>> = {
+  'failed': 'erase.failed',
+  'read-only': 'erase.readOnly',
+  'busy': 'erase.busyLast',
 }
 
-export function SettingsScreen({ showRings = false, onShowRingsChange, data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null }: Props) {
+export function SettingsScreen({ showRings = false, onShowRingsChange, data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null, language = 'en', onLanguageChange, languagePreview = false }: Props) {
+  const { t } = useT()
+  const [languageText, setLanguageText] = useState('')
+  const changeLanguage = async (next: Language) => {
+    setLanguageText('')
+    const outcome = await onLanguageChange?.(next)
+    // A kept language shows by itself (every word changes); screen readers hear it once. A refusal says why.
+    if (outcome) setLanguageText(isKept(outcome) ? '' : outcomeText('', outcome))
+    if (outcome && isKept(outcome)) setLanguageNotice(LANGUAGE_NAMES[next])
+  }
+  const [languageNotice, setLanguageNotice] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [eraseText, setEraseText] = useState('')
   const [themeText, setThemeText] = useState('')
@@ -65,66 +82,68 @@ export function SettingsScreen({ showRings = false, onShowRingsChange, data, isD
     setEraseText('')
     const outcome = await onErase()
     setConfirming(false)
-    setEraseText(ERASE_TEXT[outcome] ?? '')
+    setEraseText(ERASE_TEXT[outcome] ? t(ERASE_TEXT[outcome]!) : '')
   }
   return (
     <div className="tab-screen">
-      <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
-      <h1 className="tab-title">Settings</h1>
+      <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> {t('nav.back')}</button>
+      <h1 className="tab-title">{t('settings.title')}</h1>
 
       <section className="block" aria-labelledby="settings-help">
-        <h2 id="settings-help" className="section-title">Help &amp; Guide</h2>
-        <p className="field-help">How the app works, Getting Started and your Monthly Check-in.</p>
-        <button type="button" className="button-secondary align-start" onClick={onOpenHelp}>Open Help &amp; Guide</button>
+        <h2 id="settings-help" className="section-title">{t('settings.help')}</h2>
+        <p className="field-help">{t('settings.helpText')}</p>
+        <button type="button" className="button-secondary align-start" onClick={onOpenHelp}>{t('settings.openHelp')}</button>
       </section>
 
       <section className="block">
-        <h2 className="section-title">Account &amp; Workspace</h2>
+        <h2 className="section-title">{t('settings.account')}</h2>
         <dl className="fact-rows">
-          <div><dt>Account</dt><dd>{isDemo ? 'Demo (invented information)' : 'No account yet (Preview)'}</dd></div>
-          <div><dt>Space</dt><dd>{MODE_NAMES[data.space.mode]}</dd></div>
-          <div><dt>{data.space.members.length === 1 ? 'Member' : 'Members'}</dt>
+          <div><dt>{t('settings.accountLabel')}</dt><dd>{isDemo ? t('settings.accountDemo') : t('settings.accountNone')}</dd></div>
+          <div><dt>{t('settings.space')}</dt><dd>{t(MODE_NAMES[data.space.mode])}</dd></div>
+          <div><dt>{t('settings.members', { count: data.space.members.length })}</dt>
             <dd>{data.space.members.map(member => (
               <span key={member.id} className="member-chip"><i className="owner-dot" style={{ background: ownerColor(data.space, member.id) }} aria-hidden="true" />{member.name}</span>
             ))}</dd>
           </div>
         </dl>
-        {data.space.mode === 'duo' && <p className="field-help">There is no private information between members yet. Everyone who uses this device can see everything in the space.</p>}
+        {data.space.mode === 'duo' && <p className="field-help">{t('settings.duoNote')}</p>}
       </section>
 
       <section className="block">
-        <h2 className="section-title">Preferences</h2>
+        <h2 className="section-title">{t('settings.preferences')}</h2>
         <dl className="fact-rows">
-          <div><dt>Currency</dt><dd>{data.space.currency}</dd></div>
+          <div><dt>{t('settings.currency')}</dt><dd>{data.space.currency}</dd></div>
         </dl>
-        <p className="field-help">Chosen when the space was created. Amounts are never converted.</p>
+        <p className="field-help">{t('settings.currencyHelp')}</p>
         <div className="form-stack">
-          {onShowRingsChange && <label className="effect-option"><input type="checkbox" checked={showRings} onChange={event => onShowRingsChange(event.target.checked)} /><span><b>Show rings on Home</b><small>The four-section ring and its card come first on Home, on this device. Turn it off for the classic Home.</small></span></label>}
-          <LanguageSelect />
+          {onShowRingsChange && <label className="effect-option"><input type="checkbox" checked={showRings} onChange={event => onShowRingsChange(event.target.checked)} /><span><b>{t('settings.rings')}</b><small>{t('settings.ringsHelp')}</small></span></label>}
+          <LanguageSelect value={language} onChange={next => void changeLanguage(next)} preview={languagePreview} />
+          <p className="visually-hidden" role="status">{languageNotice && t('language.notice', { language: languageNotice })}</p>
           <ThemeSelect value={data.preferences.theme} onChange={theme => void changeTheme(theme)} />
         </div>
         {themeText && <p className="field-error" role="alert">{themeText}</p>}
+        {languageText && <p className="field-error" role="alert">{languageText}</p>}
       </section>
 
       <section className="block">
-        <h2 className="section-title">Privacy &amp; Security</h2>
+        <h2 className="section-title">{t('settings.privacy')}</h2>
         {isDemo ? <>
-          <p className="field-help">The demo uses invented information only. Changes are not saved and disappear when you exit. Reset Demo puts the original example back; your own space is never touched.</p>
+          <p className="field-help">{t('settings.demoPrivacy')}</p>
           <div className="inline-actions">
             <ResetDemoConfirm onReset={onResetDemo} showDone />
-            <button type="button" className="button-secondary" onClick={onExitDemo}>Exit Demo</button>
+            <button type="button" className="button-secondary" onClick={onExitDemo}>{t('demo.exit')}</button>
           </div>
           {demoQuestion && <div className="callout callout-warning" role="alert">{demoQuestion}</div>}
         </> : <>
           <PrivacyFacts />
           <div className="help-tips"><HelpTip topic="hide-amounts" label /></div>
-          {!confirming && <button type="button" className="button-danger" disabled={!canErase} onClick={() => setConfirming(true)}>Erase All Data on This Device</button>}
+          {!confirming && <button type="button" className="button-danger" disabled={!canErase} onClick={() => setConfirming(true)}>{t('settings.erase')}</button>}
           {confirming && (
             <div className="callout callout-warning" role="alert">
-              <p>Erase your whole space from this device? This cannot be undone. Use Download Backup in Reports &amp; Backup first if you want a copy.</p>
+              <p>{t('settings.eraseQuestion')}</p>
               <div className="inline-actions">
-                <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined} onClick={() => void erase()}>Erase Everything</button>
-                <button type="button" className="button-small" onClick={() => setConfirming(false)}>Cancel</button>
+                <button type="button" className="button-small button-small-danger" aria-disabled={blocked || undefined} onClick={() => void erase()}>{t('settings.eraseConfirm')}</button>
+                <button type="button" className="button-small" onClick={() => setConfirming(false)}>{t('common.cancel')}</button>
               </div>
             </div>
           )}
@@ -133,7 +152,7 @@ export function SettingsScreen({ showRings = false, onShowRingsChange, data, isD
       </section>
 
       <section className="block" id="settings-reports" aria-labelledby="settings-reports-title" tabIndex={-1}>
-        <h2 id="settings-reports-title" className="section-title">Reports &amp; Backup</h2>
+        <h2 id="settings-reports-title" className="section-title">{t('settings.reports')}</h2>
         <ReportSection data={data} isDemo={isDemo} months={months} month={month} today={today} />
         <ExchangeSection data={data} isDemo={isDemo} onReplace={onReplace} onDownloadCopies={onDownloadCopies} />
         <div className="help-tips"><HelpTip topic="backup" label /></div>
@@ -141,11 +160,11 @@ export function SettingsScreen({ showRings = false, onShowRingsChange, data, isD
 
       {!isDemo && onExploreDemo && (
         <section className="block" aria-labelledby="settings-demo">
-          <h2 id="settings-demo" className="section-title">Explore the Demo</h2>
-          <p className="field-help">See the app with Alex, an invented person. Your space is not changed, and Exit Demo brings you back to it.</p>
+          <h2 id="settings-demo" className="section-title">{t('settings.exploreDemo')}</h2>
+          <p className="field-help">{t('settings.exploreText')}</p>
           <button type="button" className="button-secondary align-start" aria-disabled={saving || undefined} aria-describedby={saving ? 'settings-demo-wait' : undefined}
-            onClick={() => { if (!saving) onExploreDemo() }}>Explore the Demo</button>
-          {saving && <p id="settings-demo-wait" className="field-help">Wait until your last change is saved.</p>}
+            onClick={() => { if (!saving) onExploreDemo() }}>{t('settings.exploreDemo')}</button>
+          {saving && <p id="settings-demo-wait" className="field-help">{t('settings.exploreWait')}</p>}
           {demoQuestion && <div className="callout callout-warning" role="alert">{demoQuestion}</div>}
         </section>
       )}

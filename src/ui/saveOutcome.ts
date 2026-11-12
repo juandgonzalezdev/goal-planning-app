@@ -1,4 +1,5 @@
 import type { FinanceData } from '../domain/finance/types'
+import { t } from '../i18n'
 
 /**
  * What happened to a change. Screens say which one, so a change that was
@@ -23,13 +24,13 @@ export const isKept = (outcome: SaveOutcome): boolean => outcome === 'saved' || 
 /** A short sentence after a change, e.g. "Balance updated. Saved on this device." Empty for `stale`. */
 export function outcomeText(done: string, outcome: SaveOutcome): string {
   switch (outcome) {
-    case 'saved': return `${done} Saved on this device.`
-    case 'demo': return `${done} Demo only: not saved.`
-    case 'not-saved': return 'This browser did not save it. Nothing was changed. Try again.'
-    case 'conflict': return 'Not saved: this space changed in another tab. Nothing was changed here.'
-    case 'outdated': return 'Not saved: this was started before the latest changes were opened. Copy what you need, then open it again.'
-    case 'read-only': return 'Not saved: this browser can only show your space right now.'
-    case 'busy': return 'Not saved yet: the last change is still being saved. Try again in a moment.'
+    case 'saved': return t('save.saved', { done })
+    case 'demo': return t('save.demo', { done })
+    case 'not-saved': return t('save.notSaved')
+    case 'conflict': return t('save.conflict')
+    case 'outdated': return t('save.outdated')
+    case 'read-only': return t('save.readOnly')
+    case 'busy': return t('save.busy')
     case 'stale': return ''
   }
 }

@@ -4,7 +4,7 @@ import type { BillOccurrence } from '../../domain/finance/bills'
 import type { Id } from '../../domain/finance/types'
 import type { CalendarDate } from '../../domain/goalTime'
 import type { BlockAmounts } from '../../ui/amountVisibility'
-import { formatLongDate, formatYearMonth, WEEK_HEADINGS } from '../../ui/format'
+import { formatLongDate, formatYearMonth, weekHeadings } from '../../ui/format'
 import { cellBills } from './billsView'
 
 type Props = {
@@ -79,7 +79,7 @@ export function BillsCalendar({ month, shown, selected, today, isDemo, amounts, 
       <table className="bills-calendar">
         <caption className="visually-hidden">Bills calendar for {formatYearMonth(month)}. Choose a day to see its bills below.</caption>
         <thead>
-          <tr>{WEEK_HEADINGS.map(day => <th key={day.short} scope="col" abbr={day.full}>{day.short}</th>)}</tr>
+          <tr>{weekHeadings().map(day => <th key={day.short} scope="col" abbr={day.full}>{day.short}</th>)}</tr>
         </thead>
         <tbody>
           {monthWeeks(month).map(week => (

@@ -45,6 +45,26 @@ Ejecuta las cuatro antes de entregar un cambio:
   de una factura o una meta a Bills o History. Las pruebas pasan y ese
   regreso se comprueba con un espía en `src/BillsCalendar.test.tsx`.
 
+### Textos e idiomas
+
+- Un texto visible nuevo se añade en el catálogo de su área
+  (`src/i18n/catalog/…`) en inglés, español y polaco a la vez. TypeScript
+  no compila si falta un idioma o sobra una clave, y `src/i18n/i18n.test.ts`
+  comprueba que los tres tengan los mismos marcadores (`{name}`) y las formas
+  de plural necesarias (polaco: one, few, many, other).
+- En pantallas se usa `const { t } = useT()`; en funciones sin React, `t()`.
+- Nombres de las pestañas fijados: Home · Bills · Goals · Money · History;
+  Inicio · Facturas · Metas · Dinero · Historial; Start · Rachunki · Cele ·
+  Portfel · Historia. «Portfel» es solo el nombre de la pestaña Money: en
+  otros textos «money» se sigue traduciendo según el contexto (por ejemplo,
+  «pieniądze»). A 320 px la etiqueta más larga debe caber entera (ver
+  `.nav-label` en `src/styles/finance.css`).
+- Los nombres que escribe la persona y los importes nunca pasan por el
+  catálogo. Las fechas en español y polaco las escribe `src/ui/format.ts`.
+- Hasta la fase B6, español y polaco aparecen como «coming soon». Para verlos
+  en este dispositivo: abrir la app con `?languages=preview`; para quitar la
+  vista previa, `?languages=off`. Un idioma ya elegido sigue disponible.
+
 ### Escribir pruebas
 
 - Cálculos: junto al archivo, en `src/domain/…/*.test.ts`, con importes exactos
@@ -174,3 +194,14 @@ está en el historial de Git.
 Cloudflare Pages publica automáticamente `main` (producción) y algunas ramas de
 vista previa con `npm run build` → `dist`. No cambies su configuración desde
 aquí.
+
+### B1.2: acceso al idioma
+
+- Welcome ofrece un único selector compacto en la cabecera, con globo e indicador EN/ES/PL.
+- Setup hereda esa elección y no muestra otro selector; Settings conserva el selector principal.
+- No se consulta el idioma del navegador ni se ofrecen sugerencias. Se mantienen el inglés inicial,
+  la preferencia guardada, las reglas de preview y el aislamiento de Demo.
+- El selector compacto reutiliza el select nativo y las opciones de LanguageSelect: teclado
+  y nombre accesible traducido, con foco visible y objetivo mínimo de 88 × 44 px.
+- Los formateadores UTC preservan los años 1–99; el formato inglés de mes/año muestra el
+  año numérico sin ceros iniciales. No se modifican periodos ni cálculos.

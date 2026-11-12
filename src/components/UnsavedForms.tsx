@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { UnsavedForm } from '../app/unsavedChanges'
+import { useT } from '../i18n'
 
 /**
  * The forms with changes that are not saved, and "Copy What I Typed":
@@ -9,6 +10,7 @@ import type { UnsavedForm } from '../app/unsavedChanges'
  * to copy by hand.
  */
 export function UnsavedForms({ forms, typedText }: { forms: UnsavedForm[]; typedText: () => string }) {
+  const { t } = useT()
   const [shown, setShown] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const box = useRef<HTMLTextAreaElement>(null)
@@ -33,14 +35,14 @@ export function UnsavedForms({ forms, typedText }: { forms: UnsavedForm[]; typed
   }
   return (
     <div className="unsaved-forms">
-      <p>Not saved here: {forms.map(form => form.title + (form.closed ? ' (closed)' : '')).join(', ')}.</p>
+      <p>{t('unsaved.notSavedHere', { forms: forms.map(form => (form.closed ? t('unsaved.closed', { title: form.title }) : form.title)).join(', ') })}</p>
       <div className="inline-actions">
-        <button type="button" className="button-small" onClick={() => void copy()}>Copy What I Typed</button>
-        {shown === null && <button type="button" className="button-small" onClick={() => setShown(typedText())}>Show What I Typed</button>}
+        <button type="button" className="button-small" onClick={() => void copy()}>{t('unsaved.copy')}</button>
+        {shown === null && <button type="button" className="button-small" onClick={() => setShown(typedText())}>{t('unsaved.show')}</button>}
       </div>
-      {copied && <p role="status">Copied. Paste it somewhere safe before you discard it.</p>}
+      {copied && <p role="status">{t('unsaved.copied')}</p>}
       {shown !== null && (
-        <label className="form-field">What you typed. Select it and copy it.
+        <label className="form-field">{t('unsaved.typedLabel')}
           <textarea ref={box} readOnly rows={Math.min(12, shown.split('\n').length + 1)} value={shown} />
         </label>
       )}
@@ -50,12 +52,13 @@ export function UnsavedForms({ forms, typedText }: { forms: UnsavedForm[]; typed
 
 /** A question before what was typed is dropped: never without the user's yes. */
 export function ConfirmDiscard({ question, confirm, onConfirm, onCancel }: { question: string; confirm: string; onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useT()
   return (
     <div className="discard-question">
       <p>{question}</p>
       <div className="inline-actions">
         <button type="button" className="button-small button-small-primary" onClick={onConfirm}>{confirm}</button>
-        <button type="button" className="button-small" onClick={onCancel}>Keep Editing</button>
+        <button type="button" className="button-small" onClick={onCancel}>{t('unsaved.keepEditing')}</button>
       </div>
     </div>
   )
@@ -75,6 +78,7 @@ export function LeaveDialog({ forms, typedText, canDiscard, onKeep, onDiscard }:
   const dialog = useRef<HTMLDivElement>(null)
   const keep = useRef<HTMLButtonElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
+  const { t } = useT()
   const [shown, setShown] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [slow, setSlow] = useState(false)
@@ -119,20 +123,20 @@ export function LeaveDialog({ forms, typedText, canDiscard, onKeep, onDiscard }:
   return (
     <div className="leave-backdrop">
       <div ref={dialog} className="leave-dialog" role="alertdialog" aria-modal="true" aria-labelledby="leave-title" aria-describedby="leave-text" onKeyDown={onKeyDown}>
-        <h2 id="leave-title">Leave without saving?</h2>
-        <p id="leave-text">What you typed here is not saved:</p>
+        <h2 id="leave-title">{t('unsaved.leaveTitle')}</h2>
+        <p id="leave-text">{t('unsaved.leaveText')}</p>
         <ul className="leave-forms">{forms.map(form => <li key={form.id}>{form.title}</li>)}</ul>
         <div className="inline-actions">
-          <button ref={keep} type="button" className="button-small button-small-primary" onClick={onKeep}>Keep Editing</button>
-          <button type="button" className="button-small" onClick={() => void copy()}>Copy What I Typed</button>
-          <button type="button" className="button-small button-small-danger" aria-disabled={!canDiscard || undefined} onClick={() => { if (canDiscard) onDiscard() }}>Discard and Leave</button>
+          <button ref={keep} type="button" className="button-small button-small-primary" onClick={onKeep}>{t('unsaved.keepEditing')}</button>
+          <button type="button" className="button-small" onClick={() => void copy()}>{t('unsaved.copy')}</button>
+          <button type="button" className="button-small button-small-danger" aria-disabled={!canDiscard || undefined} onClick={() => { if (canDiscard) onDiscard() }}>{t('unsaved.discardLeave')}</button>
         </div>
         {!canDiscard && <p className="field-help" role="status">{slow
-          ? 'Navigation is taking longer than expected. You can keep editing or copy what you typed. To leave, save or cancel the form first.'
-          : 'One moment…'}</p>}
-        {copied && <p role="status">Copied. Nothing was closed.</p>}
+          ? t('unsaved.slow')
+          : t('unsaved.oneMoment')}</p>}
+        {copied && <p role="status">{t('unsaved.copiedKept')}</p>}
         {shown !== null && (
-          <label className="form-field">What you typed. Select it and copy it.
+          <label className="form-field">{t('unsaved.typedLabel')}
             <textarea ref={box} readOnly rows={Math.min(12, shown.split('\n').length + 1)} value={shown} />
           </label>
         )}

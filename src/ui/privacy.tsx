@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../components/Icon'
 import { IconTip } from '../components/IconTip'
+import { useT } from '../i18n'
 import { allAreasHidden, AREA_NAMES, useAmountVisibility, VisibilityContext, type AmountVisibility, type BlockAmounts, type HomeArea } from './amountVisibility'
 
 /** The hidden areas for everything inside (Home). The state itself is kept by the app, on this device. */
@@ -10,9 +11,10 @@ export function AmountVisibilityProvider({ value, children }: { value: AmountVis
 }
 /** The eye button in an area's header: light while amounts show, marked while they are hidden. It covers everything in the area. */
 export function EyeToggle({ area, name = AREA_NAMES[area] }: { area: HomeArea; name?: string }) {
+  const { t } = useT()
   const { hidden, toggle } = useAmountVisibility()
   const isHidden = hidden.has(area)
-  const label = `${isHidden ? 'Show' : 'Hide'} amounts in ${name}`
+  const label = t(isHidden ? 'amounts.showIn' : 'amounts.hideIn', { area: name })
   return (
     <button type="button" className={`eye-toggle has-tip${isHidden ? ' is-hidden' : ''}`} aria-label={label} onClick={() => toggle(area)}>
       <Icon name={isHidden ? 'eyeOff' : 'eye'} size={18} />
@@ -33,9 +35,10 @@ export const AMOUNTS_NOTICE_MS = 2000
  * (nothing moves), and screen readers hear it once.
  */
 export function HomeAmountsEye({ compact = false, noticeHost }: { compact?: boolean; noticeHost?: HTMLElement | null }) {
+  const { t } = useT()
   const { hidden, setAll } = useAmountVisibility()
   const allHidden = allAreasHidden(hidden)
-  const label = allHidden ? 'Amounts hidden. Show amounts' : 'Hide amounts'
+  const label = allHidden ? t('amounts.hiddenShow') : t('amounts.hide')
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
@@ -47,9 +50,9 @@ export function HomeAmountsEye({ compact = false, noticeHost }: { compact?: bool
   return (
     <span className="amounts-eye">
       <button type="button" className={`${compact ? 'icon-button has-tip' : 'button-small'} tool-button contextual-privacy${allHidden ? ' is-hidden' : ''}`} aria-label={label}
-        onClick={() => { setAll(!allHidden); setNotice(allHidden ? 'Amounts visible' : 'Amounts hidden') }}>
+        onClick={() => { setAll(!allHidden); setNotice(allHidden ? t('amounts.visible') : t('amounts.hidden')) }}>
         <Icon name={allHidden ? 'eyeOff' : 'eye'} size={20} />
-        {compact ? <IconTip label={label} /> : <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>}
+        {compact ? <IconTip label={label} /> : <span aria-hidden="true">{allHidden ? t('amounts.hidden') : t('amounts.hide')}</span>}
       </button>
       {noticeHost && notice && createPortal(<span className="control-notice" aria-hidden="true">{notice}</span>, noticeHost)}
       <span className={`amounts-notice${compact ? ' visually-hidden' : ''}${notice ? ' is-shown' : ''}`} role="status">{notice}</span>
@@ -59,11 +62,12 @@ export function HomeAmountsEye({ compact = false, noticeHost }: { compact?: bool
 
 /** Hide All Amounts / Show All Amounts as a text button (Bills and History). */
 export function AllAmountsToggle() {
+  const { t } = useT()
   const { hidden, setAll } = useAmountVisibility()
   const allHidden = allAreasHidden(hidden)
   return (
-    <button type="button" className="button-small align-start contextual-privacy" aria-label={allHidden ? 'Amounts hidden. Show amounts' : 'Hide amounts'} onClick={() => setAll(!allHidden)}>
-      <Icon name={allHidden ? 'eyeOff' : 'eye'} size={16} /> <span aria-hidden="true">{allHidden ? 'Amounts hidden' : 'Hide amounts'}</span>
+    <button type="button" className="button-small align-start contextual-privacy" aria-label={allHidden ? t('amounts.hiddenShow') : t('amounts.hide')} onClick={() => setAll(!allHidden)}>
+      <Icon name={allHidden ? 'eyeOff' : 'eye'} size={16} /> <span aria-hidden="true">{allHidden ? t('amounts.hidden') : t('amounts.hide')}</span>
     </button>
   )
 }
@@ -75,10 +79,11 @@ export function AllAmountsToggle() {
  * (`kind`), so nothing jumps.
  */
 export function HiddenChart({ amounts, kind = 'bars' }: { amounts: BlockAmounts; kind?: 'donut' | 'bars' }) {
+  const { t } = useT()
   return (
     <div className={`chart-hidden is-${kind}`}>
-      <p>Chart hidden with the amounts</p>
-      <button type="button" className="button-small" onClick={amounts.show}><Icon name="eye" size={16} /> Show Amounts</button>
+      <p>{t('amounts.chartHidden')}</p>
+      <button type="button" className="button-small" onClick={amounts.show}><Icon name="eye" size={16} /> {t('amounts.showButton')}</button>
     </div>
   )
 }

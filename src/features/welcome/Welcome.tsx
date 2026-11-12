@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { EraseOutcome, SpaceProblem } from '../../app/useSpace'
 import { Icon, type IconName } from '../../components/Icon'
+import { useT, type MessageKey } from '../../i18n'
 
-const POINTS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'idea', title: 'Start with an idea', text: 'Big or small, every goal starts somewhere.' },
-  { icon: 'plan', title: 'Make a plan', text: 'Find an approach that fits your life.' },
-  { icon: 'lock', title: 'Stay in control', text: 'Your goals and choices are yours.' },
+const POINTS: { icon: IconName; title: MessageKey; text: MessageKey }[] = [
+  { icon: 'idea', title: 'welcome.point1Title', text: 'welcome.point1Text' },
+  { icon: 'plan', title: 'welcome.point2Title', text: 'welcome.point2Text' },
+  { icon: 'lock', title: 'welcome.point3Title', text: 'welcome.point3Text' },
 ]
 
 type Props = {
@@ -28,18 +29,19 @@ type Props = {
   erasedElsewhere?: boolean
 }
 
-const ERASE_TEXT: Partial<Record<EraseOutcome, string>> = {
-  'failed': 'This browser did not allow erasing. Nothing was changed.',
-  'read-only': 'This browser cannot erase it right now. Nothing was changed.',
-  'busy': 'Still saving. Try again in a moment.',
+const ERASE_TEXT: Partial<Record<EraseOutcome, MessageKey>> = {
+  'failed': 'erase.failed',
+  'read-only': 'erase.readOnly',
+  'busy': 'erase.busy',
 }
 
 export function Welcome({ onCreateAccount, onLogIn, onExplore, problem, busy, onErase, onRetry, erasedElsewhere = false }: Props) {
+  const { t } = useT()
   const [eraseText, setEraseText] = useState('')
   const erase = async () => {
     setEraseText('')
     const outcome = await onErase()
-    setEraseText(ERASE_TEXT[outcome] ?? '')
+    setEraseText(ERASE_TEXT[outcome] ? t(ERASE_TEXT[outcome]!) : '')
   }
   // Nothing new can start while saved data could not be opened, or while nothing could be saved.
   const blocked = problem?.kind === 'unreadable' || problem?.kind === 'read-only' || problem?.kind === 'conflict'
@@ -47,50 +49,50 @@ export function Welcome({ onCreateAccount, onLogIn, onExplore, problem, busy, on
     <div className="screen-column welcome">
       <div className="welcome-hero">
         <span className="welcome-mark"><Icon name="target" size={34} /></span>
-        <h1 className="screen-title">Your goals, your way.</h1>
-        <p className="screen-lead">Make plans for what matters to you, one step at a time.</p>
+        <h1 className="screen-title">{t('welcome.title')}</h1>
+        <p className="screen-lead">{t('welcome.lead')}</p>
       </div>
       <ul className="welcome-points">
         {POINTS.map(point => (
           <li key={point.title}>
             <Icon name={point.icon} />
-            <div><strong>{point.title}</strong><span>{point.text}</span></div>
+            <div><strong>{t(point.title)}</strong><span>{t(point.text)}</span></div>
           </li>
         ))}
       </ul>
       {erasedElsewhere && (
         <div className="callout" role="status">
-          <p>Your space was erased in another tab. Nothing is saved on this device now.</p>
+          <p>{t('welcome.erasedElsewhere')}</p>
         </div>
       )}
       {problem?.kind === 'read-only' && (problem.takenOver ? (
         <div className="callout callout-warning" role="alert">
-          <p>A newer version of the app was opened in another tab. Reload this page to keep using your space here. You can still explore the demo.</p>
+          <p>{t('welcome.takenOver')}</p>
         </div>
       ) : (
         <div className="callout callout-warning" role="alert">
-          <p>This browser cannot save safely here, so a new space cannot be started. You can still explore the demo.</p>
-          <button type="button" className="button-secondary" onClick={onRetry}>Try Again</button>
+          <p>{t('welcome.cannotSave')}</p>
+          <button type="button" className="button-secondary" onClick={onRetry}>{t('notice.tryAgain')}</button>
         </div>
       ))}
       {problem?.kind === 'conflict' && (
         <div className="callout callout-warning" role="alert">
-          <p>A space was started on this device in another tab.</p>
-          <button type="button" className="button-secondary" onClick={onRetry}>Open It</button>
+          <p>{t('welcome.conflict')}</p>
+          <button type="button" className="button-secondary" onClick={onRetry}>{t('welcome.openIt')}</button>
         </div>
       )}
       {problem?.kind === 'partly-erased' && (
         <div className="callout callout-warning" role="alert">
-          <p>Erase is not finished. Your space was removed from the app, but this browser kept an older copy of it. It will not be opened again.</p>
-          <p>To remove it, try again, or clear this site's data in your browser settings.</p>
-          <button type="button" className="button-secondary" aria-disabled={busy || undefined} onClick={() => void erase()}>Try Again</button>
+          <p>{t('welcome.partlyErased')}</p>
+          <p>{t('welcome.partlyErasedHelp')}</p>
+          <button type="button" className="button-secondary" aria-disabled={busy || undefined} onClick={() => void erase()}>{t('notice.tryAgain')}</button>
         </div>
       )}
       {eraseText && <p className="field-error" role="alert">{eraseText}</p>}
       <div className="screen-actions">
-        <button type="button" className="button-primary" onClick={onCreateAccount} disabled={blocked}>Create Account <Icon name="arrowRight" size={18} /></button>
-        <button type="button" className="button-secondary" onClick={onLogIn} disabled={blocked}>Log In</button>
-        <button type="button" className="button-quiet" onClick={onExplore}>Explore the App</button>
+        <button type="button" className="button-primary" onClick={onCreateAccount} disabled={blocked}>{t('welcome.createAccount')} <Icon name="arrowRight" size={18} /></button>
+        <button type="button" className="button-secondary" onClick={onLogIn} disabled={blocked}>{t('welcome.logIn')}</button>
+        <button type="button" className="button-quiet" onClick={onExplore}>{t('welcome.explore')}</button>
       </div>
     </div>
   )

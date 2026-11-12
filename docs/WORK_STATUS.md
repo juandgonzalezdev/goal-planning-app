@@ -2394,3 +2394,27 @@ Commit local `3a12cbc` en la rama, sin push. Juan confirmó la aceptación manua
 T1–T11 el 10-11-2026, en Chrome sobre Windows y en Safari del iPhone, en modo claro y
 solo con la Demo. El modo oscuro solo se probó en el recorrido automático en Edge. Siguen
 pendientes de su autorización integrar en `main`, hacer push y publicar.
+
+## B1.2: correcciones finales de idiomas, 12 de noviembre de 2026
+
+Dirección autoriza únicamente B1.2, sin commit, merge, push ni despliegue.
+Se prepara en una copia aislada de feature/b1-i18n, HEAD
+acadbacfcfd56de2403c2842022eceba43c3bf04, incluyendo los cambios sin commit
+de B1/B1.1 y los archivos nuevos de idiomas. La carpeta original no se modifica.
+
+Welcome conserva un único selector compacto en la cabecera; Setup hereda el idioma
+y no lo duplica. Se retira la sugerencia del navegador. Settings y las reglas de
+preview, persistencia e idioma temporal de Demo se conservan. Se corrige
+Second person's name en la copia del borrador Duo, y la presentación UTC de años
+1–99, incluido el día de semana inglés. No cambian cálculos, modelos ni almacenamiento.
+
+Comprobaciones propias en la copia aislada: Language 11/11; catálogos/fechas 28/28;
+suite completa 1142/1142 en 83 archivos (312,70 s); lint y build correctos.
+El build conserva el aviso de tamaño (JS 808,02 kB, gzip 227,22 kB). Se observaron
+los avisos de jsdom sobre scrollTo y navegación, sin fallos. No se suben timeouts.
+
+La revisión visual no se completa: el navegador devuelve ERR_CONNECTION_TIMED_OUT
+al servidor local. Quedan pendientes 320, 360, 375 y 390 px, teclado real y lector
+de pantalla. La aceptación manual anterior de B1/B1.1 no se extiende a B1.2.
+La entrega incremental b1-2-final-review.patch y RESUMEN-B1-2.md se conserva fuera
+del repositorio; requiere revisión y aplicación supervisada antes de integrar.

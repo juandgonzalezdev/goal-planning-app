@@ -3,6 +3,7 @@ import { isSourceActiveIn } from '../domain/finance/income'
 import { toPay } from '../domain/finance/overview'
 import type { FinanceData } from '../domain/finance/types'
 import type { CalendarDate } from '../domain/goalTime'
+import type { MessageKey } from '../i18n'
 
 /** What + Add in the header can start: records of what happened first, then plans. */
 export type AddChoice = 'spending' | 'income-received' | 'transfer' | 'balance' | 'contribution' | 'payment' | 'income' | 'bill' | 'goal'
@@ -18,6 +19,19 @@ export const ADD_LABELS = {
   'bill': 'Add Bill',
   'goal': 'Add Goal',
 } as const satisfies Record<AddChoice, string>
+
+/** The message of each choice, shown in the app's language (`ADD_LABELS` is the English text, kept for the tests). */
+export const ADD_MESSAGES = {
+  'spending': 'add.spending',
+  'income-received': 'add.incomeReceived',
+  'transfer': 'add.transfer',
+  'balance': 'add.balance',
+  'contribution': 'add.contribution',
+  'payment': 'add.payment',
+  'income': 'add.income',
+  'bill': 'add.bill',
+  'goal': 'add.goal',
+} as const satisfies Record<AddChoice, MessageKey>
 
 /**
  * The choices that apply to the space today. A record needs what it records

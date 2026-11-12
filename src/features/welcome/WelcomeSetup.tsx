@@ -1,25 +1,27 @@
 import { useState } from 'react'
 import { Icon, type IconName } from '../../components/Icon'
 import { MEMBER_NAME_MAX_LENGTH, validateSetup, type SetupError } from '../../domain/finance/space'
-import type { SpaceMode, Theme } from '../../domain/finance/types'
+import type { Language, SpaceMode, Theme } from '../../domain/finance/types'
+import { useT, type MessageKey } from '../../i18n'
+import { canChoose, LANGUAGE_NAMES, LANGUAGES } from '../../i18n/languages'
 import { CURRENCIES, type CurrencyCode } from '../../domain/money'
 import { outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { setupFromDraft, type SetupDraft } from './setupDraft'
 
-const STEPS = ['Your Profile', 'Your Plan', 'Your Preferences', 'Privacy & Terms'] as const
+const STEPS = ['setup.profile', 'setup.plan', 'setup.preferences', 'setup.privacy'] as const satisfies readonly MessageKey[]
 
-const MODES: { mode: SpaceMode; icon: IconName; name: string; text: string; available: boolean }[] = [
-  { mode: 'individual', icon: 'person', name: 'Individual', text: 'Your own money and goals.', available: true },
-  { mode: 'duo', icon: 'duo', name: 'Duo', text: 'Two people sharing one space.', available: true },
-  { mode: 'group', icon: 'group', name: 'Group', text: 'For families and groups.', available: false },
+const MODES: { mode: SpaceMode; icon: IconName; name: MessageKey; text: MessageKey; available: boolean }[] = [
+  { mode: 'individual', icon: 'person', name: 'mode.individual', text: 'setup.individualText', available: true },
+  { mode: 'duo', icon: 'duo', name: 'mode.duo', text: 'setup.duoText', available: true },
+  { mode: 'group', icon: 'group', name: 'mode.group', text: 'setup.groupText', available: false },
 ]
 
-const ERROR_TEXT: Record<SetupError, string> = {
-  'name-required': 'Enter your name.',
-  'name-too-long': `Use ${MEMBER_NAME_MAX_LENGTH} characters or fewer.`,
-  'second-name-required': 'Enter the second person\'s name.',
-  'second-name-too-long': `Use ${MEMBER_NAME_MAX_LENGTH} characters or fewer.`,
-  'mode-not-available': 'This option is not available yet.',
+const ERROR_TEXT: Record<SetupError, MessageKey> = {
+  'name-required': 'setup.errorName',
+  'name-too-long': 'setup.errorTooLong',
+  'second-name-required': 'setup.errorSecondName',
+  'second-name-too-long': 'setup.errorTooLong',
+  'mode-not-available': 'setup.errorMode',
 }
 
 type Props = {
@@ -39,6 +41,7 @@ type Props = {
  */
 
 export function WelcomeSetup({ draft, onChange, onBack, onFinish, saving = false, outcome = null }: Props) {
+  const { t } = useT()
   const [showErrors, setShowErrors] = useState(false)
   const set = (change: Partial<SetupDraft>) => onChange({ ...draft, ...change })
   const errors = validateSetup(setupFromDraft(draft))
@@ -63,112 +66,124 @@ export function WelcomeSetup({ draft, onChange, onBack, onFinish, saving = false
 
   return (
     <div className="screen-column">
-      <button type="button" className="back-link" onClick={previous}><Icon name="arrowLeft" size={18} /> Back</button>
-      <p className="step-count">Welcome Setup · Step {draft.step + 1} of {STEPS.length}</p>
-      <h1 className="screen-title">{STEPS[draft.step]}</h1>
+      <button type="button" className="back-link" onClick={previous}><Icon name="arrowLeft" size={18} /> {t('nav.back')}</button>
+      <p className="step-count">{t('setup.step', { step: draft.step + 1, total: STEPS.length })}</p>
+      <h1 className="screen-title">{t(STEPS[draft.step])}</h1>
 
       {draft.step === 0 && <>
-        <p className="screen-lead">This is how you appear in your space.</p>
-        <label className="form-field">Display Name
+        <p className="screen-lead">{t('setup.profileLead')}</p>
+        <label className="form-field">{t('setup.displayName')}
           <input value={draft.name} maxLength={80} autoComplete="given-name" aria-invalid={!!nameError} aria-describedby={nameError ? 'setup-name-error' : undefined} onChange={event => set({ name: event.target.value })} />
         </label>
-        {nameError && <p id="setup-name-error" className="field-error">{ERROR_TEXT[nameError]}</p>}
+        {nameError && <p id="setup-name-error" className="field-error">{t(ERROR_TEXT[nameError], { max: MEMBER_NAME_MAX_LENGTH })}</p>}
       </>}
 
       {draft.step === 1 && <>
-        <p className="screen-lead">Who will use this space? You can only choose this when you create it.</p>
+        <p className="screen-lead">{t('setup.planLead')}</p>
         <fieldset className="choice-list">
-          <legend className="visually-hidden">Space type</legend>
+          <legend className="visually-hidden">{t('setup.spaceType')}</legend>
           {MODES.map(option => (
             <label key={option.mode} className={`choice-card${option.available ? '' : ' is-unavailable'}`}>
               <input type="radio" name="space-mode" value={option.mode} checked={draft.mode === option.mode} disabled={!option.available} onChange={() => set({ mode: option.mode })} aria-describedby={`mode-${option.mode}-text`} />
               <Icon name={option.icon} size={22} />
               <span className="choice-body">
-                <span className="choice-name">{option.name}{!option.available && <span className="badge">Coming soon</span>}</span>
-                <span id={`mode-${option.mode}-text`} className="choice-text">{option.text}</span>
+                <span className="choice-name">{t(option.name)}{!option.available && <span className="badge">{t('common.comingSoon')}</span>}</span>
+                <span id={`mode-${option.mode}-text`} className="choice-text">{t(option.text)}</span>
               </span>
               <span className="choice-check" aria-hidden="true">{draft.mode === option.mode && <Icon name="check" size={16} />}</span>
             </label>
           ))}
         </fieldset>
         {draft.mode === 'duo' && <>
-          <label className="form-field form-field-spaced">Second Person's Name
+          <label className="form-field form-field-spaced">{t('setup.partner')}
             <input value={draft.partner} maxLength={80} aria-invalid={!!partnerError} aria-describedby={partnerError ? 'setup-partner-error' : undefined} onChange={event => set({ partner: event.target.value })} />
           </label>
-          {partnerError && <p id="setup-partner-error" className="field-error">{ERROR_TEXT[partnerError]}</p>}
+          {partnerError && <p id="setup-partner-error" className="field-error">{t(ERROR_TEXT[partnerError], { max: MEMBER_NAME_MAX_LENGTH })}</p>}
           <div className="callout callout-warning">
-            <p><strong>No private information between members yet.</strong> For now, Duo works on this device only. Everyone who uses it can see everything in the space.</p>
+            <p><strong>{t('setup.duoWarningTitle')}</strong> {t('setup.duoWarning')}</p>
           </div>
         </>}
       </>}
 
       {draft.step === 2 && <>
-        <p className="screen-lead">You can change language and appearance later in Settings.</p>
+        <p className="screen-lead">{t('setup.preferencesLead')}</p>
         <div className="form-stack">
-          <label className="form-field">Currency
+          <label className="form-field">{t('setup.currency')}
             <select value={draft.currency} onChange={event => set({ currency: event.target.value as CurrencyCode })}>
               {CURRENCIES.map(currency => <option key={currency} value={currency}>{currency}</option>)}
             </select>
           </label>
-          <p className="field-help">Every amount in your space uses this currency. Amounts are never converted.</p>
-          <LanguageSelect />
+          <p className="field-help">{t('setup.currencyHelp')}</p>
           <ThemeSelect value={draft.theme} onChange={theme => set({ theme })} />
         </div>
       </>}
 
       {draft.step === 3 && <>
-        <p className="screen-lead">Before you start, here is what this version does with your information.</p>
+        <p className="screen-lead">{t('setup.privacyLead')}</p>
         <PrivacyFacts />
-        <p className="screen-note">This is not a legal agreement. Terms of Service and a Privacy Policy will be available before real accounts exist.</p>
+        <p className="screen-note">{t('setup.notLegal')}</p>
       </>}
 
       {draft.step === STEPS.length - 1 && outcome && <p className="field-error" role="alert">{outcome === 'conflict'
-        ? 'Not created: this device already has a space, started in another tab. Go back to Welcome to open it.'
+        ? t('setup.conflict')
         : outcomeText('', outcome)}</p>}
       <div className="screen-actions">
         <button type="button" className="button-primary" onClick={next} aria-disabled={saving || undefined}>
-          {draft.step < STEPS.length - 1 ? <>Continue <Icon name="arrowRight" size={18} /></> : saving ? 'Saving…' : 'Create My Space'}
+          {draft.step < STEPS.length - 1 ? <>{t('common.continue')} <Icon name="arrowRight" size={18} /></> : saving ? t('common.saving') : t('setup.create')}
         </button>
       </div>
     </div>
   )
 }
 
-/** Only English works today; the other languages are listed so people can see they are planned. */
-export function LanguageSelect() {
-  return (
-    <label className="form-field">Language
-      <select value="en" onChange={() => undefined}>
-        <option value="en">English</option>
-        <option value="es" disabled>Español (coming soon)</option>
-        <option value="pl" disabled>Polski (coming soon)</option>
+/**
+ * The language list (Phase B1). Each language is written in its own name. Spanish and Polish are "coming soon"
+ * until every screen is translated (Phase B6), unless the preview is on for this device. The choice applies at once.
+ */
+export function LanguageSelect({ value, onChange, preview = false, compact = false }: { value: Language; onChange?: (language: Language) => void; preview?: boolean; compact?: boolean }) {
+  const { t } = useT()
+  return <>
+    <label className={compact ? 'welcome-language-control' : 'form-field'}>
+      {compact ? <>
+        <span className="visually-hidden">{t('language.label')}</span>
+        <Icon name="globe" size={18} />
+        <span aria-hidden="true">{value.toUpperCase()}</span>
+        <Icon name="chevronDown" size={14} />
+      </> : t('language.label')}
+      <select value={value} aria-label={t('language.label')} aria-describedby={compact ? undefined : 'language-help'} onChange={event => onChange?.(event.target.value as Language)}>
+        {LANGUAGES.map(option => (canChoose(option, preview, value)
+          ? <option key={option} value={option} lang={option}>{LANGUAGE_NAMES[option]}</option>
+          : <option key={option} value={option} disabled>{t('language.comingSoon', { language: LANGUAGE_NAMES[option] })}</option>))}
       </select>
     </label>
-  )
+    {!compact && <p id="language-help" className="field-help">{t('language.help')}</p>}
+  </>
 }
 
 export function ThemeSelect({ value, onChange }: { value: Theme; onChange: (theme: Theme) => void }) {
+  const { t } = useT()
   return <>
-    <label className="form-field">Appearance
+    <label className="form-field">{t('appearance.label')}
       <select value={value === 'day-night' ? 'system' : value} onChange={event => onChange(event.target.value as Theme)}>
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="day-night" disabled>Day/Night (coming soon)</option>
+        <option value="system">{t('appearance.system')}</option>
+        <option value="light">{t('appearance.light')}</option>
+        <option value="dark">{t('appearance.dark')}</option>
+        <option value="day-night" disabled>{t('appearance.dayNight')}</option>
       </select>
     </label>
-    <p className="field-help">System follows your device's setting.</p>
+    <p className="field-help">{t('appearance.help')}</p>
   </>
 }
 
 /** What this version really does with information. Shown in setup and in Settings. */
 export function PrivacyFacts() {
+  const { t } = useT()
   return (
     <ul className="fact-list">
-      <li>Your space is saved only in this browser, on this device. There is no account and no server.</li>
-      <li>This is not secure storage: anyone who can use this browser can see it. Avoid shared devices.</li>
-      <li>Nothing is sent anywhere, and there is no bank connection.</li>
-      <li>You can erase everything at any time in Settings.</li>
+      <li>{t('privacy.local')}</li>
+      <li>{t('privacy.notSecure')}</li>
+      <li>{t('privacy.nothingSent')}</li>
+      <li>{t('privacy.erase')}</li>
     </ul>
   )
 }

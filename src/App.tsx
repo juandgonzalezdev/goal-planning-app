@@ -16,12 +16,12 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
-import { readHomeRings, writeHomeRings, clearGuideProgress, readGuideProgress, writeGuideProgress } from './data/uiPrefs'
+import { readHomeRings, writeHomeRings, clearGuideProgress, readGuideProgress, writeGuideProgress, readDeviceLanguage, readLanguagePreview, writeDeviceLanguage } from './data/uiPrefs'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
-import type { Id } from './domain/finance/types'
+import type { Id, Language } from './domain/finance/types'
 import type { CalendarDate } from './domain/goalTime'
 import { BillScreen } from './features/bills/BillScreen'
 import { BillsScreen } from './features/bills/BillsScreen'
@@ -46,7 +46,10 @@ import { monthIncome } from './domain/finance/income'
 import { matchesValidity } from './domain/finance/validity'
 import type { RingsView } from './features/home/GoalRings'
 import { HomeScreen, type HomeSpot } from './features/home/HomeScreen'
-import { ADD_LABELS, addChoices, type AddChoice } from './app/addMenu'
+import { ADD_MESSAGES, addChoices, type AddChoice } from './app/addMenu'
+import { LanguageProvider, setActiveLanguage, translate, type MessageKey } from './i18n'
+import { DEFAULT_LANGUAGE } from './i18n/languages'
+import { LanguageSelect } from './features/welcome/WelcomeSetup'
 import { MenuButton, type MenuOption } from './components/MenuButton'
 import { SIDEBAR_QUERY, useMediaQuery } from './ui/useMediaQuery'
 import { DEFAULT_LAYOUT, keepCelebratedMonths, layoutToSave, normalizeLayout, type HomeLayout } from './features/home/homeLayout'
@@ -65,7 +68,7 @@ import './styles/tokens.css'
 import './styles/app.css'
 import './styles/finance.css'
 
-const MODE_NAMES = { individual: 'Individual', duo: 'Duo', group: 'Group' } as const
+const MODE_NAMES = { individual: 'mode.individual', duo: 'mode.duo', group: 'mode.group' } as const satisfies Record<string, MessageKey>
 
 /** Moving to another screen closes every form on screen (a kept draft and a form kept after a problem stay). */
 const ANY_FORM = () => true
@@ -103,6 +106,28 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const [billCelebration] = useState(createBillCelebrationChannel)
   const unsaved = useUnsavedRegistry()
   const space = useSpace(storage, getToday, createDemo, undefined, createStore, unsaved.hasUnsaved)
+  // Language (Phase B1, decisions D2 and D4). The open space keeps its choice in its data; before a space exists
+  // (Welcome, Welcome Setup) this device's choice is used. The demo starts in the language shown when it opens and
+  // keeps any change in memory only: leaving it brings back the own space's language, and nothing is written.
+  const [deviceLanguage, setDeviceLanguage] = useState<Language>(() => readDeviceLanguage(storage) ?? DEFAULT_LANGUAGE)
+  const [demoLanguage, setDemoLanguage] = useState<Language | null>(null)
+  const [languagePreview] = useState(() => readLanguagePreview(storage, typeof location === 'undefined' ? '' : location.search))
+  const language: Language = space.open?.kind === 'demo' ? demoLanguage ?? deviceLanguage : space.open ? space.open.data.preferences.language : deviceLanguage
+  // Set before anything below renders, so plain functions (dates, save messages) write in this language too.
+  setActiveLanguage(language)
+  const t = (key: MessageKey, params?: Record<string, string | number>) => translate(language, key, params)
+  /**
+   * Changes the language at once, without remounting anything: forms keep what was typed and the screen stays.
+   * The own space saves it in its data (and on this device, for Welcome after an erase); the demo keeps it in
+   * memory; before a space exists only this device keeps it.
+   */
+  const changeLanguage = async (next: Language): Promise<SaveOutcome> => {
+    if (space.open?.kind === 'demo') { setDemoLanguage(next); return 'demo' }
+    if (!space.open) { setDeviceLanguage(next); writeDeviceLanguage(storage, next); return 'saved' }
+    const outcome = await space.update(data => ({ ...data, preferences: { ...data.preferences, language: next } }))
+    if (isKept(outcome)) { setDeviceLanguage(next); writeDeviceLanguage(storage, next) }
+    return outcome
+  }
   // Asking before what was typed is dropped: to open the latest version (or try again), or to close a space erased in another tab.
   // Also before the demo opens from Settings, and before it is left, when something typed would be dropped.
   const [confirming, setConfirming] = useState<'reload' | 'discard-erased' | 'open-demo' | 'exit-demo' | 'exit-demo-settings' | null>(null)
@@ -141,9 +166,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const replace = (next: Screen) => navigation.replace(next)
   const [setupDraft, setSetupDraft] = useState<SetupDraft>(EMPTY_SETUP)
   // The Welcome Setup draft stays while the user looks elsewhere (until the space is created), so moving around never drops it.
-  const setupText = describeTyped('Welcome Setup', typedSetup(setupDraft))
-  const setupTyped = setupText !== describeTyped('Welcome Setup', typedSetup(EMPTY_SETUP))
-  useEffect(() => { unsaved.registry.set('app:welcome-setup', setupTyped ? { title: 'Welcome Setup', text: setupText, kept: true } : null) }, [unsaved.registry, setupTyped, setupText])
+  const setupTitle = translate(language, 'setup.title')
+  const setupText = describeTyped(setupTitle, typedSetup(setupDraft))
+  const setupTyped = setupText !== describeTyped(setupTitle, typedSetup(EMPTY_SETUP))
+  useEffect(() => { unsaved.registry.set('app:welcome-setup', setupTyped ? { title: setupTitle, text: setupText, kept: true } : null) }, [unsaved.registry, setupTyped, setupText, setupTitle])
   // The goal shown in the goal screen, and the New Goal form (kept while the user looks elsewhere).
   const [goalId, setGoalId] = useState<Id | null>(null)
   const [newGoal, setNewGoal] = useState<NewGoalState>(EMPTY_NEW_GOAL)
@@ -617,7 +643,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // What happened when the space could not be started: the setup stays as typed.
   const [setupOutcome, setSetupOutcome] = useState<SaveOutcome | null>(null)
   const finishSetup = async () => {
-    const created = createSpaceData(setupFromDraft(setupDraft), newId())
+    const created = createSpaceData({ ...setupFromDraft(setupDraft), language: deviceLanguage }, newId())
     if (created.status !== 'created') return
     setSetupOutcome(null)
     const outcome = await space.startOwnSpace(created.data)
@@ -663,6 +689,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     const month = chosenMonth
     if (space.openDemo() === 'busy') return
     ownReturn.current = from === 'settings' ? { billsView: bills, chosenMonth: month } : null
+    setDemoLanguage(language)
     setDemoFrom(from)
     resetGoals(); setChosenMonth(null); clearDemoViews(); setConfirming(null)
     if (from === 'settings') navigation.replace('home')
@@ -677,7 +704,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const openDemoDiscarding = () => { discardTyped(); openDemo('settings') }
   /** Leaves the demo, dropping all of it. From Settings, back to the own space's Home, opened again from the store. */
   const leaveDemo = () => {
-    space.closeDemo(); resetGoals(); clearDemoViews(); setConfirming(null)
+    space.closeDemo(); resetGoals(); clearDemoViews(); setConfirming(null); setDemoLanguage(null)
     const back = demoFrom === 'settings' ? ownReturn.current : null
     setBillsView(back?.billsView ?? INITIAL_BILLS_VIEW)
     setChosenMonth(back?.chosenMonth ?? null)
@@ -795,8 +822,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   const addOptions: MenuOption[] = (() => {
     if (!open) return []
     const { record, plan } = addChoices(open.data, space.today)
-    return [...record.map(choice => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice) })),
-      ...plan.map((choice, index) => ({ label: ADD_LABELS[choice], onSelect: () => addFrom(choice), startsGroup: index === 0 }))]
+    return [...record.map(choice => ({ label: t(ADD_MESSAGES[choice]), onSelect: () => addFrom(choice) })),
+      ...plan.map((choice, index) => ({ label: t(ADD_MESSAGES[choice]), onSelect: () => addFrom(choice), startsGroup: index === 0 }))]
   })()
   /**
    * Getting Started on Home: each step opens what already exists, as + Add does (Back or Cancel comes back to Home,
@@ -928,7 +955,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       canDiscard={asking === 'app' ? !appLeave!.history || nav.ready : nav.ready} onKeep={keepEditing} onDiscard={discardAndLeave} />
   )
 
-  const subtitle = !open ? 'Prototype' : open.kind === 'demo' ? 'Demo · Invented data' : `${open.data.space.name} · ${MODE_NAMES[open.data.space.mode]}`
+  const subtitle = !open ? t('header.prototype') : open.kind === 'demo' ? t('header.demo') : t('header.spaceLine', { space: open.data.space.name, mode: t(MODE_NAMES[open.data.space.mode]) })
   const showNav = !!open && isSpaceScreen(screen)
   // A detail keeps the main destination it was opened from; clicking it returns to that root.
   const [navContext, setNavContext] = useState<{ tab: Tab; entries: Record<string, Tab> }>({ tab: 'home', entries: {} })
@@ -942,20 +969,23 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // Wide screens: destinations become a sidebar; identity and global controls stay in the header.
   const sidebar = useMediaQuery(SIDEBAR_QUERY) && showNav
   const brand = (
-    <button type="button" className="shell-brand" aria-label={open ? 'Go to Home' : 'Go to Welcome'} aria-describedby={brandDescriptionId} title={subtitle} onClick={goToStart}>
+    <button type="button" className="shell-brand" aria-label={open ? t('header.goHome') : t('header.goWelcome')} aria-describedby={brandDescriptionId} title={subtitle} onClick={goToStart}>
       <span className="shell-brand-mark"><Icon name="target" size={20} /></span>
-      <span className="shell-brand-name"><span className="shell-brand-title">Goal Planning</span><small id={brandDescriptionId}>{subtitle}</small></span>
+      <span className="shell-brand-name"><span className="shell-brand-title">{t('header.brand')}</span><small id={brandDescriptionId}>{subtitle}</small></span>
     </button>
   )
-  const helpButton = <button type="button" className="nav-settings" aria-current={screen === 'help' ? 'page' : undefined} onClick={() => openGuide()}><Icon name="help" size={18} /> Help</button>
-  const settingsButton = <button type="button" className="icon-button has-tip" aria-label="Settings" aria-current={screen === 'settings' ? 'page' : undefined} onClick={() => go('settings')}><Icon name="settings" size={20} /><IconTip label="Settings" /></button>
+  const helpButton = <button type="button" className="nav-settings" aria-current={screen === 'help' ? 'page' : undefined} onClick={() => openGuide()}><Icon name="help" size={18} /> {t('nav.help')}</button>
+  const settingsButton = <button type="button" className="icon-button has-tip" aria-label={t('nav.settings')} aria-current={screen === 'settings' ? 'page' : undefined} onClick={() => go('settings')}><Icon name="settings" size={20} /><IconTip label={t('nav.settings')} /></button>
 
   return (
+    <LanguageProvider language={language}>
     <div className={`shell${showNav ? ' has-nav' : ''}${sidebar ? ' has-sidebar' : ''}`} data-direction={direction} ref={shellRef}>
-      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus() }}>Skip to content</a>
-      <header className="shell-header">
+      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus() }}>{t('header.skip')}</a>
+      <header className="shell-header" data-welcome={!open && shows('welcome') || undefined}>
         {brand}
-        {open && <div className="shell-utilities" role="group" aria-label="Global controls">
+        {!open && !space.opening && shows('welcome') && space.problem?.kind !== 'unreadable' &&
+          <LanguageSelect compact value={language} onChange={next => void changeLanguage(next)} preview={languagePreview} />}
+        {open && <div className="shell-utilities" role="group" aria-label={t('header.globalControls')}>
           <AmountVisibilityProvider value={visibility}><HomeAmountsEye compact noticeHost={controlFeedbackHost} /></AmountVisibilityProvider>
           <ThemeToggle key={space.generation} dark={dark} noticeHost={controlFeedbackHost} onChange={next => space.update(data => ({ ...data, preferences: { ...data.preferences, theme: next ? 'dark' : 'light' } }))} />
           {screen === 'home' && <div className="header-home-options" ref={setHomeControlsHost} />}
@@ -966,47 +996,47 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
         <DemoBanner asking={confirmReset} onAskingChange={setConfirmReset} onReset={resetDemo} onExit={() => exitDemo()}
           exitQuestion={confirming === 'exit-demo' && <>
             <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
-            <ConfirmDiscard question="Leaving the demo closes what you typed in it. It cannot be brought back." confirm="Discard and Exit Demo" onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
+            <ConfirmDiscard question={t('demo.exitQuestion')} confirm={t('demo.exitConfirm')} onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
           </>} />
       )}
       {open?.kind === 'own' && space.problem?.kind === 'read-only' && (space.problem.takenOver ? (
         <div className="save-warning" role="alert">
-          <p><b>Read-only.</b> A newer version of the app was opened in another tab, so nothing more is saved here. Anything you typed stays on screen: copy what you need, then reload this page. You can still use Download Backup in Settings, under Reports &amp; Backup.</p>
+          <p><b>{t('notice.readOnly')}</b> {t('notice.takenOver')}</p>
         </div>
       ) : (
         <div className="save-warning" role="alert">
-          <p><b>Read-only.</b> This browser cannot save safely here. This may be an older copy of your space. Changes will not be saved. You can still look at everything and use Download Backup or Download Both Copies in Settings, under Reports &amp; Backup.</p>
+          <p><b>{t('notice.readOnly')}</b> {t('notice.cannotSave')}</p>
           <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
           {confirming === 'reload'
-            ? <ConfirmDiscard question="Trying again closes the forms you changed here. What you typed cannot be brought back." confirm="Discard and Try Again" onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
-            : <button type="button" className="button-small" onClick={requestReload}>Try Again</button>}
+            ? <ConfirmDiscard question={t('notice.reloadQuestion')} confirm={t('notice.reloadConfirm')} onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={requestReload}>{t('notice.tryAgain')}</button>}
         </div>
       ))}
       {open?.kind === 'own' && space.problem?.kind === 'conflict' && (
         <div className="save-warning" role="alert">
-          <p>This space changed in another tab, so nothing more is saved here until it is opened again. {unsaved.forms.length > 0 ? 'Your changes here are not saved yet. Copy what you need, then Open Latest Version.' : 'Anything you typed stays on screen: copy what you need first.'}</p>
+          <p>{t('notice.conflict')} {unsaved.forms.length > 0 ? t('notice.conflictWithForms') : t('notice.conflictNoForms')}</p>
           <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
           {confirming === 'reload'
-            ? <ConfirmDiscard question="Opening the latest version closes the forms you changed here. What you typed cannot be brought back." confirm="Discard and Open Latest Version" onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
-            : <button type="button" className="button-small" onClick={requestReload}>Open Latest Version</button>}
+            ? <ConfirmDiscard question={t('notice.latestQuestion')} confirm={t('notice.latestConfirm')} onConfirm={reloadDiscarding} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={requestReload}>{t('notice.openLatest')}</button>}
         </div>
       )}
       {open?.kind === 'own' && space.problem?.kind === 'erased-elsewhere' && (
         <div className="save-warning" role="alert">
-          <p><b>This space was erased in another tab.</b> Nothing here can be saved. Copy what you typed, then discard it to close the space.</p>
+          <p><b>{t('notice.erasedTitle')}</b> {t('notice.erasedText')}</p>
           <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
           {confirming === 'discard-erased'
-            ? <ConfirmDiscard question="Discard what you typed and close this space? It cannot be brought back." confirm="Discard and Close" onConfirm={closeErased} onCancel={() => setConfirming(null)} />
-            : <button type="button" className="button-small" onClick={() => setConfirming('discard-erased')}>Discard and Close…</button>}
+            ? <ConfirmDiscard question={t('notice.erasedQuestion')} confirm={t('notice.erasedConfirm')} onConfirm={closeErased} onCancel={() => setConfirming(null)} />
+            : <button type="button" className="button-small" onClick={() => setConfirming('discard-erased')}>{t('notice.erasedButton')}</button>}
         </div>
       )}
       {notice === 'older-copy-changed' && (
         <div className="save-warning" role="alert">
-          <p>An older version of the app is open in another tab. Close it so nothing is lost: what it saves is not part of this space.</p>
-          <button type="button" className="button-small" onClick={dismissNotice}>OK</button>
+          <p>{t('notice.olderApp')}</p>
+          <button type="button" className="button-small" onClick={dismissNotice}>{t('notice.ok')}</button>
         </div>
       )}
-      {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">Updated with changes from another tab.</p>}
+      {notice === 'updated' && open?.kind === 'own' && !space.problem && <p className="update-notice" role="status">{t('notice.updated')}</p>}
       {leaveQuestion}
       <BillCelebrationContext.Provider value={billCelebration}>
       <WriteStatusContext.Provider value={writeStatus}>
@@ -1015,8 +1045,8 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       <GuideContext.Provider value={open ? openGuide : null}>
       {sidebar && <BottomNav current={currentTab} onSelect={selectTab} rail bottom={helpButton} />}
       <main id="main-content" tabIndex={-1} className="shell-main" ref={mainRef} data-saving={space.saving || undefined}>
-        {open && isTab(screen) && <div className="shell-action-row"><div className="control-feedback" ref={setControlFeedbackHost} /><div className="shell-add"><MenuButton label="Add" text options={addOptions} /></div></div>}
-        {space.saving && <p className="visually-hidden" role="status">Saving…</p>}
+        {open && isTab(screen) && <div className="shell-action-row"><div className="control-feedback" ref={setControlFeedbackHost} /><div className="shell-add"><MenuButton label={t('add.button')} text options={addOptions} /></div></div>}
+        {space.saving && <p className="visually-hidden" role="status">{t('notice.saving')}</p>}
         {!open && space.opening && <div className="screen" data-screen="opening">
           <Opening onRetry={() => void space.reload()} />
         </div>}
@@ -1068,7 +1098,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onCreated={billCreated} onDeleted={() => { setBillId(null); navigation.backAllowed() }} />
           </div>}
           {(shows('goals') || (shows('goal') && !selectedGoal)) && <div className="screen" data-screen="goals">
-            {shows('goal') && goalId && <p className="callout" role="status">The goal you had open is no longer here. It may have been changed or deleted in another tab.</p>}
+            {shows('goal') && goalId && <p className="callout" role="status">{t('notice.goalGone')}</p>}
             <GoalsScreen data={open.data} today={space.today} filter={goalsFilter} onFilterChange={changeGoalsFilter}
               addHint={goalsAddHint}
               onNew={() => fromGoals('add-goal', () => navigation.go('new-goal'))} onOpenGoal={id => fromGoals(`goal-${id}`, () => { showGoal(id); if (goalsAddHint) addFocus.current = '#move-amount' })}
@@ -1131,12 +1161,13 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
               onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onOpenHelp={() => openGuide()} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
               onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
-                <ConfirmDiscard question="Opening the demo closes what you typed here. It cannot be brought back." confirm="Discard and Open Demo" onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />
+                <ConfirmDiscard question={t('demo.openQuestion')} confirm={t('demo.openConfirm')} onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />
               </> : confirming === 'exit-demo-settings' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
-                <ConfirmDiscard question="Leaving the demo closes what you typed in it. It cannot be brought back." confirm="Discard and Exit Demo" onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
+                <ConfirmDiscard question={t('demo.exitQuestion')} confirm={t('demo.exitConfirm')} onConfirm={exitDemoDiscarding} onCancel={() => setConfirming(null)} />
               </> : null}
-              onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} canErase={space.problem === null} />
+              onThemeChange={theme => space.update(data => ({ ...data, preferences: { ...data.preferences, theme } }))} canErase={space.problem === null}
+              language={language} onLanguageChange={changeLanguage} languagePreview={languagePreview} />
           </div>}
         </Fragment>}
       </main>
@@ -1147,11 +1178,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
       </BillCelebrationContext.Provider>
       {showNav && !sidebar && <BottomNav current={currentTab} onSelect={selectTab} />}
       <footer className="shell-footer">
-        {!open ? 'Prototype · No account needed · Nothing is sent anywhere'
-          : open.kind === 'demo' ? 'Demo · Invented information · Changes are not saved · No account, no bank connection'
-          : 'Prototype · Saved on this device only · Not secure storage · No bank connection'}
+        {!open ? t('footer.welcome') : open.kind === 'demo' ? t('footer.demo') : t('footer.own')}
       </footer>
     </div>
+    </LanguageProvider>
   )
 }
 

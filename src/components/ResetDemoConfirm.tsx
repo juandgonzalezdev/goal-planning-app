@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useT } from '../i18n'
 
 type Props = {
   onReset: () => void
@@ -18,6 +19,7 @@ type Props = {
  * opens and back to the first button when it closes.
  */
 export function ResetDemoConfirm({ onReset, triggerClassName = 'button-secondary', onAskingChange, showDone = false }: Props) {
+  const { t } = useT()
   const [asking, setAsking] = useState(false)
   const [done, setDone] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -34,8 +36,8 @@ export function ResetDemoConfirm({ onReset, triggerClassName = 'button-secondary
   }
 
   if (!asking) return <>
-    <button ref={trigger} type="button" className={triggerClassName} onClick={() => { setDone(false); ask(true) }}>Reset Demo</button>
-    {showDone && done && <p className="muted-note" role="status">The demo is back to Alex’s original example.</p>}
+    <button ref={trigger} type="button" className={triggerClassName} onClick={() => { setDone(false); ask(true) }}>{t('demo.reset')}</button>
+    {showDone && done && <p className="muted-note" role="status">{t('demo.resetDone')}</p>}
   </>
   return <ResetDemoQuestion onCancel={() => ask(false)} onReset={() => { onReset(); setDone(true); ask(false) }} />
 }
@@ -46,15 +48,16 @@ export function ResetDemoConfirm({ onReset, triggerClassName = 'button-secondary
  * up to the place that asked (its first button, or the demo menu).
  */
 export function ResetDemoQuestion({ onCancel, onReset }: { onCancel: () => void; onReset: () => void }) {
+  const { t } = useT()
   const cancel = useRef<HTMLButtonElement>(null)
   const id = useId()
   useEffect(() => { cancel.current?.focus() }, [])
   return (
     <div className="reset-confirm" role="group" aria-labelledby={`${id}-question`} aria-describedby={`${id}-text`}>
-      <p><b id={`${id}-question`}>Reset demo?</b> <span id={`${id}-text`}>This will remove your changes and restore Alex’s original example.</span></p>
+      <p><b id={`${id}-question`}>{t('demo.resetQuestion')}</b> <span id={`${id}-text`}>{t('demo.resetText')}</span></p>
       <span className="inline-actions">
-        <button ref={cancel} type="button" className="button-small" onClick={onCancel}>Cancel</button>
-        <button type="button" className="button-small button-small-primary" onClick={onReset}>Reset Demo</button>
+        <button ref={cancel} type="button" className="button-small" onClick={onCancel}>{t('common.cancel')}</button>
+        <button type="button" className="button-small button-small-primary" onClick={onReset}>{t('demo.reset')}</button>
       </span>
     </div>
   )
