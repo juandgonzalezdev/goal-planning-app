@@ -1,10 +1,12 @@
 import { useContext, useEffect, useId, useRef, useState } from 'react'
 import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
+import { AccountForm } from './AccountForm'
+import { accountFormTitle, accountTypedFields, editAccountDraft, newAccountDraft, prepareAccountSave, type AccountDraft } from './accountDraft'
 import { Icon } from '../../components/Icon'
 import { recordBalance } from '../../domain/finance/debts'
-import { accountDeletionReason, deleteAccount, saveAccount, summarizeMoney } from '../../domain/finance/moneyAccounts'
-import { MONEY_ACCOUNT_KINDS, type FinanceData, type Id, type MoneyAccountKind } from '../../domain/finance/types'
+import { accountDeletionReason, deleteAccount, summarizeMoney } from '../../domain/finance/moneyAccounts'
+import type { FinanceData, Id } from '../../domain/finance/types'
 import { MONEY_KINDS } from '../../ui/chartColors'
 import { formatAmount, formatDate } from '../../ui/format'
 import { amountText } from '../../ui/labels'
@@ -18,8 +20,6 @@ import { SavingsOverTime } from '../charts/TimeCharts'
 import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
-type AccountForm = { id: Id | null; name: string; kind: MoneyAccountKind; balance: string; asOf: string; error?: string }
-
 /**
  * Accounts and their dated balances in a compact list (name, kind, latest
  * balance and its date). Opening an account shows Update Balance, Edit and
@@ -29,7 +29,7 @@ type AccountForm = { id: Id | null; name: string; kind: MoneyAccountKind; balanc
 export function AccountsSection({ data, today, owner, newId, onChange, say, tell, onOpenGoal }: SectionProps) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const { items } = summarizeMoney(data)
-  const [form, setForm] = useState<AccountForm | null>(null)
+  const [form, setForm] = useState<AccountDraft | null>(null)
   const [balanceFor, setBalanceFor] = useState<{ id: Id; amount: string; asOf: string; error?: string } | null>(null)
   const { view, onViewChange } = useContext(MoneyBlocksContext)
   const focusField = useRef<string | null>(null)
@@ -41,7 +41,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
   const [balanceBase, setBalanceBase] = useState(revision)
   const [sending, setSending] = useState<'form' | 'balance' | null>(null)
   const [deleting, setDeleting] = useState<{ id: Id; base: number } | null>(null)
-  const accountForm = useUnsavedChanges(form?.id ? 'Edit account' : 'Add account', form ? { 'Name': form.name, 'Kind': form.kind, 'Balance': form.balance, 'As of': form.asOf } : null)
+  const accountForm = useUnsavedChanges(accountFormTitle(form), accountTypedFields(form))
   const balanceForm = useUnsavedChanges(`Update balance: ${data.moneyAccounts.find(account => account.id === balanceFor?.id)?.name ?? ''}`,
     balanceFor ? { 'Balance': balanceFor.amount, 'As of': balanceFor.asOf } : null)
   /** Saves one change and says what happened. */
@@ -79,31 +79,21 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
 
   // Opening the account form, or Update Balance, for another account takes the place of the one open: the app asks first.
   const guard = useLeaveGuard()
-  const openForm = (next: AccountForm) => guard(f => f.id === accountForm.id, () => {
+  const openForm = (next: AccountDraft) => guard(f => f.id === accountForm.id, () => {
     setFormBase(revision)
     setForm(next)
     focusField.current = 'account-name'
   })
   const startNew = () => {
     onViewChange(setBlockOpen(view, 'accounts', true))
-    openForm({ id: null, name: '', kind: 'savings', balance: '', asOf: today })
+    openForm(newAccountDraft(today))
   }
 
   const saveForm = async () => {
     if (!form) return
-    const balance = form.balance.trim() === '' ? null : parseMoneyInput(form.balance)
-    if (form.id === null && form.balance.trim() !== '' && balance === null) { setForm({ ...form, error: 'Enter a balance such as 820, or leave it empty.' }); return }
-    if (form.id === null && balance !== null && (!form.asOf || form.asOf > today)) { setForm({ ...form, error: 'Choose a balance date that is not after today.' }); return }
-    const id = form.id ?? newId()
-    const balanceId = newId()
-    const { kind, name, asOf } = form
-    const apply = (current: FinanceData) => {
-      const result = saveAccount(current, id, { kind, name, owner: current.moneyAccounts.find(a => a.id === id)?.owner ?? owner })
-      if (result.status !== 'ok') return null
-      return form.id === null && balance !== null ? recordBalance(result.data, balanceId, id, balance, asOf) ?? result.data : result.data
-    }
-    if (!apply(data)) { setForm({ ...form, error: 'Enter a name (40 characters or fewer). A savings account used by goal movements must stay a savings account.' }); return }
-    const outcome = await save('Account saved.', current => apply(current) ?? current, formBase, 'form')
+    const prepared = prepareAccountSave(data, form, { today, owner, newId })
+    if ('error' in prepared) { setForm({ ...form, error: prepared.error }); return }
+    const outcome = await save('Account saved.', current => prepared.apply(current) ?? current, formBase, 'form')
     // Not kept: the form stays as typed; the message says why.
     if (isKept(outcome)) setForm(null)
   }
@@ -120,25 +110,8 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
   }
 
   const formBox = form && (
-    <div className="form-stack edit-box">
-      <Field id="account-name" label="Account Name" value={form.name} onChange={name => setForm({ ...form, name, error: undefined })} maxLength={60} />
-      <div className="form-field">
-        <label htmlFor="account-kind">Kind</label>
-        <select id="account-kind" value={form.kind} onChange={e => setForm({ ...form, kind: e.target.value as MoneyAccountKind })}>
-          {MONEY_ACCOUNT_KINDS.map(kind => <option key={kind} value={kind}>{MONEY_KINDS[kind].label}</option>)}
-        </select>
-      </div>
-      {form.id === null && <>
-        <Field id="account-balance" label={`Balance (${data.space.currency}, optional)`} inputMode="decimal" value={form.balance} onChange={balance => setForm({ ...form, balance, error: undefined })}
-          help="Leave it empty if you don’t know it yet: it shows as not entered, not as 0." />
-        <Field id="account-date" label="Balance Date" type="date" max={today} value={form.asOf} onChange={asOf => setForm({ ...form, asOf, error: undefined })} />
-      </>}
-      {form.error && <p className="field-error" role="alert">{form.error}</p>}
-      <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveForm()}>{sending === 'form' ? 'Saving…' : 'Save Account'}</button>
-        <button type="button" className="button-small" onClick={() => setForm(null)}>Cancel</button>
-      </div>
-    </div>
+    <AccountForm draft={form} onDraftChange={setForm} currency={data.space.currency} today={today} saving={sending === 'form'} blocked={blocked}
+      onSave={() => void saveForm()} onCancel={() => setForm(null)} />
   )
   const missing = items.filter(item => item.balance === null).length
   const summary = items.length === 0 ? 'No accounts yet'
@@ -192,7 +165,7 @@ export function AccountsSection({ data, today, owner, newId, onChange, say, tell
                         setBalanceFor({ id: account.id, amount: amountText(balance), asOf: today })
                         focusField.current = 'account-new-balance'
                       })}>Update Balance</button>
-                      <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => openForm({ id: account.id, name: account.name, kind: account.kind, balance: '', asOf: today })}>Edit</button>
+                      <button type="button" className="button-small" aria-label={`Edit: ${account.name}`} onClick={() => openForm(editAccountDraft(account, today))}>Edit</button>
                       <button id={`${detailId}-delete`} type="button" className="button-small" aria-label={`Delete: ${account.name}`} aria-disabled={blocked || !!deletionReason || undefined} aria-describedby={deletionReason ? `${detailId}-delete-reason` : undefined} onClick={() => {
                         if (blocked || deletionReason) return
                         focusField.current = `${detailId}-delete-confirmation`

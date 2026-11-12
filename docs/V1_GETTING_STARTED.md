@@ -70,16 +70,47 @@ El valor solo se reescribe, en v2, cuando el usuario cambia algo.
 - Help & Guide y `guideContent.ts` describen el nuevo orden.
 - Un paso `none` se ve igual que uno hecho (✓), y el lector de pantalla dice «none».
 
-## Pendiente (no incluido en GS-1)
+## GS-2: formularios reutilizables
+
+Los formularios de Add Account / Edit e Add Income / Edit salieron de sus
+secciones de Money sin cambiar lo que ve ni lo que guarda el usuario:
+
+| Pieza | Qué contiene | Qué no contiene |
+| --- | --- | --- |
+| `features/money/accountDraft.ts`, `incomeDraft.ts` | Borrador y valores iniciales (`new…Draft`, `edit…Draft`), título y campos para «Leave without saving?» (`…FormTitle`, `…TypedFields`), comprobaciones y el cambio a guardar (`prepare…Save`, con los mismos mensajes y el mismo orden) | Estado de React, guardado, navegación |
+| `features/money/AccountForm.tsx`, `IncomeSourceForm.tsx` | Los campos y los botones Save/Cancel, controlados por props (`draft`, `onDraftChange`, `saving`, `blocked`, `onSave`, `onCancel`) | Estado propio, `MoneyBlocksContext`, navegación, persistencia |
+| `AccountsSection.tsx`, `IncomeSection.tsx` (el anfitrión) | El borrador abierto, su registro con `useUnsavedChanges`, el aviso al cambiar de formulario (`useLeaveGuard`), el guardado con `onChange` y su revisión base, el mensaje y el foco | — |
+
+Un anfitrión nuevo, como la etapa de GS-3, hace lo mismo que Money: guarda el
+borrador en su estado, lo registra con
+`useUnsavedChanges(accountFormTitle(d), accountTypedFields(d))`, llama a
+`prepareAccountSave` y guarda `apply` con su `onChange` (igual para Income).
+
+**Observación conocida, sin cambios en GS-2:** en Money, si se abre Add Account
+(o Add Income) sin escribir y después Edit de otro registro, el formulario de
+Edit cuenta como modificado y salir pregunta «Leave without saving?» aunque no
+se haya escrito nada. Ya ocurría en la base. Se conserva porque GS-2 no cambia
+el comportamiento; se puede corregir aparte si Dirección lo decide.
+
+## Pendiente (no incluido en GS-1 ni GS-2)
 
 | Paso | Contenido |
 | --- | --- |
-| GS-2 | Extraer `AccountForm` e `IncomeSourceForm` sin cambiar su comportamiento. |
-| GS-3 | Pantallas de etapa con Back, Continue y Skip for now; tarjeta compacta en Home; `I don't have regular income`; etiquetas definitivas; escribir `last`. |
+| GS-3 | Pantallas de etapa con Back, Continue y Skip for now; tarjeta compacta en Home; `I don't have regular income`; etiquetas definitivas; escribir `last`; **D-GS9** (abajo). |
 | GS-4 | Debts y Bills dentro de la etapa; volver a la etapa tras guardar (D-GS6); `I don't have any debts`. |
 | GS-5 | Goals: Emergency Fund y New Goal desde la etapa; no duplicar la invitación al fondo en Home. |
 | GS-6 | Finish Setup con resumen y sin confirmación (D-GS7); `Whose income is this?` en Duo (D-GS5). |
 | GS-7 | Retomar desde la tarjeta de Home y Settings › Help & Guide (D-GS8); documentación final; recorridos manuales. |
+
+## D-GS9: navegación libre entre etapas (aprobada, se implementa en GS-3)
+
+- Se puede elegir directamente cualquier etapa anterior.
+- Las etapas omitidas se pueden recuperar.
+- Las completadas se pueden revisar.
+- Back retrocede una etapa.
+- Retroceder nunca borra datos guardados.
+- Los formularios con cambios sin guardar mantienen su protección.
+- Los estados Completed, Skipped y Current se distinguen a simple vista y son accesibles.
 
 ## Decisión registrada para la fase Debts
 

@@ -4,13 +4,15 @@ import { useLeaveGuard, useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { Icon } from '../../components/Icon'
 import { yearMonthOf, type YearMonth } from '../../domain/calendar'
-import { deleteIncomeSource, isSourceActiveIn, monthIncome, recordIncomeReceived, saveIncomeSource } from '../../domain/finance/income'
+import { deleteIncomeSource, isSourceActiveIn, monthIncome, recordIncomeReceived } from '../../domain/finance/income'
 import type { FinanceData, Id, IncomeSource } from '../../domain/finance/types'
 import { countByValidity, matchesValidity, usableFilter, validityOn } from '../../domain/finance/validity'
 import { formatAmount, formatDate, formatYearMonth } from '../../ui/format'
 import { amountText } from '../../ui/labels'
 import { parseMoneyInput } from '../../ui/moneyInput'
 import { MoneyBlockFrame } from './MoneyBlockFrame'
+import { IncomeSourceForm } from './IncomeSourceForm'
+import { editIncomeDraft, incomeFormTitle, incomeTypedFields, newIncomeDraft, prepareIncomeSave, type IncomeSourceDraft } from './incomeDraft'
 import { MoneyBlocksContext, setBlockOpen } from './moneyBlocks'
 import type { SectionProps } from './MoneyScreen'
 import { ValidityFilterBar, ValidityTag } from '../../components/ValidityFilterBar'
@@ -18,7 +20,7 @@ import { useWriteBlocked, useWriteStatus } from '../../app/writeStatus'
 import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
 
 /** `fromHome`: opened by + Add on Home, so Cancel goes back there. */
-type SourceForm = { id: Id | null; name: string; amount: string; payDay: string; startMonth: string; endMonth: string; error?: string; fromHome?: boolean }
+type SourceForm = IncomeSourceDraft & { fromHome?: boolean }
 type ReceivedForm = { sourceId: Id; month: YearMonth; amount: string; date: string; error?: string }
 
 /**
@@ -31,7 +33,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   // + Add Income on Home: a new income form, open from the start (the request is used once, below).
   const [editing, setEditing] = useState<SourceForm | null>(() => (startAdding
-    ? { id: null, name: '', amount: '', payDay: '', startMonth: yearMonthOf(today), endMonth: '', fromHome: true } : null))
+    ? { ...newIncomeDraft(yearMonthOf(today)), fromHome: true } : null))
   const [receiving, setReceiving] = useState<ReceivedForm | null>(null)
   const { revision } = useWriteStatus()
   const blocked = useWriteBlocked()
@@ -39,9 +41,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
   const [editBase, setEditBase] = useState(revision)
   const [receivingBase, setReceivingBase] = useState(revision)
   const [sending, setSending] = useState<'source' | 'received' | null>(null)
-  const sourceForm = useUnsavedChanges(editing?.id ? 'Edit income' : 'Add income', editing ? {
-    'Name': editing.name, 'Usual amount': editing.amount, 'Pay day': editing.payDay, 'Start month': editing.startMonth, 'End month': editing.endMonth,
-  } : null)
+  const sourceForm = useUnsavedChanges(incomeFormTitle(editing), incomeTypedFields(editing))
   const receivedForm = useUnsavedChanges(`Income received: ${data.incomeSources.find(source => source.id === receiving?.sourceId)?.name ?? ''}`,
     receiving ? { 'Month': receiving.month, 'Amount': receiving.amount, 'Date': receiving.date } : null)
   /** Saves one change and says what happened. */
@@ -117,22 +117,14 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
 
   const startNew = () => {
     onViewChange(setBlockOpen(view, 'income', true))
-    openSource({ id: null, name: '', amount: '', payDay: '', startMonth: reference, endMonth: '' })
+    openSource(newIncomeDraft(reference))
   }
 
   const saveSource = async () => {
     if (!editing) return
-    const amount = parseMoneyInput(editing.amount)
-    const payDay = /^\d{1,2}$/.test(editing.payDay.trim()) ? Number(editing.payDay) : NaN
-    if (amount === null) { setEditing({ ...editing, error: 'Enter the usual net amount, such as 6500.' }); return }
-    const id = editing.id ?? newId()
-    const memberId = data.incomeSources.find(s => s.id === id)?.memberId ?? (owner === 'shared' ? data.space.members[0].id : owner)
-    const fields = { name: editing.name, amount, payDay, startMonth: editing.startMonth, endMonth: editing.endMonth || null }
-    if (saveIncomeSource(data, id, memberId, fields).status !== 'ok') { setEditing({ ...editing, error: 'Check the name, the pay day (1 to 31) and the months.' }); return }
-    const outcome = await save('Income saved.', current => {
-      const result = saveIncomeSource(current, id, memberId, fields)
-      return result.status === 'ok' ? result.data : current
-    }, editBase, 'source')
+    const prepared = prepareIncomeSave(data, editing, { owner, newId })
+    if ('error' in prepared) { setEditing({ ...editing, error: prepared.error }); return }
+    const outcome = await save('Income saved.', prepared.apply, editBase, 'source')
     // Not kept: the form stays as typed; the message says why.
     if (isKept(outcome)) setEditing(null)
   }
@@ -149,19 +141,10 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
     if (isKept(outcome)) setReceiving(null)
   }
 
+  // `fromHome` (Cancel goes back to Home) stays with the draft while the form changes it.
   const form = editing && (
-    <div className="form-stack edit-box">
-      <Field id="income-name" label="Name" value={editing.name} onChange={name => setEditing({ ...editing, name, error: undefined })} maxLength={60} />
-      <Field id="income-amount" label={`Usual Net Amount per Month (${data.space.currency})`} inputMode="decimal" value={editing.amount} onChange={amount => setEditing({ ...editing, amount, error: undefined })} />
-      <Field id="income-day" label="Pay Day" inputMode="numeric" value={editing.payDay} onChange={payDay => setEditing({ ...editing, payDay, error: undefined })} help="Day of the month it usually arrives." />
-      <Field id="income-start" label="First Month" type="month" value={editing.startMonth} onChange={startMonth => setEditing({ ...editing, startMonth })} />
-      <Field id="income-end" label="Last Month (optional)" type="month" value={editing.endMonth} onChange={endMonth => setEditing({ ...editing, endMonth })} />
-      {editing.error && <p className="field-error" role="alert">{editing.error}</p>}
-      <div className="inline-actions">
-        <button type="button" className="button-small button-small-primary" aria-disabled={blocked || undefined} onClick={() => void saveSource()}>{sending === 'source' ? 'Saving…' : 'Save Income'}</button>
-        <button type="button" className="button-small" onClick={cancelSource}>Cancel</button>
-      </div>
-    </div>
+    <IncomeSourceForm draft={editing} onDraftChange={draft => setEditing({ ...editing, ...draft })} currency={data.space.currency}
+      saving={sending === 'source'} blocked={blocked} onSave={() => void saveSource()} onCancel={cancelSource} />
   )
 
   const summary = sourceCount === 0 ? 'No income yet'
@@ -204,7 +187,7 @@ export function IncomeSection({ data, months, today, isDemo, owner, newId, onCha
                       onNotReceived={m => void save(`${formatYearMonth(m)} is expected again.`, current => recordIncomeReceived(current, source, m, null) ?? current)} />
                     {editing?.id === source.id ? form : (
                       <div className="inline-actions">
-                        <button type="button" className="button-small" onClick={() => openSource({ id: source.id, name: source.name, amount: amountText(source.amount), payDay: String(source.payDay), startMonth: source.startMonth, endMonth: source.endMonth ?? '' })}>Edit {source.name}</button>
+                        <button type="button" className="button-small" onClick={() => openSource(editIncomeDraft(source))}>Edit {source.name}</button>
                         <button type="button" className="button-small" aria-label={`Remove ${source.name}`}
                           aria-disabled={blocked || undefined} onClick={() => void save(`${source.name} removed. Income already received stays.`, current => deleteIncomeSource(current, source.id))}>Remove</button>
                       </div>
