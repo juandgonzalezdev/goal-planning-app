@@ -1,3 +1,4 @@
+import { activeGoals, emergencyFund } from '../../domain/finance/goals'
 import type { FinanceData } from '../../domain/finance/types'
 
 /**
@@ -47,7 +48,9 @@ export const DEMO_PROGRESS: GuideProgress = { ...NEW_PROGRESS, hidden: true }
  * Whether the space already has what a stage asks for. Only real records
  * count: a payment a debt added is not a bill of the Bills stage, and the
  * Emergency Fund counts for Goals as a goal does (it is one record, never
- * counted twice). The last stage is done only with Finish.
+ * counted twice). An archived goal or fund does not count (D-GS6-10, GS-6B).
+ * The last stage is done only with Finish. Always the saved records: a
+ * draft that was not saved never completes a stage (D-GS6-21).
  */
 export function stepDone(data: FinanceData, step: GuideStep): boolean {
   switch (step) {
@@ -55,10 +58,22 @@ export function stepDone(data: FinanceData, step: GuideStep): boolean {
     case 'income': return data.incomeSources.length > 0
     case 'debts': return data.debts.length > 0
     case 'bills': return data.bills.some(bill => !bill.debtId)
-    case 'goals': return data.goals.some(goal => goal.kind === 'goal' || goal.kind === 'emergency')
+    case 'goals': return activeGoals(data.goals).length > 0 || emergencyFund(data.goals) !== null
     case 'finish': return false
   }
 }
+
+/** The five stages before Finish, the ones its summary lists. */
+export const SETUP_STAGES = GUIDE_STEPS.filter(step => step !== 'finish')
+
+/**
+ * Whether the space has any saved record of the kinds the five stages ask for: accounts, income sources, debts, bills
+ * and goals (D-GS6-15; GS-6B.1, D4). It is about records existing, not about stages being complete (`stepDone`): an
+ * archived goal does not complete Goals, but it is a record, so Finish does not say that nothing is added. Each
+ * kind is counted whatever its state (archived, ended, linked to a debt). Finish says so, without blocking, when none.
+ */
+export const setupHasRecords = (data: FinanceData) =>
+  data.moneyAccounts.length > 0 || data.incomeSources.length > 0 || data.debts.length > 0 || data.bills.length > 0 || data.goals.length > 0
 
 /** done: the space has it (or Finish was chosen). none: the user has none. skipped: left for later. to-do: not yet. */
 export type StepState = 'done' | 'none' | 'skipped' | 'to-do'
@@ -160,12 +175,13 @@ export const visitStep = (progress: GuideProgress, step: GuideStep): GuideProgre
 export const finishGuide = (progress: GuideProgress): GuideProgress => ({ ...progress, finished: true })
 
 /**
- * Shows Getting Started on Home again: skipped stages come back, and a
- * finished guide starts again where something is left. A "none" stays: it
- * was an answer, not something left for later.
+ * Shows Getting Started on Home again: skipped stages come back. A "none"
+ * stays: it was an answer, not something left for later. A finished guide
+ * stays finished (D-GS6-24, GS-6B): nothing starts it again, and once
+ * finished Help & Guide offers Review Setup instead.
  */
 export const resumeGuide = (progress: GuideProgress = NEW_PROGRESS): GuideProgress =>
-  ({ ...progress, hidden: false, skipped: [], finished: false })
+  (progress.finished ? progress : { ...progress, hidden: false, skipped: [] })
 
 /** Ids of the guide before v1.0 that mean something else now. */
 const OLD_STEP_IDS: Record<string, GuideStep> = { 'day-to-day': 'finish' }

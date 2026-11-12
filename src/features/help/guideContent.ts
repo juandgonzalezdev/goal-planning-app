@@ -38,7 +38,8 @@ export const GUIDE: Record<GuideChapter, GuideText> = {
       'Debts come before bills: a card or loan with its monthly Payment adds that payment to your bills, so you never enter it twice.',
       'Each stage has Back, and Skip for now (or Continue once it is complete). Tap any stage you have already reached to go back to it: a skipped stage can be done later, and a completed one can get another record. Nothing is filled in for you, and moving between stages never deletes anything.',
       'Close keeps your progress: Continue setup on Home opens the stage you were on. Hide for now takes the card off Home; Open Getting Started here opens the guide, and Show Getting Started on Home brings the card back.',
-      'On Income, I don’t have regular income, and on Debts, I don’t have any debts, mean you have none: that stage is complete. A goal or your emergency fund completes Goals.',
+      'On Income, I don’t have regular income, and on Debts, I don’t have any debts, mean you have none: that stage is complete. An active goal or your emergency fund completes Goals; an archived goal does not.',
+      'Finish shows where each stage stands, without amounts. You can finish with stages still open. After Done, the card leaves Home for good. Review Setup, in Home options and here, shows the same summary and lets you change any stage. It never starts the guide again.',
     ],
   },
   home: {

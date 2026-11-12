@@ -149,7 +149,7 @@ describe('Getting Started progress is saved, and shown only once saved (GS-6A.1)
     await fire.click(button('Skip for now'))
     expect(alerts()).toContain('Not saved: Getting Started changed in another tab. Its latest progress is shown.')
     expect(await storedProgress()).toEqual(progress({ none: ['debts'], skipped: ['accounts'], last: 'income' }))
-    expect(stageStates().slice(0, 3)).toEqual(['Accounts: Skipped, current', 'Income: Not started', 'Debts: Completed (none)'])
+    expect(stageStates().slice(0, 3)).toEqual(['Accounts: Skipped, current', 'Income: Not started', 'Debts: No debts'])
   })
 })
 

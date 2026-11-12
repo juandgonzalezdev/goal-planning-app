@@ -168,7 +168,7 @@ describe('Debts stage', () => {
     await fire.click(button('I don’t have any debts'))
     expect(title()).toBe('Bills & Subscriptions')
     expect(await savedProgress()).toMatchObject({ skipped: ['accounts', 'income'], none: ['debts'] })
-    expect(stageStates()[2]).toBe('Debts: Completed (none)')
+    expect(stageStates()[2]).toBe('Debts: No debts')
     expect((await storedData())!.debts).toEqual([])
     // Kept after Close and a new start.
     await fire.click(button('Close Getting Started'))
@@ -177,7 +177,7 @@ describe('Debts stage', () => {
     render(<App getToday={() => TODAY} storage={storage} />)
     await settle()
     await fire.click(within(card()!).getByRole('button', { name: /setup$/ }))
-    expect(stageStates()[2]).toBe('Debts: Completed (none)')
+    expect(stageStates()[2]).toBe('Debts: No debts')
     // The answer never blocks a real debt; once there is one, the records decide.
     await fire.click(stage('Debts'))
     await typeDebt({ name: 'Family loan', interest: '0' })

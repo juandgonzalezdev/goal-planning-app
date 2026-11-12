@@ -25,7 +25,7 @@ const stageNames = () => stageList().getAllByRole('button').map(item => (item.ge
 const steps = () => stageNames().map(name => {
   const current = name.endsWith(', current')
   const words = name.replace(/, current$/, '').replace(/^.*: /, '')
-  const state = words === 'Completed (none)' ? 'none' : words === 'Completed' ? 'done' : words === 'Skipped' ? 'skipped' : 'to-do'
+  const state = words === 'No regular income' || words === 'No debts' ? 'none' : words === 'Completed' ? 'done' : words === 'Skipped' ? 'skipped' : 'to-do'
   return state + (current ? '*' : '')
 })
 
@@ -150,7 +150,7 @@ describe('Getting Started', () => {
     expect(text(screen.getByRole('main'))).toContain('What do you pay regularly?')
     expect(document.activeElement?.textContent).toBe('Bills & Subscriptions')
     expect(steps()).toEqual(['skipped', 'skipped', 'none', 'to-do*', 'to-do', 'to-do'])
-    expect(stageNames()[2]).toBe('Debts, step 3 of 6: Completed (none)')
+    expect(stageNames()[2]).toBe('Debts, step 3 of 6: No debts')
     // The progress is kept on this device for this space (v2), never in the space's data; `last` is the stage visited.
     // GS-6A.1: it is saved in the database with its own revision, and no longer in localStorage.
     expect(await storedProgress()).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: ['debts'], finished: false, last: 'bills' })

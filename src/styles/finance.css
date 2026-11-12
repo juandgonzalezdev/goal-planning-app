@@ -1117,6 +1117,12 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .gs-form .block { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .gs-form .form-field select { background: var(--color-surface); }
 .gs-summary li.is-complete b { color: var(--color-positive); }
+/* GS-6B: each summary line opens its stage (Finish and Review Setup); the whole line is the button, 44 px tall at least. */
+.gs-summary li { padding: 0; }
+.gs-summary-open { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-small); }
+.gs-summary-open:hover { background: var(--color-surface-muted); }
+.gs-summary-open:focus-visible { outline: 3px solid var(--color-focus); outline-offset: -3px; }
 .gs-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .gs-footer .button-small { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; }
 .gs-forward { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; justify-content: flex-end; }

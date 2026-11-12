@@ -182,7 +182,7 @@ describe('Moving between stages (D-GS9)', () => {
     expect(document.activeElement?.id).toBe('gs-add-debt')
     await fire.click(button('I don’t have any debts'))
     expect(title()).toBe('Bills & Subscriptions')
-    expect(stageStates()[2]).toBe('Debts: Completed (none)')
+    expect(stageStates()[2]).toBe('Debts: No debts')
     await fire.click(button('Add a Bill'))
     expect(shownScreen()).toBe('guide')
     expect(document.activeElement?.id).toBe('bill-name')
@@ -217,11 +217,12 @@ describe('Moving between stages (D-GS9)', () => {
     expect(await savedProgress()).toMatchObject({ finished: true, skipped: ['accounts', 'income', 'debts', 'bills', 'goals'] })
     // GS-6A.1: the own space no longer writes progress to localStorage.
     expect(storage.getItem(PROGRESS_KEY)).toBeNull()
-    // Help & Guide still opens it, with every stage reviewable.
+    // Help & Guide opens Review Setup (GS-6B): the summary, with every stage reviewable, and nothing to start again.
     await fire.click(button('Settings'))
     await fire.click(button('Open Help & Guide'))
-    await fire.click(button('Open Getting Started'))
-    expect(title()).toBe('Accounts & Savings')
+    expect(screen.queryByRole('button', { name: 'Show Getting Started on Home' })).toBeNull()
+    await fire.click(button('Review Setup'))
+    expect(title()).toBe('Review Setup')
     expect(stage('Goals').disabled).toBe(false)
   })
 
@@ -231,7 +232,7 @@ describe('Moving between stages (D-GS9)', () => {
     await fire.click(button('Skip for now'))
     await fire.click(button('I don’t have regular income'))
     expect(title()).toBe('Debts')
-    expect(stageStates()[1]).toBe('Income: Completed (none)')
+    expect(stageStates()[1]).toBe('Income: No regular income')
     expect(await savedProgress()).toMatchObject({ none: ['income'], skipped: ['accounts'] })
     // GS-6A.1: the own space no longer writes progress to localStorage.
     expect(storage.getItem(PROGRESS_KEY)).toBeNull()

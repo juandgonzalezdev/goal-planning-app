@@ -52,8 +52,9 @@ de esa etapa, y omitirla quita el `none`.
 - `last` solo dice qué etapa abrir al volver (`resumeStep`). Nunca decide si una
   etapa está completa. GS-1 no lo escribe todavía: lo harán las pantallas de GS-3 (`visitStep`).
 - La demo mantiene su progreso en memoria (`DEMO_PROGRESS`, oculto al empezar) y nunca lo guarda.
-- Show Getting Started on Home (`resumeGuide`) devuelve las etapas omitidas,
-  reabre un recorrido terminado y **conserva** las respuestas `none`.
+- Show Getting Started on Home (`resumeGuide`) devuelve las etapas omitidas y
+  **conserva** las respuestas `none`. Desde GS-6B **nunca** reabre un recorrido
+  terminado (D-GS6-24): con `finished`, Help & Guide ofrece Review Setup.
 
 ### Compatibilidad con el progreso anterior
 
@@ -170,7 +171,7 @@ importe. Los formularios nuevos muestran lo que el usuario escribe. Los mensajes
 de guardado no incluyen importes. Money no sigue este control (ya era así antes de
 GS-3 y queda fuera de este alcance).
 
-### Finish (provisional)
+### Finish (provisional, sustituido por GS-6B; ver abajo)
 
 Muestra el estado de las cinco etapas en palabras. **Done** guarda `finished` (la
 semántica de GS-1, la misma que el antiguo Done) y cierra la guía; las etapas omitidas
@@ -335,7 +336,7 @@ que New Goal en Goals. GS-5 no añade selector de propietario (GS-6).
 
 ### Limitaciones y observaciones para GS-6
 
-- `stepDone('goals')` cuenta cualquier registro `goal`/`emergency`, también uno **archivado**,
+- (Corregido en GS-6B, D-GS6-10.) `stepDone('goals')` contaba cualquier registro `goal`/`emergency`, también uno **archivado**,
   que la lista (y Goals) no muestran: un espacio con solo una meta archivada ve Goals como
   Completed y «No goals yet.». Ya era así en GS-1; no se cambia sin decisión.
 - Los importes de la confirmación `Check Your Goal` (y el ritmo sugerido) son los que el usuario
@@ -349,7 +350,9 @@ que New Goal en Goals. GS-5 no añade selector de propietario (GS-6).
 | GS-3 | **Implementado** | Lo descrito arriba, incluida D-GS9 y `I don't have regular income`. |
 | GS-4 | **Implementado** | Debts y Bills dentro de la etapa, D-GS6 en ambas, `I don't have any debts` (D-GS3), pagos ya vinculados sin duplicar. |
 | GS-5 | **Implementado** | Goals con New Goal y el borrador del Emergency Fund dentro de la etapa, metas con y sin fecha, D-GS6 en Goals, D-GS2 conservada. La invitación de Home desaparece en cuanto existe el fondo (sin cambios). |
-| GS-6 | Pendiente | Finish Setup con resumen y sin confirmación (D-GS7); `Whose income is this?` en Duo (D-GS5). |
+| GS-6A.1 | **Implementado** | Progreso transaccional y Backup/Restore. |
+| GS-6B | **Implementado** | Finish con resumen, Finishing…/Try Again, Review Setup, metas archivadas (D-GS6-09 a D-GS6-24). |
+| GS-6 (resto) | Pendiente | `Whose income is this?` en Duo (D-GS5). |
 | GS-7 | Pendiente | Documentación final y recorridos manuales (Home y Help & Guide ya permiten retomar, D-GS8). |
 
 | Decisión | Estado |
@@ -399,3 +402,42 @@ Setup, resumen) es de GS-6B.
   se avisa. Hide for now y Show Getting Started on Home avisan igual.
 - **Migración, Backup/Restore, Erase, Recovery, pestañas y límites:**
   `docs/STORAGE_AND_RECOVERY.md` §10.
+
+## GS-6B: Finish y Review Setup
+
+Implementado sobre `b0f6dd4` (rama `feature/gs-6b-finish-review`). Reutiliza la
+persistencia de GS-6A.1 sin cambiarla: ni almacén, ni formato, ni revisión.
+
+- **Estados (D-GS6-13):** `stageStateWords` (`features/guide/guideText.ts`) da
+  Completed, No regular income (solo Income), No debts (solo Debts), Skipped y
+  Not started. Finish sin terminar dice Not finished. Sustituye a «Completed (none)».
+- **Goals (D-GS6-10):** `stepDone('goals')` solo cuenta metas activas
+  (`activeGoals`) o el Emergency Fund activo (`emergencyFund`), lo mismo que lista
+  la etapa. Una meta archivada no completa Goals.
+- **Finish (D-GS6-09/15/19/20):** resumen de las cinco etapas, cada línea abre su
+  etapa, sin importes. Sin registros, un aviso breve que no bloquea
+  (`setupHasRecords`: existencia de cuentas, fuentes de ingreso, deudas, facturas
+  o metas en cualquier estado, incluidas las archivadas; no es lo mismo que una
+  etapa completa. GS-6B.1, D4). Done espera a
+  `changeGuide(finishGuide)`: mientras guarda dice **Finishing…**
+  (`aria-disabled`, una segunda pulsación no hace nada); si no se guarda dice
+  **Try Again** con el motivo (`role="alert"`) y no cierra. Guardado → Home, sin
+  la tarjeta. Abierta desde Home, es Back a ese paso; desde otro sitio (Help &
+  Guide, o tras recargar), Home sustituye al paso de la guía.
+- **Review Setup (D-GS6-12/14/16):** con `finished`, Home options › Review Setup
+  y Help & Guide › Getting Started › Review Setup abren la etapa `finish`, titulada
+  Review Setup, con Close. Abrirla o moverse entre etapas **no escribe** progreso
+  (`last` no sirve con la guía terminada). Close vuelve a donde se abrió, con la
+  protección de formularios. Los cambios en las etapas no tocan `finished`.
+- **Sin reinicio (D-GS6-24):** `resumeGuide` conserva `finished`; Help & Guide ya
+  no ofrece Show Getting Started on Home ni Open Getting Started tras Finish.
+- **Datos (D-GS6-21/22/23):** los estados salen siempre de los registros guardados
+  y de las respuestas guardadas; un borrador nunca completa una etapa. Si se borran
+  registros, la etapa vuelve a su respuesta (`none`, `skipped`) o a Not started;
+  `finished` no se deshace. Tener registros nunca pone `finished`.
+- **Demo (D-GS6-17):** igual que en GS-6A.1, el progreso de la demo vive en
+  memoria; Review Setup también funciona en la demo. Nada pasa al espacio propio.
+- **Backup/Restore (D-GS6-18):** sin cambios respecto a GS-6A.1.
+
+Pruebas: `src/GuideFinishReview.test.tsx` (app completa) y la sección GS-6B de
+`src/features/home/gettingStarted.test.ts`.

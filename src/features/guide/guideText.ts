@@ -40,6 +40,32 @@ export const STATE_WORDS: Record<StepState, string> = {
   done: 'Completed', none: 'Completed', skipped: 'Skipped', 'to-do': 'Not started',
 }
 
+/**
+ * D-GS6-13 (GS-6B): the five states a stage can show: Completed, No regular income (Income only), No debts (Debts
+ * only), Skipped and Not started. A "none" answer is complete, and it says which answer it was. Finish, not finished
+ * yet, says "Not finished".
+ */
+export function stageStateWords(state: StepState, step: GuideStep): string {
+  if (state === 'none') return step === 'income' ? 'No regular income' : step === 'debts' ? 'No debts' : STATE_WORDS.none
+  if (step === 'finish' && state === 'to-do') return 'Not finished'
+  return STATE_WORDS[state]
+}
+
+/** GS-6B: the summary on Finish (before Done) and in Review Setup (after it). It never shows an amount (D-GS6-20). */
+export const FINISH_TEXT = {
+  /** Finish, before Done. */
+  ready: 'You can finish now, even with stages still open. You can come back to any of them later from Review Setup.',
+  /** D-GS6-15: no stage has a saved record. Informative only; Done still works. */
+  empty: 'Nothing is added yet. That’s fine: you can add your accounts, income, bills and goals at any time.',
+  /** Review Setup: the guide was finished. */
+  reviewTitle: 'Review Setup',
+  reviewQuestion: 'Here is where your setup stands.',
+  reviewText: 'Open a stage to check it or make changes. Getting Started stays finished.',
+  done: 'Done',
+  finishing: 'Finishing…',
+  tryAgain: 'Try Again',
+} as const
+
 /** The "I don't have any" answer, only for Income and Debts (D-GS3). It is not Skip for now: the stage is complete. */
 export const NONE_TEXT = { income: 'I don’t have regular income', debts: 'I don’t have any debts' } as const
 

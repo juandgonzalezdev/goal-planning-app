@@ -847,15 +847,33 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // GS-6A.1: moving to a stage opens it at once and remembers it (`last`) in the background; if that is not saved, the
   // screen says so. Skip for now and "none" are answers: the next stage opens only once the answer is saved, so an
   // answer that was not saved is never shown as given, and it can be given again.
+  // GS-6B: the screen Getting Started was opened from (Home, Help & Guide), so Done can show Home without a second Home step.
+  const setupFrom = useRef<Screen | null>(null)
   const openSetup = () => confirmLeave(ANY_FORM, () => {
     if (!open) return
     const stage = openingStep(open.data, guideProgress)
+    setupFrom.current = screen
     setGuideStage(stage)
     setGuideNote(null)
     void changeGuide(progress => visitStep(progress, stage))
     navigation.go('guide')
   })
-  const toStage = (stage: GuideStep) => confirmLeave(ANY_FORM, () => { setGuideStage(stage); void changeGuide(progress => visitStep(progress, stage)) })
+  /**
+   * Review Setup (GS-6B, D-GS6-12/14): once the guide is finished, Home options › Review Setup and Help & Guide ›
+   * Getting Started open the summary directly. It only reads: nothing is saved by opening it or moving between its
+   * stages (a finished guide has no stage to return to), and Close goes back to where it was opened (D-GS6-16).
+   */
+  const openReview = () => confirmLeave(ANY_FORM, () => {
+    if (!open) return
+    setupFrom.current = screen
+    setGuideStage('finish')
+    setGuideNote(null)
+    navigation.go('guide')
+  })
+  const toStage = (stage: GuideStep) => confirmLeave(ANY_FORM, () => {
+    setGuideStage(stage)
+    if (!guideProgress.finished) void changeGuide(progress => visitStep(progress, stage))
+  })
   const answerStage = (stage: GuideStep, answer: (progress: GuideProgress) => GuideProgress) => confirmLeave(ANY_FORM, () => {
     const next = nextStep(stage) ?? stage
     void changeGuide(progress => visitStep(answer(progress), next)).then(outcome => { if (guideKept(outcome)) setGuideStage(next) })
@@ -868,10 +886,19 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     else if (discarded) navigation.backAllowed()
     else navigation.back()
   }, true)
-  /** Done on Finish (D-GS6-19): the screen closes only once the store confirmed the guide as finished; otherwise it says why. */
+  /**
+   * Done on Finish (D-GS6-09/19): only once the store confirmed the guide as finished does Home show, without the
+   * card; otherwise the screen stays and says why. Opened from Home, that is Back to it; from anywhere else (Help &
+   * Guide, or the first step after a reload), Home takes the guide's place.
+   */
   const finishSetupGuide = async (): Promise<GuideOutcome> => {
     const outcome = await changeGuide(finishGuide)
-    if (guideKept(outcome)) leaveSetup()
+    if (guideKept(outcome)) confirmLeave(ANY_FORM, discarded => {
+      if (setupFrom.current === 'home' && navigation.current().idx > 0) {
+        if (discarded) navigation.backAllowed()
+        else navigation.back()
+      } else navigation.replace('home')
+    }, true)
     return outcome
   }
   /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
@@ -1111,6 +1138,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenDebt={(id, spot) => fromHome(spot, () => showDebt(id))} isDemo={open.kind === 'demo'} onOpenBill={(id, spot, forMonth) => fromHome(spot, () => showBill(id, forMonth), forMonth ? month : undefined)}
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAddBill={() => addFrom('bill')}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
+                onReviewSetup={guideProgress.finished ? openReview : undefined}
                 guide={guideShown(open.data, guideProgress) && <GettingStartedCard data={open.data} progress={guideProgress} isDemo={open.kind === 'demo'}
                   onOpen={openSetup} notice={guideNote} onHide={() => void changeGuide(progress => ({ ...progress, hidden: true }))} />} />
             </AmountVisibilityProvider>
@@ -1183,6 +1211,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('help') && <div className="screen" data-screen="help">
             <HelpScreen key={guideChapter ?? 'all'} isDemo={open.kind === 'demo'} chapter={guideChapter} guideOnHome={guideShown(open.data, guideProgress)}
+              guideFinished={guideProgress.finished} onReviewSetup={openReview}
               onShowGuide={() => changeGuide(resumeGuide)} onOpenSetup={openSetup} onBack={back} />
           </div>}
           {shows('guide') && <div className="screen" data-screen="guide">

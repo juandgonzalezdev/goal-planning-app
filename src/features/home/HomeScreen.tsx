@@ -72,6 +72,8 @@ type Props = {
   onEmergencyLater: () => void
   /** Getting Started, above the areas while it is shown (not while customizing). */
   guide?: ReactNode
+  /** Review Setup in Home options, once Getting Started is finished (GS-6B, D-GS6-12); absent before. */
+  onReviewSetup?: () => void
   /** Add Bill, as + Add does (Ring-first: the Bills card of a month without bills). */
   onAddBill?: () => void
 }
@@ -248,6 +250,8 @@ export function HomeScreen(props: Props) {
               { label: 'Collapse All', disabled: customizing, onSelect: () => { onLayoutChange(setAllOpen(layout, false)); setAnnouncement('All parts closed.') } },
               // Ring-first Home has no area order to change: its areas are inside More for [Month], in the saved order.
               ...(props.showRings ? [] : [{ label: 'Customize Home', disabled: customizing, onSelect: () => customize(true) }]),
+              // GS-6B: the guide's card is gone for good after Finish; its summary stays one step away, last in the menu.
+              ...(props.onReviewSetup ? [{ label: 'Review Setup', disabled: customizing, startsGroup: true, onSelect: props.onReviewSetup }] : []),
             ]} />
           </div>, props.controlsHost)}
       {customizing && <div className="home-customize" role="group" aria-label="Customize Home" aria-describedby="customize-home-help" tabIndex={-1} ref={customizeRef}>

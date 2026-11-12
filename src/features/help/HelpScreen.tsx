@@ -14,6 +14,10 @@ type Props = {
   onShowGuide: () => Promise<GuideOutcome>
   /** Opens the Getting Started screens (GS-3), on the stage to do now. */
   onOpenSetup: () => void
+  /** Getting Started was finished (GS-6B): this section offers Review Setup, and nothing starts the guide again (D-GS6-24). */
+  guideFinished?: boolean
+  /** Review Setup: the summary of the five stages, opened from here (D-GS6-12); Close comes back here (D-GS6-16). */
+  onReviewSetup?: () => void
   onBack: () => void
 }
 
@@ -23,7 +27,7 @@ type Props = {
  * Started (shown on Home again from here) and the Monthly Check-in. A
  * chapter asked for opens, and the app puts the keyboard on its title.
  */
-export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSetup, onBack }: Props) {
+export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSetup, guideFinished = false, onReviewSetup, onBack }: Props) {
   const [open, setOpen] = useState<ReadonlySet<GuideChapter>>(() => new Set(chapter ? [chapter] : []))
   const [shown, setShown] = useState(false)
   const [notSaved, setNotSaved] = useState('')
@@ -41,6 +45,10 @@ export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSe
 
       <section className="block" aria-labelledby="help-getting-started">
         <h2 id="help-getting-started" className="section-title">Getting Started</h2>
+        {guideFinished && onReviewSetup ? <>
+          <p className="field-help">You finished Getting Started. Review Setup shows where each stage stands, and you can open any stage to check it or make changes.</p>
+          <button type="button" className="button-secondary align-start" onClick={onReviewSetup}>Review Setup</button>
+        </> : <>
         <p className="field-help">A guided setup in six stages: Accounts, Income, Debts, Bills, Goals and Finish. You can skip a stage, go back to any stage you reached, and come back later. Nothing you added is lost.</p>
         <button type="button" className="button-secondary align-start" onClick={onOpenSetup}>Open Getting Started</button>
         {guideOnHome
@@ -48,6 +56,7 @@ export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSe
           : <button type="button" className="button-secondary align-start" onClick={() => void onShowGuide().then(outcome => {
             if (guideKept(outcome)) { setShown(true); setNotSaved('') } else setNotSaved(outcome === 'stale' ? '' : progressNotSaved(outcome))
           })}>Show Getting Started on Home</button>}
+        </>}
         {notSaved && <p className="field-error" role="alert">{notSaved}</p>}
       </section>
 

@@ -3,8 +3,9 @@ import { createAlexDemo } from '../../data/fixtures/demoAlex'
 import type { FinanceData } from '../../domain/finance/types'
 import {
   clearNone, currentStep, declareNone, DEMO_PROGRESS, finishGuide, guideShown, guideStarted, NEW_PROGRESS, nextStep, openingStep, previousStep, readProgress,
-  resumeGuide, resumeStep, skipStep, stepDone, stepReachable, stepStates, visitStep, type GuideProgress,
+  resumeGuide, resumeStep, setupHasRecords, skipStep, stepDone, stepReachable, stepStates, visitStep, type GuideProgress,
 } from './gettingStarted'
+import { stageStateWords } from '../guide/guideText'
 
 // Getting Started (GS-1): the order, what makes a stage done, none and skipped, the saved progress (v2) and reading older values safely.
 const alex = createAlexDemo()
@@ -185,5 +186,67 @@ describe('Getting Started: stage screens (GS-3, D-GS9)', () => {
   it('knows the stage before and after', () => {
     expect([previousStep('accounts'), nextStep('accounts')]).toEqual([null, 'income'])
     expect([previousStep('finish'), nextStep('finish')]).toEqual(['goals', null])
+  })
+})
+
+describe('GS-6B: Goals, finished and the five states', () => {
+  const archived = (data: FinanceData) => ({ ...data, goals: data.goals.map(goal => ({ ...goal, status: 'archived' as const })) })
+
+  it('D-GS6-10: archived goals never complete Goals; an active Emergency Fund or goal does', () => {
+    expect(stepDone(archived(alex), 'goals')).toBe(false)
+    expect(stepStates(archived(alex), NEW_PROGRESS).goals).toBe('to-do')
+    expect(stepStates(archived(alex), skipStep(NEW_PROGRESS, 'goals')).goals).toBe('skipped')
+    expect(stepDone(emergencyOnly, 'goals')).toBe(true)
+    expect(stepDone(archived(emergencyOnly), 'goals')).toBe(false)
+    const oneActive = { ...archived(alex), goals: alex.goals.map((goal, index) => (index === 0 ? goal : { ...goal, status: 'archived' as const })) }
+    expect(stepDone(oneActive, 'goals')).toBe(true)
+  })
+
+  it('D-GS6-21/22: "finished" stays true whatever happens to the records later', () => {
+    const finished = finishGuide(declareNone(skipStep(NEW_PROGRESS, 'accounts'), 'income'))
+    expect(stepStates(alex, finished).finish).toBe('done')
+    // Every record gone: each stage goes back to its answer, or Not started; Finish stays finished.
+    const states = stepStates(empty, finished)
+    expect(states).toEqual({ accounts: 'skipped', income: 'none', debts: 'to-do', bills: 'to-do', goals: 'to-do', finish: 'done' })
+    expect(guideShown(empty, finished)).toBe(false)
+  })
+
+  it('D-GS6-23: records make stages complete, never "finished"', () => {
+    expect(stepStates(alex, NEW_PROGRESS).finish).toBe('to-do')
+    expect(currentStep(alex, NEW_PROGRESS)).toBe('finish')
+    expect(guideShown(alex, NEW_PROGRESS)).toBe(true)
+  })
+
+  it('D-GS6-24: Show Getting Started on Home never starts a finished guide again', () => {
+    const finished = finishGuide(skipStep(NEW_PROGRESS, 'accounts'))
+    expect(resumeGuide(finished)).toEqual(finished)
+    expect(resumeGuide({ ...NEW_PROGRESS, hidden: true, skipped: ['bills'] })).toEqual(NEW_PROGRESS)
+  })
+
+  it('D-GS6-15 / GS-6B.1 D4: whether the space has records, which is not whether stages are complete', () => {
+    expect(setupHasRecords(empty)).toBe(false)
+    // An archived goal is a record: Goals stays Not started, but the space is not empty.
+    const archivedOnly = { ...empty, goals: archived(alex).goals.slice(0, 1) }
+    expect(stepDone(archivedOnly, 'goals')).toBe(false)
+    expect(setupHasRecords(archivedOnly)).toBe(true)
+    expect(setupHasRecords(emergencyOnly)).toBe(true)
+    expect(setupHasRecords({ ...empty, goals: alex.goals.filter(goal => goal.kind === 'goal') })).toBe(true)
+    expect(setupHasRecords({ ...empty, moneyAccounts: alex.moneyAccounts })).toBe(true)
+    expect(setupHasRecords({ ...empty, incomeSources: alex.incomeSources })).toBe(true)
+    expect(setupHasRecords({ ...empty, debts: alex.debts })).toBe(true)
+    expect(setupHasRecords({ ...empty, bills: alex.bills.filter(bill => !bill.debtId) })).toBe(true)
+    // Only kinds the stages ask for: an expense alone is not one of them.
+    expect(alex.expenses.length).toBeGreaterThan(0)
+    expect(setupHasRecords({ ...empty, expenses: alex.expenses, transfers: alex.transfers })).toBe(false)
+  })
+
+  it('D-GS6-13: Completed, No regular income, No debts, Skipped and Not started', () => {
+    expect(stageStateWords('done', 'accounts')).toBe('Completed')
+    expect(stageStateWords('none', 'income')).toBe('No regular income')
+    expect(stageStateWords('none', 'debts')).toBe('No debts')
+    expect(stageStateWords('skipped', 'goals')).toBe('Skipped')
+    expect(stageStateWords('to-do', 'bills')).toBe('Not started')
+    expect(stageStateWords('to-do', 'finish')).toBe('Not finished')
+    expect(stageStateWords('done', 'finish')).toBe('Completed')
   })
 })
