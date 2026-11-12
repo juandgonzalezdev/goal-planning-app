@@ -1175,7 +1175,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
             <GuideScreen data={open.data} progress={guideProgress} stage={shownStage} isDemo={open.kind === 'demo'} today={space.today} owner={newGoalOwner} newId={newId} onChange={space.update}
               onStage={toStage} onSkip={skipStage} onNone={noneStage} onFinish={finishSetupGuide} onClose={leaveSetup}
-              onAddDebt={() => openDebt(null)} onAddBill={() => openBill(null)} onAddGoal={() => go('new-goal')} />
+              onAddGoal={() => go('new-goal')} />
             </AmountVisibilityProvider>
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">

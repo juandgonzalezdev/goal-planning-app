@@ -16,8 +16,8 @@ export const STAGE_TEXT: Record<GuideStep, { short: string; title: string; quest
     text: 'Add what you usually receive each month, such as a salary. Later, you’ll record what actually arrives.',
   },
   debts: {
-    short: 'Debts', title: 'Debts', question: 'Do you owe anything?',
-    text: 'Add each card or loan with its Remaining Balance. If you add its monthly Payment, it is added to your bills too. You won’t need to add it again.',
+    short: 'Debts', title: 'Debts', question: 'What do you owe?',
+    text: 'Add each credit card or loan with its Remaining Balance. If you add its monthly payment, it is added to your bills too, so you won’t need to add it again.',
   },
   bills: {
     short: 'Bills', title: 'Bills & Subscriptions', question: 'What do you pay regularly?',
@@ -38,5 +38,5 @@ export const STATE_WORDS: Record<StepState, string> = {
   done: 'Completed', none: 'Completed', skipped: 'Skipped', 'to-do': 'Not started',
 }
 
-/** The "I don't have any" answer, only for Income and Debts (D-GS3). Debts keeps its existing label until GS-4. */
-export const NONE_TEXT = { income: 'I don’t have regular income', debts: 'I Have None' } as const
+/** The "I don't have any" answer, only for Income and Debts (D-GS3). It is not Skip for now: the stage is complete. */
+export const NONE_TEXT = { income: 'I don’t have regular income', debts: 'I don’t have any debts' } as const

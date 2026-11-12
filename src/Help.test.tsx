@@ -144,9 +144,9 @@ describe('Getting Started', () => {
     expect(text(screen.getByRole('main'))).toContain('What money comes in?')
     expect(document.activeElement?.textContent).toBe('Income')
     await fire.click(button('Skip for now'))
-    // Debts come before bills, and "I Have None" says there are none: complete, not skipped (GS-1).
-    expect(text(screen.getByRole('main'))).toContain('Do you owe anything?')
-    await fire.click(button('I Have None'))
+    // Debts come before bills, and "I don’t have any debts" says there are none: complete, not skipped (GS-1, label from GS-4).
+    expect(text(screen.getByRole('main'))).toContain('What do you owe?')
+    await fire.click(button('I don’t have any debts'))
     expect(text(screen.getByRole('main'))).toContain('What do you pay regularly?')
     expect(document.activeElement?.textContent).toBe('Bills & Subscriptions')
     expect(steps()).toEqual(['skipped', 'skipped', 'none', 'to-do*', 'to-do', 'to-do'])
@@ -213,7 +213,7 @@ describe('Getting Started', () => {
     await fire.click(button('Save Income'))
     expect(steps().slice(0, 2)).toEqual(['skipped', 'done*'])
     await fire.click(button(/^Continue/))
-    expect(text(screen.getByRole('main'))).toContain('Do you owe anything?')
+    expect(text(screen.getByRole('main'))).toContain('What do you owe?')
     await fire.click(tab('Home'))
     expect(text(guide())).toContain('Step 3 of 6 · Debts')
   })

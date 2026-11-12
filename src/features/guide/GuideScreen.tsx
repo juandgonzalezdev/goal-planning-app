@@ -5,6 +5,8 @@ import {
   type GuideProgress, type GuideStep, type NoneStep, type StepState,
 } from '../home/gettingStarted'
 import { AccountsStage } from './AccountsStage'
+import { BillsStage } from './BillsStage'
+import { DebtsStage } from './DebtsStage'
 import { NONE_TEXT, STAGE_TEXT, STATE_WORDS } from './guideText'
 import { IncomeStage } from './IncomeStage'
 import type { StageProps } from './stageProps'
@@ -18,15 +20,13 @@ type Props = StageProps & {
   onStage: (step: GuideStep) => void
   /** Skip for now: the stage is left for later and the next one opens. */
   onSkip: (step: GuideStep) => void
-  /** "I don't have regular income" / "I Have None": the stage is complete, nothing is added. */
+  /** "I don't have regular income" / "I don't have any debts": the stage is complete, nothing is added. */
   onNone: (step: NoneStep) => void
   /** Done on the last stage: the guide ends (GS-1 `finished`), and the screen closes. */
   onFinish: () => void
   /** Close: back to where the guide was opened from, with the progress kept. */
   onClose: () => void
-  /** The existing screens these stages open (GS-4/GS-5 bring them into the stages). Back there returns here. */
-  onAddDebt: () => void
-  onAddBill: () => void
+  /** New Goal, the screen that already exists (GS-5 brings it into the stage). Back there returns here. */
   onAddGoal: () => void
 }
 
@@ -118,27 +118,13 @@ function stateWords(state: StepState, step: GuideStep): string {
   return STATE_WORDS[state]
 }
 
-/** What each stage shows: its form (Accounts, Income), or the records and the screen that already exists to add one. */
+/** What each stage shows: its form (Accounts, Income, Debts, Bills), or the records and the screen that already exists to add one (Goals). */
 function StageContent(props: Props & { states: Record<GuideStep, StepState> }) {
   const { data, stage, states } = props
   if (stage === 'accounts') return <AccountsStage key="accounts" {...props} />
   if (stage === 'income') return <IncomeStage key="income" {...props} />
-  if (stage === 'debts') {
-    return (
-      <Records names={data.debts.map(debt => ({ id: debt.id, name: debt.name, detail: debt.kind === 'card' ? 'Card' : 'Loan' }))} label="Your cards and loans" empty="No cards or loans yet."
-        action="Add Card or Loan" onAction={props.onAddDebt} note="It opens the card or loan form. Back there brings you here." />
-    )
-  }
-  if (stage === 'bills') {
-    const linked = data.bills.filter(bill => bill.debtId)
-    return (
-      <>
-        <Records names={data.bills.filter(bill => !bill.debtId).map(bill => ({ id: bill.id, name: bill.name }))} label="Your bills" empty="No bills yet."
-          action="Add Bill" onAction={props.onAddBill} note="It opens the bill form. Back there brings you here." />
-        {linked.length > 0 && <p className="field-help">Already in your bills from your cards and loans: {linked.map(bill => bill.name).join(', ')}.</p>}
-      </>
-    )
-  }
+  if (stage === 'debts') return <DebtsStage key="debts" {...props} />
+  if (stage === 'bills') return <BillsStage key="bills" {...props} />
   if (stage === 'goals') {
     return (
       <Records names={data.goals.filter(goal => goal.kind === 'goal' || goal.kind === 'emergency').map(goal => ({ id: goal.id, name: goal.name }))} label="Your goals" empty="No goals yet."

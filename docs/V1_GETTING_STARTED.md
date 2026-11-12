@@ -119,10 +119,9 @@ se deriva de los registros y del progreso v2 de GS-1.
 - La etapa en pantalla vive en memoria (`guideStage` en `App.tsx`); al cambiar de etapa
   se guarda `last` con `visitStep`. Al volver se abre `openingStep`: la última etapa
   visitada si sigue pendiente; si no, la primera pendiente.
-- **Debts, Bills y Goals** (provisional hasta GS-4/GS-5) muestran lo que ya hay y abren
-  las pantallas existentes (`Add Card or Loan` → `debt`, `Add Bill` → `bill`,
-  `Add a Goal` → `new-goal`). Su Back/Cancel vuelve a la etapa; tras crear, el detalle
-  se abre como antes y su Back vuelve a la etapa. No se fuerza ninguna navegación nueva.
+- **Goals** (provisional hasta GS-5) muestra lo que ya hay y abre la pantalla existente
+  (`Add a Goal` → `new-goal`). Su Back/Cancel vuelve a la etapa. Desde GS-4, Debts y
+  Bills tienen su formulario dentro de la etapa (ver abajo).
 
 ### D-GS9 (implementada): regla de acceso elegida
 
@@ -169,23 +168,106 @@ semántica de GS-1, la misma que el antiguo Done) y cierra la guía; las etapas 
 siguen omitidas. Queda para GS-6: resumen final, «Your journey starts here!», Finish
 Setup sin confirmación (D-GS7) y `Whose income is this?` (D-GS5).
 
+## GS-4: Debts y Bills dentro de la guía (implementado)
+
+Las etapas 3 y 4 alojan los formularios que ya existían, como Accounts e Income alojan
+los de GS-2. No hay una segunda implementación de campos, validaciones ni guardado.
+
+| Pieza | Archivo |
+| --- | --- |
+| Etapa Debts: lista `Your debts` (nombre, tipo, Remaining Balance, `Already in your bills`), `Add a Debt` / `Add Another Debt` | `features/guide/DebtsStage.tsx` |
+| Formulario de tarjeta o préstamo, ahora exportado; `inline` quita el enlace Back propio y usa un h2 `Add a Debt` | `DebtForm` en `features/cards/DebtScreen.tsx` |
+| Etapa Bills: `Your bills`, `Debt payments already in your bills`, `Add a Bill` / `Add Another Bill` | `features/guide/BillsStage.tsx` (aloja `features/bills/BillForm.tsx` sin cambios) |
+
+### Reutilización
+
+- **Debts**: el mismo `DebtForm` de la pantalla `debt` (Money › Cards & Loans › Add Card or
+  Loan), con `readDebtDraft` y `applyDebtForm` de `debtDraft.ts`. Mismos campos, mismo
+  interés obligatorio (0 válido), mismo «Add this payment to my monthly bills» marcado por
+  defecto, misma revisión base (`useEditBase`) y mismo `useUnsavedChanges`.
+- **Bills**: el mismo `BillForm` de la pantalla `bill`, sin cambios: importe conocido o
+  `Amount not known yet` (se guarda `null`, nunca 0), frecuencias `Every month`,
+  `Every year` y `One month only`, More details (categoría, mes final,
+  `Pays a card or loan`, nota). Una factura nueva empieza en el mes de hoy; la guía no
+  cambia el mes compartido ni el calendario.
+- **Cambio en `DebtForm` válido en toda la app**: una protección local contra doble
+  pulsación (`saving`, como ya tenía `BillForm`). En la base, en la demo, dos pulsaciones
+  seguidas de **Add** creaban dos deudas (reproducido en `bf36c8e`); en el espacio propio
+  el almacén ya respondía `busy`. El mensaje de alta es ahora `Debt added.`, que solo usa
+  la guía (la pantalla `debt` sigue abriendo el detalle, como antes).
+
+### D-GS6 (implementada en Debts y Bills)
+
+Tras un guardado confirmado el usuario **permanece en la etapa**: el formulario se cierra,
+el registro aparece en la lista, el estado se recalcula con los datos reales, el foco va a
+`Add Another …` y un mensaje dice `Debt added.` / `Bill added.` con el resultado del
+guardado. **Cancel** cierra sin guardar. Si el guardado no se confirma (navegador, otra
+pestaña), el formulario sigue como estaba y dice por qué. Fuera de la guía nada cambia:
+Money abre el detalle de la deuda creada y Bills sigue su flujo propio.
+
+### D-GS3 (implementada en Debts)
+
+`I don't have any debts` sustituye a `I Have None` y guarda `none` con el modelo v2 de
+GS-1 (`declareNone`); no crea ningún registro. **Skip for now** guarda `skipped`, nunca
+`none`. Los registros reales tienen prioridad: si después se añade una deuda, la etapa
+pasa a Completed y la respuesta `none` no lo impide. Con una deuda ya registrada no se
+ofrece `I don't have any debts`. No hay un segundo indicador.
+
+### Pagos de deudas que ya son facturas
+
+- La relación es la que guarda la factura (`debtId`), leída con `linkedBill` de
+  `domain/finance/debts.ts`. Nunca por nombres parecidos.
+- Debts muestra `Already in your bills` en la tarjeta o préstamo con factura vinculada.
+- Bills los lista aparte (`Debt payments already in your bills`) con
+  «This debt payment is already included in your bills.» No cuentan para completar la
+  etapa Bills (regla de GS-1, `stepDone`).
+- «Not in your bills yet: the monthly payment you entered for …» solo aparece para una
+  deuda cuyo pago está guardado en la propia deuda (`debtPayment` con `source: 'debt'` e
+  importe mayor que 0) y que no ha terminado (préstamo sin `finalPaymentMonth` pasado).
+  Una deuda sin pago configurado no recibe ningún aviso. El texto explica cómo añadirla
+  con `Pays a card or loan`, que la vincula sin duplicar (`debt-already-paid` impide una
+  segunda factura). Corrección de la revisión de Juan (v2).
+- Recorrer Debts y Bills no crea facturas: solo el guardado de la deuda, como antes.
+
+### Borradores
+
+Los dos formularios ya registraban su borrador con `useUnsavedChanges`; dentro de la etapa
+quedan cubiertos por la misma protección que Accounts e Income: Back, Skip for now,
+`I don't have any debts`, la lista de etapas, las pestañas, Close, el Back del navegador y
+Exit Demo preguntan «Leave without saving?». Keep Editing conserva lo escrito; Discard and
+Leave mueve una sola vez; con un guardado en curso, el movimiento espera a la respuesta.
+
+### Hide amounts
+
+Las listas de Debts y Bills usan `useAllAmounts` y `Amount.tsx` (GS-3). `Unknown` y
+`Not entered` se mantienen. Los mensajes de guardado no contienen importes.
+
+### Limitaciones conocidas
+
+- Solo existen los tipos `card` (Credit Card) y `loan`. Las deudas personales (familia,
+  amigos) siguen pendientes del módulo Debts (necesitan esquema v4).
+- D-D2-INTEREST sigue pendiente: el interés es obligatorio, como antes.
+- El formulario de deuda no lleva el foco al primer error (ya era así en Money).
+
 ## Pendiente
 
 | Paso | Estado | Contenido |
 | --- | --- | --- |
 | GS-3 | **Implementado** | Lo descrito arriba, incluida D-GS9 y `I don't have regular income`. |
-| GS-4 | Pendiente | Debts y Bills dentro de la etapa; volver a la etapa tras guardar (D-GS6); `I don't have any debts` (hoy sigue `I Have None`). |
+| GS-4 | **Implementado** | Debts y Bills dentro de la etapa, D-GS6 en ambas, `I don't have any debts` (D-GS3), pagos ya vinculados sin duplicar. |
 | GS-5 | Pendiente | Goals: Emergency Fund y New Goal desde la etapa; no duplicar la invitación al fondo en Home. |
 | GS-6 | Pendiente | Finish Setup con resumen y sin confirmación (D-GS7); `Whose income is this?` en Duo (D-GS5). |
 | GS-7 | Pendiente | Documentación final y recorridos manuales (Home y Help & Guide ya permiten retomar, D-GS8). |
 
 | Decisión | Estado |
 | --- | --- |
-| D-GS9 | Implementada en GS-3 |
+| D-GS9 | Implementada en GS-3, conservada en GS-4 |
+| D-GS3 | Implementada (Income en GS-3, Debts en GS-4) |
+| D-GS6 | Implementada en Debts y Bills (GS-4); Goals pendiente (GS-5) |
 | D-GS5 | Pendiente (GS-6) |
-| D-D2-INTEREST | Pendiente (fase Debts) |
+| D-D2-INTEREST | Pendiente (mejora funcional del módulo Debts) |
 
-Getting Started v1.0 **no está completo**: faltan GS-4 a GS-7.
+Getting Started v1.0 **no está completo**: faltan GS-5, GS-6 y GS-7.
 
 ## Decisión registrada para la fase Debts
 

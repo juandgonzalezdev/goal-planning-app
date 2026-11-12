@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { Field } from '../../components/Field'
 import { HelpTip } from '../../components/HelpTip'
@@ -56,7 +56,8 @@ export function DebtScreen(props: Props) {
       </div>
     )
   }
-  return debt ? <DebtDetail {...props} debtId={debt.id} /> : <DebtForm {...props} draftStart={emptyDebtDraft(month, today)} />
+  return debt ? <DebtDetail {...props} debtId={debt.id} />
+    : <DebtForm {...props} draftStart={emptyDebtDraft(month, today)} onCancel={props.onCancel ?? props.onBack} onCreated={id => props.onCreated(id)} />
 }
 
 function DebtDetail(props: Props & { debtId: Id }) {
@@ -93,7 +94,7 @@ function DebtDetail(props: Props & { debtId: Id }) {
   }
 
   if (editing) {
-    return <DebtForm {...props} draftStart={draftFromDebt(data, debt, month, today)}
+    return <DebtForm {...props} draftStart={draftFromDebt(data, debt, month, today)} onCancel={onBack} onCreated={() => {}}
       onDone={done => { setEditing(false); if (done) setMessage(done) }} />
   }
 
@@ -255,8 +256,30 @@ function ExtraPayments({ balance, basisPoints, payment, money, currency }: { bal
   )
 }
 
-function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: string | null) => void }) {
-  const { data, debtId, today, owner, newId, onBack, onChange, onCreated, draftStart, onDone } = props
+export type DebtFormProps = Pick<Props, 'data' | 'debtId' | 'today' | 'owner' | 'newId' | 'onChange'> & {
+  draftStart: DebtDraft
+  /** Cancel (and Back) on a new card or loan. */
+  onCancel: () => void
+  /** A new card or loan was saved; `message` says what happened to the save, e.g. "Debt added. Saved on this device." */
+  onCreated: (id: Id, message: string) => void
+  /** Edit Details closed: with the message after a save, null after Cancel. */
+  onDone?: (message: string | null) => void
+  /**
+   * Inside Getting Started (GS-4): the same fields, checks and save, without
+   * the screen's own Back link and with a level-2 heading, because the stage
+   * around it already has its title and its Back.
+   */
+  inline?: boolean
+}
+
+/**
+ * Add Card or Loan (and Edit Details): one form for the card or loan
+ * screen and, since GS-4, the Debts stage of Getting Started. The checks
+ * and the change it saves are `debtDraft.ts`; the payment goes to the one
+ * place that holds it (`applyDebtForm`).
+ */
+export function DebtForm(props: DebtFormProps) {
+  const { data, debtId, today, owner, newId, onChange, onCreated, draftStart, onDone, inline } = props
   const currency = data.space.currency
   const [draft, setDraft] = useState(draftStart)
   const [errors, setErrors] = useState<DebtDraftErrors>({})
@@ -264,7 +287,9 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
   const debt = debtId ? data.debts.find(d => d.id === debtId) ?? null : null
   const linked = debt ? debtPayment(data, debt, draft.paymentFrom).bill : null
   const set = (patch: Partial<DebtDraft>) => setDraft({ ...draft, ...patch })
-  const cancel = () => (onDone ? onDone(null) : (props.onCancel ?? onBack)())
+  const cancel = () => (onDone ? onDone(null) : props.onCancel())
+  // A save in progress: a second tap (or Enter) before the form closes must not add a second card or loan.
+  const saving = useRef(false)
   useUnsavedChanges(isNew ? 'Add card or loan' : `Edit: ${debt?.name ?? ''}`, {
     'Kind': draft.kind, 'Name': draft.name, 'Yearly interest (%)': draft.interest, 'Due day': draft.dueDay, 'Closing day': draft.closingDay,
     'Minimum payment': draft.minimumPayment, 'Start month': draft.startMonth, 'Final payment month': draft.finalPaymentMonth,
@@ -274,23 +299,28 @@ function DebtForm(props: Props & { draftStart: DebtDraft; onDone?: (message: str
   const saver = useSaver()
 
   const save = async () => {
+    if (saving.current) return
     const read = readDebtDraft(draft, debt?.owner ?? owner, { isNew, today })
     if (read.status === 'invalid') { setErrors(read.errors); return }
     const ids = { debt: newId(), bill: newId(), balance: newId() }
     if (applyDebtForm(data, debtId, read.value, draft, ids) === null) { setErrors({ name: 'This could not be saved. Check the details.' }); return }
+    saving.current = true
     const outcome = await saver.save(() => onChange(current => applyDebtForm(current, debtId, read.value, draft, ids) ?? current, base))
+      .finally(() => { saving.current = false })
     // Not kept: the form stays as typed, with the reason.
     if (!isKept(outcome)) return
-    if (isNew) onCreated(ids.debt)
+    if (isNew) onCreated(ids.debt, outcomeText('Debt added.', outcome))
     else onDone?.(outcomeText('Details updated.', outcome))
   }
 
   const card = draft.kind === 'card'
   return (
-    <div className="tab-screen">
-      <button type="button" className="back-link" onClick={cancel}><Icon name="arrowLeft" size={18} /> {isNew ? 'Back' : 'Cancel'}</button>
-      <h1 className="tab-title">{isNew ? 'Add Card or Loan' : `Edit ${debt?.name}`}</h1>
-      <section className="block">
+    <div className={inline ? 'form-stack edit-box gs-form' : 'tab-screen'} role={inline ? 'group' : undefined} aria-labelledby={inline ? 'gs-form-title' : undefined}>
+      {!inline && <button type="button" className="back-link" onClick={cancel}><Icon name="arrowLeft" size={18} /> {isNew ? 'Back' : 'Cancel'}</button>}
+      {inline
+        ? <h2 id="gs-form-title" className="section-title">Add a Debt</h2>
+        : <h1 className="tab-title">{isNew ? 'Add Card or Loan' : `Edit ${debt?.name}`}</h1>}
+      <section className={inline ? 'gs-form-fields' : 'block'}>
         <div className="form-stack">
           <div className="form-field">
             <label htmlFor="debt-kind">Type</label>

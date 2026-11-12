@@ -1112,6 +1112,10 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .gs-list .item-name { overflow-wrap: anywhere; }
 .gs-list small { color: var(--color-text-muted); font-size: 12px; }
 .gs-list b { flex-shrink: 0; text-align: right; }
+/* GS-4: the card or loan form and the bill form inside a stage, in the same box as Accounts and Income (no card inside the card). */
+.gs-form .section-title { margin: 0; }
+.gs-form .block { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.gs-form .form-field select { background: var(--color-surface); }
 .gs-summary li.is-complete b { color: var(--color-positive); }
 .gs-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .gs-footer .button-small { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; }
