@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LoadResult, SpaceStore, StoreChange, StoredSpace } from '../data/spaceStore'
 import { createSpaceData } from '../domain/finance/space'
+import { NEW_PROGRESS } from '../features/home/gettingStarted'
 import type { FinanceData } from '../domain/finance/types'
 import { memoryStorage } from '../test/memoryStorage'
 import { freshDatabaseForEachTest, heldStore, storedData, storedSpace } from '../test/space'
@@ -27,6 +28,9 @@ function storeThatLoads(result: LoadResult | (() => Promise<LoadResult>)) {
     erase: vi.fn(async () => ({ status: 'failed' as const })),
     useOlderCopy: vi.fn(async () => ({ status: 'failed' as const })),
     exportCopies: async () => ({ database: null, olderCopy: null, erasedMark: false }),
+    restore: vi.fn(async () => ({ status: 'failed' as const })),
+    loadProgress: async () => ({ status: 'unavailable' as const, progress: NEW_PROGRESS }),
+    saveProgress: vi.fn(async () => ({ status: 'failed' as const })),
     watch: () => () => {},
   }
   return store

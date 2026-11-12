@@ -8,7 +8,9 @@ import type { FinanceData } from '../../domain/finance/types'
  * when the guide is resumed; Income and Debts can also be answered with
  * "none". A stage is done when the space has what it asks for; nothing is
  * filled in by the app. Progress is kept per device and per space (the demo:
- * in memory while it is open), never in the space's data or its backup.
+ * in memory while it is open), never in the space's data. From GS-6A.1 it is
+ * saved in the browser's database with its own revision, and the backup file
+ * holds it apart from the records (`data/guideProgress.ts`).
  */
 export const GUIDE_STEPS = ['accounts', 'income', 'debts', 'bills', 'goals', 'finish'] as const
 export type GuideStep = (typeof GUIDE_STEPS)[number]

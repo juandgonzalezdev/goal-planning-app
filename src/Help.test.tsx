@@ -5,7 +5,7 @@ import App from './App'
 import { createDemoHousehold, DEMO_TODAY } from './data/fixtures/demoHousehold'
 import { Opening, SKELETON_AFTER_MS } from './features/welcome/Opening'
 import { classicHome, memoryStorage } from './test/memoryStorage'
-import { fire, settle, freshDatabaseForEachTest } from './test/space'
+import { fire, settle, freshDatabaseForEachTest, storedData, storedGuideRecord, storedProgress } from './test/space'
 
 freshDatabaseForEachTest()
 
@@ -152,8 +152,9 @@ describe('Getting Started', () => {
     expect(steps()).toEqual(['skipped', 'skipped', 'none', 'to-do*', 'to-do', 'to-do'])
     expect(stageNames()[2]).toBe('Debts, step 3 of 6: Completed (none)')
     // The progress is kept on this device for this space (v2), never in the space's data; `last` is the stage visited.
-    const saved = JSON.parse(storage.getItem('goal-planning-app.getting-started') ?? 'null')
-    expect(saved.progress).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: ['debts'], finished: false, last: 'bills' })
+    // GS-6A.1: it is saved in the database with its own revision, and no longer in localStorage.
+    expect(await storedProgress()).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: ['debts'], finished: false, last: 'bills' })
+    expect(storage.getItem('goal-planning-app.getting-started')).toBeNull()
     cleanup()
     render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
@@ -172,30 +173,31 @@ describe('Getting Started', () => {
     expect(steps()).toEqual(['to-do', 'to-do', 'none', 'to-do*', 'to-do', 'to-do'])
   })
 
-  it('reads progress saved before v1.0 for this space, in the new order, and writes it only after a change', async () => {
+  it('brings in progress saved before v1.0 for this space once, in the new order, and the saved progress wins after that (GS-6A.1)', async () => {
     const storage = await createOwnSpace()
-    // Nothing is saved until the first change: opening the guide saves this space's id with the stage visited.
+    // Nothing is saved until the first change.
     expect(storage.getItem('goal-planning-app.getting-started')).toBeNull()
-    await fire.click(within(guide()!).getByRole('button', { name: 'Start setup' }))
-    const spaceId = JSON.parse(storage.getItem('goal-planning-app.getting-started')!).spaceId
-    // As the old guide saved it: Income and Accounts skipped, Debts answered with the old "I Have None" (saved as skipped).
+    expect(await storedGuideRecord()).toBeNull()
+    const spaceId = (await storedData())!.space.id
+    // As the old guide saved it in localStorage: Income and Accounts skipped, Debts answered with the old "I Have None" (saved as skipped).
     const old = JSON.stringify({ spaceId, progress: { hidden: false, skipped: ['income', 'accounts', 'debts'], finished: false } })
     storage.setItem('goal-planning-app.getting-started', old)
     cleanup()
     render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
     expect(text(guide())).toContain('Step 4 of 6 · Bills')
-    // Reading it wrote nothing.
+    // Brought into the database once (revision 1), as `readProgress` reads it; the old value is left as it was.
+    expect(await storedGuideRecord()).toMatchObject({ format: 1, spaceId, revision: 1, progress: { version: 2, skipped: ['income', 'accounts', 'debts'], none: [], finished: false } })
     expect(storage.getItem('goal-planning-app.getting-started')).toBe(old)
     await fire.click(within(guide()!).getByRole('button', { name: 'Continue setup' }))
     expect(steps()).toEqual(['skipped', 'skipped', 'skipped', 'to-do*', 'to-do', 'to-do'])
-    // Another space's progress is not this space's.
+    // localStorage is never read again for this space: another value there (here: another space's, finished) changes nothing.
     storage.setItem('goal-planning-app.getting-started', JSON.stringify({ spaceId: 'another-space', progress: { hidden: true, skipped: [], finished: true } }))
     cleanup()
     render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
-    expect(text(guide())).toContain('Step 1 of 6 · Accounts')
-    expect(within(guide()!).getByRole('button', { name: 'Start setup' })).toBeTruthy()
+    expect(text(guide())).toContain('Step 4 of 6 · Bills')
+    expect(within(guide()!).getByRole('button', { name: 'Continue setup' })).toBeTruthy()
   })
 
   it('each stage adds with the forms that already exist, and a stage is done once the space has it', async () => {

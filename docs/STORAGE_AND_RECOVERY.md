@@ -18,10 +18,12 @@ errores.
 | --- | --- | --- |
 | El espacio propio (registros y apariencia) | Base de datos IndexedDB `goal-planning-app`, almacén `spaces` | Un sobre por espacio: `{ format, revision, savedAt, data }`. `data` es el `FinanceData` de siempre, sin la revisión, así que una copia de seguridad sigue siendo `FinanceData` |
 | Qué espacio abre este dispositivo | Almacén `meta`: `current-space`, `legacy` y `last-revision` | `legacy` vale `migrated` o `erased` cuando la copia antigua ya se trató. `last-revision` sobrevive a Erase para que un espacio nuevo siga contando desde ahí |
+| Progreso de Getting Started (GS-6A.1) | Almacén `meta`: una clave `guide-progress:<id del espacio>` por espacio | `{ format: 1, spaceId, revision, savedAt, progress }`, con **revisión propia**, separada de la del espacio. Va en la copia de seguridad nueva. Ver §10 |
 | Espacios ilegibles apartados por Use Older Copy | Almacén `quarantine` | Cada uno con su propia clave. Nunca se borran ni se sobrescriben |
 | La copia antigua (versiones anteriores de la app) | `localStorage`, clave `goal-planning-app.my-space` | Solo se lee y nunca se cambia, salvo con Erase |
 | La marca de borrado | `localStorage`, clave `goal-planning-app.erased` | Mientras existe, la copia antigua no se vuelve a abrir |
-| Preferencias de pantalla del espacio propio | `localStorage`: `goal-planning-app.hidden-amounts`, `.bills-chart`, `.emergency-later`, `.home-layout` y `.getting-started` (estos dos ligados al id del espacio) | Son de este dispositivo, no del espacio, y no van en la copia de seguridad |
+| Preferencias de pantalla del espacio propio | `localStorage`: `goal-planning-app.hidden-amounts`, `.bills-chart`, `.emergency-later` y `.home-layout` (ligado al id del espacio) | Son de este dispositivo, no del espacio, y no van en la copia de seguridad |
+| Progreso de Getting Started de versiones anteriores a GS-6A.1 | `localStorage`, clave `goal-planning-app.getting-started` | Solo se lee, una vez, para traerlo a `meta` (§10). Esta versión nunca lo escribe. Erase lo borra |
 | La demo | Solo en memoria | Nunca se guarda (sección 8) |
 
 Los espacios nuevos reciben un id aleatorio (`newId`). Los creados antes
@@ -48,7 +50,7 @@ conservan `my-space`.
   abiertos los bloques cuyo nombre coincide con una parte abierta; This Month y
   Left to Pay aparecen cerrados. Es solo la vista: ningún dato se pierde.
 - Reset Layout solo cambia `home-layout`; nunca toca `hidden-amounts`.
-- `getting-started` se guarda como `{ spaceId, progress: { version: 2, hidden, skipped, none, finished, last } }` (GS-1, ver `docs/V1_GETTING_STARTED.md`). El valor anterior `{ hidden, skipped, finished }` se sigue leyendo sin pérdidas y solo se reescribe tras un cambio del usuario. Un valor ilegible vuelve a una guía nueva (nunca la oculta para siempre). Nunca contiene datos financieros. Erase All Data lo borra.
+- `getting-started` (GS-1 a GS-5) se guardaba como `{ spaceId, progress: { version: 2, hidden, skipped, none, finished, last } }`. Desde GS-6A.1 el progreso vive en IndexedDB (§10) y esta clave solo se lee para traerlo una vez; ya no se escribe. Erase All Data la borra.
 - La demo no lee ni escribe ninguna de estas claves.
 
 ## 2. Migración desde la copia antigua
@@ -206,16 +208,20 @@ La distancia entre dos pasos solo se calcula dentro de una misma cadena.
 
 **Use Older Copy** aparta el espacio ilegible en `quarantine` (no lo borra) y
 abre la copia antigua. **Erase** borra el espacio, apunta su última revisión y
-después quita la copia antigua.
+después quita la copia antigua. Desde GS-6A.1, Erase borra también, en la misma
+transacción, el progreso de Getting Started de **todos** los espacios, y después
+la clave antigua `goal-planning-app.getting-started`. Use Older Copy aparta en
+`quarantine` el progreso del espacio que sale de `spaces` (cuando la copia
+antigua tiene otro id); si el id es el mismo, el progreso se queda con él.
 
 ## 7. Download Backup y Download Both Copies
 
 | | Download Backup | Download Both Copies |
 | --- | --- | --- |
 | Dónde | Settings → Reports & Backup → Data Backup, siempre (también en la demo) | Pantalla de recuperación, y en Settings → Reports & Backup cuando el espacio es de solo lectura |
-| Qué contiene | El espacio abierto, validado, en el formato de intercambio | Todas las copias del dispositivo **tal como están guardadas**: el espacio actual (aunque esté dañado), todos los espacios, la cuarentena, las marcas y la copia antigua como texto |
+| Qué contiene | Desde GS-6A.1, un sobre `{ kind: "goal-planning-backup", format: 1, financeData, gettingStarted }`: el espacio abierto, validado, sin cambios, y el progreso de Getting Started **tal como está guardado** (`null` si no hay nada guardado). Ver §10 | Todas las copias del dispositivo **tal como están guardadas**: el espacio actual (aunque esté dañado), todos los espacios, la cuarentena, las marcas, los registros de progreso de Getting Started (`database.guideProgress`) y, como texto, la copia antigua y el progreso antiguo (`olderGuideProgress`) |
 | Para qué | Guardar y restaurar con **Restore Backup** | Rescatar información antes de Use Older Copy o Erase |
-| Restore Backup | Lo lee, lo comprueba y pide confirmación antes de reemplazar | Lo rechaza: «This is a recovery file, not a backup…» |
+| Restore Backup | Lo lee, lo comprueba y pide confirmación antes de reemplazar. Acepta también los archivos antiguos (solo `FinanceData`) | Lo rechaza: «This is a recovery file, not a backup…» |
 | ¿Cambia algo al descargar? | No | No: se lee en una transacción de solo lectura |
 | Nombre | `goal-planning-backup.json` | `goal-planning-recovery-AAAA-MM-DD.json` |
 
@@ -264,3 +270,102 @@ con la demo abierta).
 
 Qué archivo de pruebas cubre cada parte: [PROJECT_MAP.md](PROJECT_MAP.md#pruebas).
 Qué recorridos manuales están confirmados: [STATUS.md](STATUS.md).
+
+## 10. Progreso de Getting Started (GS-6A.1)
+
+### Dónde y con qué revisión
+
+- Un registro por espacio en el almacén `meta`, clave `guide-progress:<id>`:
+  `{ format: 1, spaceId, revision, savedAt, progress }`, con `progress` en el
+  formato `GuideProgress` v2 (`docs/V1_GETTING_STARTED.md`). Código:
+  `src/data/guideProgress.ts` y `indexedDbStore.ts` (`loadProgress`,
+  `saveProgress`, `restore`).
+- `revision` es **del progreso**: empieza en 1 y sube con cada guardado de la
+  guía. **Nunca** cambia la revisión del espacio ni sus registros, así que un
+  cambio de etapa en una pestaña no deja «desactualizado» un formulario
+  financiero abierto en otra. Revisión 0 = no hay nada guardado todavía (guía
+  nueva). Así se distingue «sin progreso» de un progreso guardado con
+  `finished: false`.
+- No hay almacén nuevo ni cambio de `DATABASE_VERSION` (sigue en 1) ni de
+  `schemaVersion` (sigue en 3). Una pestaña de la versión anterior sigue
+  funcionando.
+- `saveProgress(spaceId, progress, baseRevision)` compara y escribe en una
+  sola transacción (`transact`, `durability: 'strict'`). Responde `saved` solo
+  cuando la transacción terminó; `conflict` (otra pestaña o un Restore guardó
+  antes, o el espacio ya no es el abierto) con lo guardado ahora; o `failed`.
+  En los dos últimos casos no escribe nada.
+- La app (`useSpace.changeGuide`) solo muestra un cambio de la guía cuando el
+  almacén respondió `saved`. Los cambios de la guía de una pestaña van en cola,
+  uno tras otro, y no esperan a los guardados financieros (ni al revés).
+
+### Migración desde localStorage
+
+`loadProgress` al abrir el espacio:
+
+1. Lee `current-space` y el registro. Si hay registro, **ese manda**
+   (GS-6A-T01) y localStorage ya no se vuelve a leer para ese espacio.
+2. Si no hay registro, lee `goal-planning-app.getting-started`. Solo lo usa si
+   su `spaceId` es el del espacio abierto, con `readProgress` (lectura
+   tolerante de v1 y v2). Un valor de otro espacio, dañado o ausente da una
+   guía nueva **sin escribir nada**. Un valor de una versión futura (> 2) no se
+   trae.
+3. Lo escribe con `add` en una transacción que vuelve a comprobar que el
+   espacio sigue abierto y que **nadie** guardó progreso entretanto (otra
+   pestaña, un Restore). Si alguien lo hizo, se usa lo suyo.
+4. La clave antigua **no se borra** (solo Erase la borra).
+
+Migración interrumpida: si la escritura falla, no queda nada a medias; se
+muestra lo que tenía localStorage (revisión 0) y se reintenta en la siguiente
+apertura. Repetirla o hacerla en dos pestañas a la vez deja un único registro.
+Los datos financieros nunca dan `finished: true`.
+
+### Backup y Restore
+
+- **Download Backup** escribe el sobre con `gettingStarted: { progress }` leído
+  del almacén en ese momento (lo confirmado, nunca el estado en pantalla), o
+  `null` si no hay nada guardado. En la demo, siempre `null`. Si hay progreso
+  guardado pero no se puede leer, el archivo sale sin él y la pantalla lo dice.
+- **Restore Backup** (`importBackup`) acepta el sobre nuevo y los archivos
+  antiguos (solo `FinanceData`). Todo o nada: un problema en los registros **o**
+  en `gettingStarted` (campos desconocidos, etapas no válidas, versión futura,
+  `format` futuro) rechaza el archivo entero con el motivo. Se mantienen todas
+  las comprobaciones financieras y el rechazo del archivo de recuperación.
+- `store.restore(data, baseRevision, guide)` escribe los registros **y** el
+  progreso en **una única transacción** IndexedDB (`spaces`, `meta`,
+  `quarantine`): o queda todo o no queda nada. El espacio conserva su id.
+  - Archivo nuevo con progreso: ese progreso pasa a ser el del espacio (con
+    `finished` tal cual, `true` o `false`).
+  - Archivo antiguo, o nuevo con `null`: se conserva el progreso válido del
+    espacio. Si no tenía ninguno, se guarda el que tuviera localStorage para ese
+    espacio o, si no, una guía nueva sin terminar. Nunca se inventa `finished`.
+    Como queda un registro, ninguna migración posterior lo pisa.
+  - Progreso guardado dañado o de una versión futura: un archivo con progreso lo
+    aparta en `quarantine` antes de reemplazarlo; un archivo antiguo deja intacto
+    el de una versión futura.
+
+### Otras pestañas
+
+- Cada guardado avisa con `StoreChange` `progress-saved` (`spaceId`,
+  `revision`). La otra pestaña relee solo el progreso; no relee el espacio ni
+  toca sus formularios. Una pestaña de la versión anterior trata ese aviso como
+  cualquier otro y comprueba el espacio sin encontrar cambios.
+- Al volver a una pestaña (`visibilitychange`) también se relee el progreso.
+- Una pestaña con un progreso viejo recibe `conflict`: se muestra lo guardado y
+  el aviso «Not saved: Getting Started changed in another tab…». Nada se pisa.
+
+### Límites conocidos
+
+- Una pestaña de una versión **anterior** a GS-6A.1 sigue leyendo y escribiendo
+  la clave de localStorage. Esos cambios ya no llegan a esta versión (manda el
+  registro de `meta`).
+- Un Erase hecho desde una versión anterior no borra los registros
+  `guide-progress:*`. No se reutilizan: los espacios nuevos tienen id aleatorio
+  y `create` borra cualquier registro con su id. El siguiente Erase de esta
+  versión los borra.
+- Un registro dañado o de una versión futura queda bloqueado: se ve una guía
+  nueva, sin terminar, y los cambios de la guía dicen que no se guardaron. Se
+  resuelve con Restore de un archivo con progreso o con Erase.
+- Un archivo de backup nuevo no lo abre una versión anterior de la app («The
+  file has no schemaVersion.»).
+- Sin IndexedDB (solo lectura) el progreso se muestra desde localStorage y no se
+  puede cambiar.

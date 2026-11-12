@@ -9,8 +9,10 @@ type Props = {
   isDemo: boolean
   /** Start setup / Continue setup: the stage screen, on the stage to do now. */
   onOpen: () => void
-  /** Hide for now: the card leaves Home; Settings › Help & Guide brings the guide back. */
+  /** Hide for now: the card leaves Home once that is saved; Settings › Help & Guide brings the guide back. */
   onHide: () => void
+  /** Why the last Getting Started change was not saved (GS-6A.1). */
+  notice?: string | null
 }
 
 /**
@@ -18,7 +20,7 @@ type Props = {
  * panel. It says which step comes next and how many stages are complete, and
  * opens the stage screen. It never adds or completes anything by itself.
  */
-export function GettingStartedCard({ data, progress, isDemo, onOpen, onHide }: Props) {
+export function GettingStartedCard({ data, progress, isDemo, onOpen, onHide, notice = null }: Props) {
   const states = stepStates(data, progress)
   const step = openingStep(data, progress)
   const index = GUIDE_STEPS.indexOf(step)
@@ -35,6 +37,7 @@ export function GettingStartedCard({ data, progress, isDemo, onOpen, onHide }: P
         </div>
         <p className="visually-hidden">{done} of {GUIDE_STEPS.length} stages completed.</p>
         {isDemo && <p className="field-help">In the demo, Alex’s information is invented.</p>}
+        {notice && <p className="field-error" role="alert">{notice}</p>}
       </div>
       <div className="gs-card-actions">
         <button type="button" className="button-small button-small-primary" onClick={onOpen}>{started ? 'Continue setup' : 'Start setup'}</button>

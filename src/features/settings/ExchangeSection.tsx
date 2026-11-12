@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import { exportFinanceData, importFinanceData } from '../../data/exchange'
+import { exportBackup, importBackup, type Backup } from '../../data/exchange'
 import type { FinanceData } from '../../domain/finance/types'
 import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { useSaver, useWriteStatus } from '../../app/writeStatus'
@@ -9,18 +9,23 @@ import { downloadFile } from '../../ui/download'
 /**
  * Data Backup: download everything as a JSON file; Restore Backup: read it
  * back. This is the copy that can be restored (the PDF report cannot).
- * Restoring never replaces anything until the user confirms.
+ * Restoring never replaces anything until the user confirms. From GS-6A.1
+ * the file also holds Getting Started progress as saved; older files (the
+ * records only) are still restored, and keep the space's own progress.
  */
 type Props = {
   data: FinanceData
   isDemo: boolean
-  onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome>
+  /** Replaces the records and Getting Started progress together, in one save. */
+  onReplace: (backup: Backup, base?: number) => Promise<SaveOutcome>
+  /** The backup file: the records and the saved progress. Without it, the records only (the demo's file has no progress either). */
+  onBackup?: () => Promise<{ text: string; guideLeftOut: boolean }>
   /** While the space can only be shown: "Download Both Copies", every copy as stored. */
   onDownloadCopies?: () => Promise<boolean>
 }
 
-export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: Props) {
-  const [pending, setPending] = useState<FinanceData | null>(null)
+export function ExchangeSection({ data, isDemo, onReplace, onBackup, onDownloadCopies }: Props) {
+  const [pending, setPending] = useState<Backup | null>(null)
   const { revision } = useWriteStatus()
   const saver = useSaver()
   // The revision on screen when the file was chosen: Replace never writes over changes opened since.
@@ -30,9 +35,16 @@ export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: P
   const [copiesText, setCopiesText] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
   // A backup read and waiting for Replace is a change not made yet: it is never dropped silently.
-  useUnsavedChanges('Restore Backup', pending ? { 'Backup file of': pending.space.name } : null, { empty: {} })
+  useUnsavedChanges('Restore Backup', pending ? { 'Backup file of': pending.data.space.name } : null, { empty: {} })
+  const [downloadText, setDownloadText] = useState('')
 
-  const download = () => downloadFile(exportFinanceData(data), 'goal-planning-backup.json')
+  const download = async () => {
+    setDownloadText('')
+    const backup = onBackup ? await onBackup() : { text: exportBackup(data, null), guideLeftOut: false }
+    downloadFile(backup.text, 'goal-planning-backup.json')
+    // Said only when saved progress exists but could not be read: the file then keeps the records only.
+    if (backup.guideLeftOut) setDownloadText('Backup downloaded without Getting Started progress: it could not be read here.')
+  }
   const downloadCopies = async () => {
     setCopiesText('')
     const done = await onDownloadCopies?.()
@@ -44,8 +56,8 @@ export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: P
     event.target.value = ''
     setDone('')
     if (!file) return
-    const result = importFinanceData(await file.text())
-    if (result.status === 'imported') { setErrors([]); setBase(revision); saver.clearRefusal(); setPending(result.data) }
+    const result = importBackup(await file.text())
+    if (result.status === 'imported') { setErrors([]); setBase(revision); saver.clearRefusal(); setPending(result.backup) }
     else { setPending(null); setErrors(result.errors) }
   }
 
@@ -54,7 +66,8 @@ export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: P
       <section className="sub-block" aria-labelledby="data-backup">
         <h3 id="data-backup" className="section-title">Data Backup</h3>
         <p className="field-help">Download everything in this space as a JSON file, to restore it later. Keep it somewhere safe: it is not encrypted.</p>
-        <button type="button" className="button-secondary" onClick={download}>Download Backup</button>
+        <button type="button" className="button-secondary" onClick={() => void download()}>Download Backup</button>
+        {downloadText && <p className="muted-note" role="status">{downloadText}</p>}
         {onDownloadCopies && <>
           <p className="field-help">Download Both Copies saves every copy this device keeps, exactly as saved. It is a recovery file with your information not encrypted, not a backup: Restore Backup may not open it. Keep it private.</p>
           <button type="button" className="button-secondary" onClick={() => void downloadCopies()}>Download Both Copies</button>
@@ -79,7 +92,7 @@ export function ExchangeSection({ data, isDemo, onReplace, onDownloadCopies }: P
           )}
           {pending && (
             <div className="callout" role="alert">
-              <p>Replace everything in this space with “{pending.space.name}” from the file? This cannot be undone. Download a backup first if you want a copy.</p>
+              <p>Replace everything in this space with “{pending.data.space.name}” from the file? This cannot be undone. Download a backup first if you want a copy.</p>
               {saver.refusal && <p className="field-error">{saver.refusal}</p>}
               <div className="inline-actions">
                 <button type="button" className="button-small button-small-primary" aria-disabled={saver.blocked || undefined} onClick={async () => {

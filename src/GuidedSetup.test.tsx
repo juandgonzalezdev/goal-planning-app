@@ -7,7 +7,7 @@ import type { SpaceStore } from './data/spaceStore'
 import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage, storedKeys } from './test/memoryStorage'
-import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData } from './test/space'
+import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData, storedProgress } from './test/space'
 
 freshDatabaseForEachTest()
 
@@ -30,7 +30,8 @@ const stageStates = () => stages().getAllByRole('button').map(item => (item.getA
 const title = () => screen.getByRole('heading', { level: 1 }).textContent
 const question = () => screen.queryByRole('alertdialog')
 const shownScreen = () => document.querySelector('[data-screen]')?.getAttribute('data-screen')
-const savedProgress = (storage: Storage) => JSON.parse(storage.getItem(PROGRESS_KEY) ?? 'null')?.progress
+// GS-6A.1: the progress is saved in the database, with its own revision (no longer in localStorage).
+const savedProgress = () => storedProgress()
 const moves = () => act(async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setTimeout(resolve, 5)) })
 
 function space(duo = false): FinanceData {
@@ -119,7 +120,9 @@ describe('Moving between stages (D-GS9)', () => {
     expect(text(screen.getByRole('region', { name: 'Accounts & Savings' }))).toContain('Skipped')
     // Stages reached stay open from the list, even after going back.
     expect(stage('Debts').disabled).toBe(false)
-    expect(savedProgress(storage)).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: [], finished: false, last: 'accounts' })
+    expect(await savedProgress()).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: [], finished: false, last: 'accounts' })
+    // GS-6A.1: the own space no longer writes progress to localStorage.
+    expect(storage.getItem(PROGRESS_KEY)).toBeNull()
     await typeAccount('Wallet', '120')
     await fire.click(button('Save Account'))
     expect(stageStates()[0]).toBe('Accounts: Completed, current')
@@ -211,7 +214,9 @@ describe('Moving between stages (D-GS9)', () => {
     await moves()
     expect(shownScreen()).toBe('home')
     expect(card()).toBeNull()
-    expect(savedProgress(storage)).toMatchObject({ finished: true, skipped: ['accounts', 'income', 'debts', 'bills', 'goals'] })
+    expect(await savedProgress()).toMatchObject({ finished: true, skipped: ['accounts', 'income', 'debts', 'bills', 'goals'] })
+    // GS-6A.1: the own space no longer writes progress to localStorage.
+    expect(storage.getItem(PROGRESS_KEY)).toBeNull()
     // Help & Guide still opens it, with every stage reviewable.
     await fire.click(button('Settings'))
     await fire.click(button('Open Help & Guide'))
@@ -227,7 +232,9 @@ describe('Moving between stages (D-GS9)', () => {
     await fire.click(button('I don’t have regular income'))
     expect(title()).toBe('Debts')
     expect(stageStates()[1]).toBe('Income: Completed (none)')
-    expect(savedProgress(storage)).toMatchObject({ none: ['income'], skipped: ['accounts'] })
+    expect(await savedProgress()).toMatchObject({ none: ['income'], skipped: ['accounts'] })
+    // GS-6A.1: the own space no longer writes progress to localStorage.
+    expect(storage.getItem(PROGRESS_KEY)).toBeNull()
     expect((await storedData())!.incomeSources).toEqual([])
   })
 })

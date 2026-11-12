@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ALEX_DEMO_TODAY, createAlexDemo } from '../data/fixtures/demoAlex'
+import { exportBackup } from '../data/exchange'
 import { createIndexedDbStore } from '../data/indexedDbStore'
 import { browserStorage } from '../data/localStore'
-import type { LoadResult, RecoveryCopies, SaveResult, SpaceStore, UnreadableReason } from '../data/spaceStore'
+import type { GuideUnreadable } from '../data/guideProgress'
+import type { GuideRestore, LoadResult, ProgressLoad, RecoveryCopies, SaveResult, SpaceStore, UnreadableReason } from '../data/spaceStore'
 import { stampNewRecords } from '../domain/finance/records'
 import type { FinanceData } from '../domain/finance/types'
+import { NEW_PROGRESS, type GuideProgress } from '../features/home/gettingStarted'
 import type { CalendarDate } from '../domain/goalTime'
 import type { SaveOutcome } from '../ui/saveOutcome'
 
@@ -68,7 +71,38 @@ export type SpaceNotice = 'updated' | 'erased' | 'older-copy-changed'
 
 export type EraseOutcome = 'erased' | 'partly-erased' | 'failed' | 'read-only' | 'busy' | 'stale'
 
+/**
+ * Getting Started progress of the own space as the store confirmed it (GS-6A.1). Never what a change
+ * hopes to save: a change shows only once `saveProgress` answered `saved`.
+ * - `revision`: the progress's own revision (0: nothing saved yet), never the space's.
+ * - `locked`: what is saved cannot be used or written over (damaged, or from a newer version); `progress` is a new guide.
+ * - `unavailable`: this browser cannot save; `progress` is shown only.
+ */
+export interface OwnGuide {
+  spaceId: string
+  progress: GuideProgress
+  revision: number
+  locked?: GuideUnreadable
+  unavailable?: true
+}
+
+/** What happened to a Getting Started change: a `SaveOutcome`, or `locked` (what is saved cannot be changed by this version). */
+export type GuideOutcome = SaveOutcome | 'locked'
+
+/** The Getting Started change is in the progress now (saved, or kept in the demo). */
+export const guideKept = (outcome: GuideOutcome): boolean => outcome === 'saved' || outcome === 'demo'
+
 type Store = SpaceStore & { close?: () => void }
+
+/** The guide as the store answered for `spaceId` (null: nothing could be read for it). */
+function guideFrom(spaceId: string, loaded: ProgressLoad): OwnGuide | null {
+  switch (loaded.status) {
+    case 'loaded': return { spaceId, progress: loaded.progress, revision: loaded.revision }
+    case 'locked': return { spaceId, progress: loaded.progress, revision: loaded.revision, locked: loaded.reason }
+    case 'unavailable': return { spaceId, progress: loaded.progress, revision: 0, unavailable: true }
+    case 'failed': return null
+  }
+}
 
 /**
  * The open space and every change to it. The own space is saved in the
@@ -98,6 +132,11 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   // Goes up each time the own space is read again from the store: the screens start again from it.
   const [generation, setGeneration] = useState(0)
   const [notice, setNotice] = useState<SpaceNotice | null>(null)
+  // Getting Started progress of the own space, as confirmed by the store (GS-6A.1). The demo keeps its own in the app.
+  const [guide, setGuide] = useState<OwnGuide | null>(null)
+  const guideRef = useRef<OwnGuide | null>(null)
+  /** Guide reads and writes, one after another, so each starts from the progress the one before confirmed. */
+  const guideQueue = useRef<Promise<unknown>>(Promise.resolve())
 
   // The same values for the callbacks, so an answer is checked against what is open now, not when it started.
   const openRef = useRef(open)
@@ -118,6 +157,21 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
 
   const show = useCallback((next: OpenSpace | null) => { openRef.current = next; setOpen(next) }, [])
   const report = useCallback((next: SpaceProblem | null) => { problemRef.current = next; setProblem(next) }, [])
+  const showGuide = useCallback((next: OwnGuide | null) => { guideRef.current = next; setGuide(next) }, [])
+  /** Runs guide work after the guide work already waiting. */
+  const queueGuide = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
+    const next = guideQueue.current.then(run, run)
+    guideQueue.current = next.catch(() => undefined)
+    return next
+  }, [])
+  /** Reads the own space's progress again (another tab saved it, a restore, back to this tab). Ignored if another space opened meanwhile. */
+  const refreshGuide = useCallback((spaceId: string) => queueGuide(async () => {
+    const loaded = await store.loadProgress(spaceId).catch((): ProgressLoad => ({ status: 'failed' }))
+    const open = openRef.current
+    if (open?.kind !== 'own' || open.data.space.id !== spaceId) return
+    const next = guideFrom(spaceId, loaded)
+    if (next) showGuide(next)
+  }), [store, queueGuide, showGuide])
   /** Starts a new session: answers to anything started before it are ignored. */
   const newSession = useCallback(() => {
     sessionRef.current += 1
@@ -171,19 +225,25 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
       result = await store.load().catch((): LoadResult => ({ status: 'read-only', space: null, mayBeOutdated: true }))
     } while (writing.current && sessionRef.current === mine)
     if (sessionRef.current !== mine || !isCurrent()) return
+    // The guide is read before the space shows, so Home never shows a guide that is not the saved one (GS-6A.1).
+    const shown = result.status === 'loaded' ? result.space : result.status === 'read-only' ? result.space : null
+    const loaded = shown ? await store.loadProgress(shown.data.space.id).catch((): ProgressLoad => ({ status: 'failed' })) : null
+    if (sessionRef.current !== mine || !isCurrent()) return
+    showGuide(shown && loaded ? guideFrom(shown.data.space.id, loaded) : null)
     apply(result)
     openingRef.current = false
     setOpening(false)
-  }, [store, apply])
+  }, [store, apply, showGuide])
 
   /** Closes the own space after another tab erased it: Welcome says so. */
   const closeErased = useCallback(() => {
     newSession()
     floor.current = 0
     show(null)
+    showGuide(null)
     report(null)
     setNotice('erased')
-  }, [newSession, show, report])
+  }, [newSession, show, report, showGuide])
 
   /**
    * Another tab may have changed the space: reads it again and decides. Nothing typed here and not
@@ -218,6 +278,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
         return 'done'
       }
       apply(result)
+      if (result.status === 'loaded' && !sameSpace) { showGuide(null); void refreshGuide(result.space.data.space.id) }
       setNotice(result.status === 'loaded' ? 'updated' : null)
       return 'done'
     }
@@ -228,9 +289,10 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     if (result.status === shown && result.status === 'empty') return 'done'
     if (result.status === 'unreadable' && problemBefore?.kind === 'unreadable' && problemBefore.reason === result.reason && problemBefore.source === result.source) return 'done'
     apply(result)
+    if (result.status === 'loaded') { showGuide(null); void refreshGuide(result.space.data.space.id) }
     setNotice(result.status === 'loaded' ? 'updated' : null)
     return 'done'
-  }, [store, apply, report, closeErased])
+  }, [store, apply, report, closeErased, showGuide, refreshGuide])
 
   // One check at a time; a notice that comes during one runs another after it.
   const checking = useRef(false)
@@ -256,22 +318,32 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
       report({ kind: 'read-only', withCopy: openRef.current?.kind === 'own', takenOver: true })
     } else if (change.kind === 'older-copy-changed') {
       setNotice('older-copy-changed')
+    } else if (change.kind === 'progress-saved') {
+      // Only Getting Started changed in another tab: the space's records and revision did not, so no form here is affected.
+      const current = guideRef.current
+      if (current?.spaceId === change.spaceId && change.revision > current.revision) void refreshGuide(change.spaceId)
     } else {
       void check()
     }
-  }), [store, report, check])
+  }), [store, report, check, refreshGuide])
 
   // Back to this tab (or the page shown again from the browser's cache): a notice may have been missed, as on an iPhone in the background.
   useEffect(() => {
     if (typeof document === 'undefined') return
-    const onVisible = () => { if (document.visibilityState === 'visible') void check() }
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void check()
+      // A Getting Started notice may have been missed too.
+      const open = openRef.current
+      if (open?.kind === 'own' && guideRef.current?.spaceId === open.data.space.id) void refreshGuide(open.data.space.id)
+    }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('pageshow', onVisible)
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('pageshow', onVisible)
     }
-  }, [check])
+  }, [check, refreshGuide])
 
   // The first opening.
   useEffect(() => {
@@ -291,7 +363,8 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   }, [load, newSession])
 
   /** Saves a change to the own space, on the revision it was made on. The demo keeps it without saving. */
-  const commit = useCallback(async (next: (data: FinanceData) => FinanceData, base: number | undefined): Promise<SaveOutcome> => {
+  const commit = useCallback(async (next: (data: FinanceData) => FinanceData, base: number | undefined,
+    send: (data: FinanceData, revision: number) => Promise<SaveResult> = (data, revision) => store.save(data, revision)): Promise<SaveOutcome> => {
     const current = openRef.current
     if (!current) return 'not-saved'
     if (current.kind === 'demo') {
@@ -303,7 +376,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     if (writing.current) return 'busy'
     if (base !== undefined && base < floor.current) return 'outdated'
     const data = next(current.data)
-    const done = await write<SaveResult>(() => store.save(data, current.revision), { status: 'failed' })
+    const done = await write<SaveResult>(() => send(data, current.revision), { status: 'failed' })
     if (done === 'busy') return 'busy'
     if (!done.current) return 'stale'
     if (done.result.status === 'saved') {
@@ -329,9 +402,59 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   /**
    * Replaces the whole space with a restored backup, as it is: no record gets a time it did not have.
    * The open space keeps its own id, whatever id the backup has, so it is still the same space for the store.
+   * GS-6A.1: Getting Started progress is restored in the same transaction (`guide`; an older backup keeps the
+   * space's own), and is read again from the store once it is saved.
    */
-  const replaceData = useCallback((data: FinanceData, base?: number): Promise<SaveOutcome> =>
-    commit(current => ({ ...data, space: { ...data.space, id: current.space.id } }), base), [commit])
+  const replaceData = useCallback(async (data: FinanceData, base?: number, guide: GuideRestore = { kind: 'keep' }): Promise<SaveOutcome> => {
+    const outcome = await commit(current => ({ ...data, space: { ...data.space, id: current.space.id } }), base,
+      (restored, revision) => store.restore(restored, revision, guide))
+    const open = openRef.current
+    if (outcome === 'saved' && open?.kind === 'own') await refreshGuide(open.data.space.id)
+    return outcome
+  }, [commit, store, refreshGuide])
+
+  /**
+   * Changes Getting Started progress (GS-6A.1). `change` gets the progress the store confirmed last, after any
+   * guide change still being saved, and the result shows only once the store saved it. It never changes the
+   * space's records or revision, and it is not held by a change to them being saved. The demo is the app's.
+   */
+  const changeGuide = useCallback((change: (progress: GuideProgress) => GuideProgress): Promise<GuideOutcome> => queueGuide(async () => {
+    const open = openRef.current
+    const current = guideRef.current
+    if (open?.kind !== 'own' || current?.spaceId !== open.data.space.id) return 'not-saved'
+    if (problemRef.current?.kind === 'read-only' || current.unavailable) return 'read-only'
+    if (current.locked) return 'locked'
+    const next = change(current.progress)
+    if (next === current.progress) return 'saved'
+    const mine = sessionRef.current
+    const result = await store.saveProgress(current.spaceId, next, current.revision).catch(() => ({ status: 'failed' as const }))
+    if (sessionRef.current !== mine || guideRef.current?.spaceId !== current.spaceId) return 'stale'
+    if (result.status === 'saved') {
+      showGuide({ spaceId: current.spaceId, progress: next, revision: result.revision })
+      return 'saved'
+    }
+    if (result.status === 'conflict') {
+      // Saved meanwhile by another tab (or a restore): that is shown, and nothing here was written over it.
+      if (result.latest) showGuide({ spaceId: current.spaceId, ...result.latest })
+      return 'conflict'
+    }
+    return 'not-saved'
+  }), [store, queueGuide, showGuide])
+
+  /**
+   * The backup file (GS-6A.1): the records on screen and Getting Started progress as the store has it saved,
+   * never what is on screen. The demo's file has no progress. `guideLeftOut`: saved progress may exist but could
+   * not be read or used, so the screen can say the file has none.
+   */
+  const backupText = useCallback(async (): Promise<{ text: string; guideLeftOut: boolean }> => {
+    const open = openRef.current
+    if (!open) return { text: '', guideLeftOut: false }
+    if (open.kind === 'demo') return { text: exportBackup(open.data, null), guideLeftOut: false }
+    if (problemRef.current?.kind === 'read-only') return { text: exportBackup(open.data, null), guideLeftOut: true }
+    const loaded = await store.loadProgress(open.data.space.id).catch((): ProgressLoad => ({ status: 'failed' }))
+    const saved = loaded.status === 'loaded' && loaded.revision > 0 ? loaded.progress : null
+    return { text: exportBackup(open.data, saved), guideLeftOut: loaded.status !== 'loaded' }
+  }, [store])
 
   /** Starts the own space. Refused if this device already has one (another tab may have made it). */
   const startOwnSpace = useCallback(async (data: FinanceData): Promise<SaveOutcome> => {
@@ -343,6 +466,8 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     if (done.result.status === 'saved') {
       floor.current = done.result.revision
       report(null)
+      // A new space starts a new guide: nothing is saved for it until the user changes something.
+      showGuide({ spaceId: data.space.id, progress: NEW_PROGRESS, revision: 0 })
       show({ kind: 'own', data, revision: done.result.revision })
       return 'saved'
     }
@@ -351,7 +476,7 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
       return 'conflict'
     }
     return 'not-saved'
-  }, [show, report, store, write])
+  }, [show, report, store, write, showGuide])
 
   /**
    * Opens the demo. Refused (`busy`) while a change is being saved or the own space is being opened:
@@ -416,9 +541,10 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
     floor.current = 0
     setNotice(null)
     if (openRef.current?.kind === 'own') show(null)
+    showGuide(null)
     report(done.result.status === 'erased' ? null : { kind: 'partly-erased' })
     return done.result.status
-  }, [show, report, store, write, newSession])
+  }, [show, report, store, write, newSession, showGuide])
 
   // The demo always shows its own fixed date, so its October data makes sense on any day.
   const today = open?.kind === 'demo' && demoToday ? demoToday : getToday()
@@ -429,5 +555,6 @@ export function useSpace(storage: Storage | null = browserStorage(), getToday: (
   return {
     opening, open, problem, notice, generation, saving, canWrite, revision, today, update, replaceData, startOwnSpace, openDemo, closeDemo, resetDemo,
     eraseOwnSpace, reload, discardErased, restoreOlderCopy, exportCopies, dismissNotice: useCallback(() => setNotice(null), []),
+    guide, changeGuide, backupText,
   }
 }

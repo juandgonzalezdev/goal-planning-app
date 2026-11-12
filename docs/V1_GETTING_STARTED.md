@@ -41,8 +41,14 @@ de esa etapa, y omitirla quita el `none`.
 { version: 2, hidden, skipped: StageId[], none: ('income' | 'debts')[], finished, last: StageId | null }
 ```
 
-- Misma clave del dispositivo: `goal-planning-app.getting-started` → `{ spaceId, progress }`.
-- Sin datos financieros. Nunca va en los datos del espacio ni en la copia de seguridad.
+- Desde GS-6A.1 se guarda en IndexedDB, almacén `meta`, un registro por espacio
+  (`guide-progress:<id>`) con **revisión propia**, separado de `FinanceData` y de
+  la revisión del espacio. Antes vivía en localStorage
+  (`goal-planning-app.getting-started` → `{ spaceId, progress }`); ese valor se
+  trae una sola vez y ya no se escribe. Detalle en
+  `docs/STORAGE_AND_RECOVERY.md` §10.
+- Sin datos financieros. Nunca va dentro de los datos del espacio. Desde GS-6A.1
+  sí va en la copia de seguridad, separado de los registros (`gettingStarted`).
 - `last` solo dice qué etapa abrir al volver (`resumeStep`). Nunca decide si una
   etapa está completa. GS-1 no lo escribe todavía: lo harán las pantallas de GS-3 (`visitStep`).
 - La demo mantiene su progreso en memoria (`DEMO_PROGRESS`, oculto al empezar) y nunca lo guarda.
@@ -52,13 +58,17 @@ de esa etapa, y omitirla quita el `none`.
 ### Compatibilidad con el progreso anterior
 
 `readProgress` lee cualquier valor sin bloquear la aplicación y **nunca escribe**.
-El valor solo se reescribe, en v2, cuando el usuario cambia algo.
+Desde GS-6A.1 se usa para traer el valor antiguo de localStorage a IndexedDB una
+sola vez; lo guardado en IndexedDB se comprueba con `checkProgress`, que es
+estricto (ver GS-6A.1 más abajo).
 
 - Sin `version` (antes de v1.0): mismos ids. `day-to-day` se lee como `finish` y
   nunca queda como omitida. `hidden` y `finished` se respetan. Un antiguo
   «I Have None» se guardaba como `skipped` y **sigue como skipped**, porque no se puede
   saber si significaba `none`. Un campo `none` en un valor antiguo se ignora.
-- Versión futura (> 2): se leen los campos conocidos y se ignoran los demás.
+- Versión futura (> 2): `readProgress` lee los campos conocidos. Desde GS-6A.1
+  un valor así no se trae de localStorage, y un registro así en IndexedDB queda
+  bloqueado: nunca se lee como `finished: true` ni se sobrescribe.
 - Valor dañado o desconocido: guía nueva. Ids desconocidos y un `last` no válido se descartan.
 
 ### Adaptación mínima del panel actual
@@ -363,3 +373,29 @@ Getting Started v1.0 **no está completo**: faltan GS-6 y GS-7.
 - El futuro formulario de Debts permitirá guardar, de forma explícita, una deuda con tasa desconocida.
 - Se implementa en la fase Debts (D2), no en GS-1. Hasta entonces, el formulario
   actual sigue exigiendo el interés (D-GS4).
+
+## GS-6A.1: progreso transaccional y Backup/Restore
+
+Implementado sobre `669984a` (rama `feature/gs-6a-persistence`). Solo
+persistencia; la experiencia visual de Finish (Finishing…, Try Again, Review
+Setup, resumen) es de GS-6B.
+
+- **Dónde:** IndexedDB, almacén `meta`, `guide-progress:<id>` →
+  `{ format: 1, spaceId, revision, savedAt, progress }`. Revisión propia; los
+  cambios de la guía no suben la revisión del espacio.
+- **Contrato** (`SpaceStore`): `loadProgress(spaceId)` → `loaded` | `locked` |
+  `unavailable` | `failed`; `saveProgress(spaceId, progress, baseRevision)` →
+  `saved` | `conflict` | `failed`; `restore(data, baseRevision, guide)` para
+  Restore Backup en una sola transacción.
+- **App:** `useSpace` lee el progreso antes de mostrar el espacio y expone
+  `guide` (lo confirmado), `changeGuide(cambio)` (asíncrono, devuelve
+  `GuideOutcome`) y `backupText()`. La demo sigue en memoria (`demoGuide`).
+- **Estados de etapa:** se siguen derivando de los registros guardados
+  (`stepStates`); `finished` sigue siendo independiente (D-GS6-21/22).
+- **Errores:** Skip for now, la respuesta «none» y Done esperan a que se guarde.
+  Si no se guarda, la pantalla se queda en la misma etapa con un aviso mínimo
+  (`role="alert"`) y la respuesta se puede volver a dar. Moverse entre etapas
+  abre la etapa al momento y guarda `last` en segundo plano; si falla, también
+  se avisa. Hide for now y Show Getting Started on Home avisan igual.
+- **Migración, Backup/Restore, Erase, Recovery, pestañas y límites:**
+  `docs/STORAGE_AND_RECOVERY.md` §10.

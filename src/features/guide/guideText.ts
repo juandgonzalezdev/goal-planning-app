@@ -1,3 +1,5 @@
+import type { GuideOutcome } from '../../app/useSpace'
+import { outcomeText } from '../../ui/saveOutcome'
 import type { GuideStep, StepState } from '../home/gettingStarted'
 
 /**
@@ -40,3 +42,15 @@ export const STATE_WORDS: Record<StepState, string> = {
 
 /** The "I don't have any" answer, only for Income and Debts (D-GS3). It is not Skip for now: the stage is complete. */
 export const NONE_TEXT = { income: 'I don’t have regular income', debts: 'I don’t have any debts' } as const
+
+/**
+ * GS-6A.1: why a Getting Started change was not saved, shown where it was made. Nothing on screen shows the change as
+ * done until it is saved, so the answer can be given again.
+ */
+export function progressNotSaved(outcome: GuideOutcome): string {
+  switch (outcome) {
+    case 'locked': return 'Not saved: Getting Started progress on this device was saved by a newer version of the app, or is damaged, so it is not changed here.'
+    case 'conflict': return 'Not saved: Getting Started changed in another tab. Its latest progress is shown.'
+    default: return outcomeText('', outcome).trim()
+  }
+}

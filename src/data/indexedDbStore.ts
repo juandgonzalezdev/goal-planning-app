@@ -1,10 +1,17 @@
 import type { FinanceData } from '../domain/finance/types'
+import { NEW_PROGRESS, type GuideProgress } from '../features/home/gettingStarted'
+import {
+  checkProgress, guideKey, isGuideKey, LEGACY_GUIDE_KEY, makeGuideRecord, readGuideRecord, readLegacyGuide, type GuideReading,
+} from './guideProgress'
 import { openDatabase, transact, when } from './idb'
 import {
   ERASED_KEY, isErasedMarked, makeEnvelope, OLDER_COPY_KEY, readData, readEnvelope, readOlderCopy, sameRecords,
   type Reading,
 } from './savedCopies'
-import type { EraseResult, LoadResult, RecoveryCopies, SaveResult, SpaceStore, StoreChange, StoredSpace, UnreadableReason } from './spaceStore'
+import type {
+  EraseResult, GuideRestore, LoadResult, ProgressLoad, ProgressSaveResult, RecoveryCopies, SaveResult, SpaceStore, StoreChange, StoredSpace,
+  UnreadableReason,
+} from './spaceStore'
 
 /**
  * The own space in the browser's database (IndexedDB).
@@ -20,6 +27,11 @@ import type { EraseResult, LoadResult, RecoveryCopies, SaveResult, SpaceStore, S
  * - `quarantine`: spaces that could not be read and were set aside by
  *   "Use Older Copy". Each one gets its own new key, so none is ever
  *   written over.
+ * - GS-6A.1: `meta` also keeps one `guide-progress:<space id>` record per
+ *   space with its Getting Started progress and its own revision
+ *   (`guideProgress.ts`). It is written apart from the space, so a guide
+ *   change never changes the space's revision. No new store and no new
+ *   database version: a tab of an earlier version keeps working.
  *
  * The older copy in localStorage is only read, never changed, except by
  * Erase.
@@ -46,7 +58,7 @@ export interface IndexedDbStoreOptions {
   /** Where other tabs' notices come from. Tests pass their own. */
   window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null
   /** Tests only: waits before a migration step, to play two tabs one step at a time. */
-  pause?: (step: 'before-copy' | 'before-activate') => Promise<void>
+  pause?: (step: 'before-copy' | 'before-activate' | 'before-guide-copy') => Promise<void>
 }
 
 /** What `load` saw last, so "Use Older Copy" can check that nothing changed since. */
@@ -272,6 +284,8 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
             if (existing !== undefined) { end.undo({ status: 'conflict', latest: null }); return }
             when(meta.get(LAST_REVISION), last => {
               const revision = revisionOf({ revision: last }) + 1
+              // A new space never takes progress left under its id (GS-6A.1): it starts with a new guide.
+              meta.delete(guideKey(id))
               spaces.add(makeEnvelope(data, revision, now()), id)
               when(meta.put(id, CURRENT), () => end.done({ status: 'saved', revision }))
             })
@@ -294,7 +308,7 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
       await transact<true>(db, [SPACES, META, QUARANTINE], 'readwrite', (tx, end) => {
         const spaces = tx.objectStore(SPACES)
         const meta = tx.objectStore(META)
-        when(meta.get(CURRENT), current => when(meta.get(LAST_REVISION), last => {
+        when(meta.get(CURRENT), current => when(meta.get(LAST_REVISION), last => when(meta.getAllKeys(), metaKeys => {
           const readCurrent = (then: (raw: unknown) => void) => {
             if (typeof current !== 'string') { then(undefined); return }
             when(spaces.get(current), then)
@@ -304,10 +318,12 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
             spaces.clear()
             tx.objectStore(QUARANTINE).clear()
             meta.delete(CURRENT)
+            // Getting Started progress of every space goes with them (GS-6A.1): nothing of it can come back.
+            for (const key of metaKeys.filter(isGuideKey)) meta.delete(key)
             if (revision > 0) meta.put(revision, LAST_REVISION)
             when(meta.put('erased', LEGACY), () => end.done(true))
           })
-        }))
+        })))
       })
     } catch {
       return { status: 'failed' }
@@ -322,6 +338,8 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     } catch {
       removed = false
     }
+    // Getting Started progress kept by versions before GS-6A.1: only a screen preference, it holds no records.
+    try { storage?.removeItem(LEGACY_GUIDE_KEY) } catch { /* Tied to the erased space's id: a new space never reads it. */ }
     return removed ? { status: 'erased' } : { status: 'partly-erased', remaining: 'older-copy' }
   }
 
@@ -351,7 +369,12 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
               if (expected.target === id) { then(undefined); return }
               when(spaces.get(id), then)
             }
-            readDestination(destination => {
+            // GS-6A.1: the progress of a space that leaves `spaces` goes to quarantine with it, never left behind under its id.
+            const readTargetGuide = (then: (guide: unknown) => void) => {
+              if (expected.target === id) { then(undefined); return }
+              when(meta.get(guideKey(expected.target)), then)
+            }
+            readDestination(destination => readTargetGuide(targetGuide => {
               const destinationReading = destination === undefined ? null : readEnvelope(destination)
               const keepsNothingNew = destinationReading?.ok === true && sameRecords(destinationReading.value.data, older.data)
               // The older copy goes on from the highest set-aside revision, so no open tab can save over it with an old one.
@@ -359,9 +382,10 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
               const toSetAside = [
                 ...(raw === undefined ? [] : [{ spaceId: expected.target, value: raw }]),
                 ...(destination === undefined || keepsNothingNew ? [] : [{ spaceId: id, value: destination }]),
+                ...(targetGuide === undefined ? [] : [{ spaceId: expected.target, guideProgress: targetGuide }]),
               ]
               const replace = () => {
-                if (expected.target !== id) spaces.delete(expected.target)
+                if (expected.target !== id) { spaces.delete(expected.target); meta.delete(guideKey(expected.target)) }
                 spaces.put(makeEnvelope(older.data, revision, now()), id)
                 meta.put(id, CURRENT)
                 when(meta.put('migrated', LEGACY), () => end.done({ status: 'saved', revision }))
@@ -372,7 +396,7 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
                 when(tx.objectStore(QUARANTINE).add({ movedAt: now(), ...toSetAside[index] }), () => setAside(index + 1))
               }
               setAside(0)
-            })
+            }))
           })
         }))
       })
@@ -386,6 +410,147 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     return result
   }
 
+  /** Saved progress as `loadProgress` reports it. Unusable progress is never read as finished: a new guide is shown. */
+  const fromReading = (reading: Exclude<GuideReading, { state: 'none' }>): ProgressLoad =>
+    reading.state === 'readable'
+      ? { status: 'loaded', progress: reading.progress, revision: reading.revision }
+      : { status: 'locked', progress: NEW_PROGRESS, revision: reading.revision, reason: reading.reason }
+
+  /** What localStorage had for this space, for a browser that cannot use its database (never after Erase). */
+  const legacyOnly = (spaceId: string): GuideProgress => {
+    if (isErasedMarked(storage)) return NEW_PROGRESS
+    const legacy = readLegacyGuide(storage, spaceId)
+    return legacy.state === 'readable' ? legacy.progress : NEW_PROGRESS
+  }
+
+  async function loadProgress(spaceId: string): Promise<ProgressLoad> {
+    const db = await database()
+    if (!db) return { status: 'unavailable', progress: legacyOnly(spaceId) }
+    const key = guideKey(spaceId)
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const state = await transact<{ current: unknown; raw: unknown }>(db, [META], 'readonly', (tx, end) => {
+          const meta = tx.objectStore(META)
+          when(meta.get(CURRENT), current => when(meta.get(key), raw => end.done({ current, raw })))
+        })
+        // Erased or replaced meanwhile: nothing is read or brought in for a space that is not open.
+        if (state.current !== spaceId) return { status: 'failed' }
+        const reading = readGuideRecord(state.raw, spaceId)
+        // Saved progress always wins (GS-6A-T01): localStorage is never read again for this space.
+        if (reading.state !== 'none') return fromReading(reading)
+        const legacy = readLegacyGuide(storage, spaceId)
+        // Nothing saved anywhere: a new guide, and nothing is written until the user changes something.
+        if (legacy.state !== 'readable') return { status: 'loaded', progress: NEW_PROGRESS, revision: 0 }
+        await pause?.('before-guide-copy')
+        // Bring it in: only while the space is still the one open and nothing was saved meanwhile (another tab, a restore).
+        const copied = await transact<ProgressLoad | 'again'>(db, [META], 'readwrite', (tx, end) => {
+          const meta = tx.objectStore(META)
+          when(meta.get(CURRENT), current => {
+            if (current !== spaceId) { end.undo('again'); return }
+            when(meta.get(key), existing => {
+              if (existing !== undefined) { end.undo('again'); return }
+              when(meta.add(makeGuideRecord(spaceId, legacy.progress, 1, now()), key), () =>
+                end.done({ status: 'loaded', progress: legacy.progress, revision: 1 }))
+            })
+          })
+        })
+        if (copied !== 'again') {
+          notify({ kind: 'progress-saved', spaceId, revision: 1 })
+          return copied
+        }
+      }
+      return { status: 'failed' }
+    } catch {
+      // The database failed part-way: nothing half-written stays. localStorage still has it, untouched; it is brought in next time.
+      const legacy = readLegacyGuide(storage, spaceId)
+      return legacy.state === 'readable' ? { status: 'loaded', progress: legacy.progress, revision: 0 } : { status: 'failed' }
+    }
+  }
+
+  async function saveProgress(spaceId: string, progress: GuideProgress, baseRevision: number): Promise<ProgressSaveResult> {
+    const db = await database()
+    if (!db || !checkProgress(progress).ok) return { status: 'failed' }
+    const key = guideKey(spaceId)
+    let result: ProgressSaveResult
+    try {
+      result = await transact<ProgressSaveResult>(db, [META], 'readwrite', (tx, end) => {
+        const meta = tx.objectStore(META)
+        when(meta.get(CURRENT), current => {
+          // Erased, or another space was started: an old tab never writes progress for it.
+          if (current !== spaceId) { end.undo({ status: 'conflict', latest: null }); return }
+          when(meta.get(key), raw => {
+            const reading = readGuideRecord(raw, spaceId)
+            // Damaged, or from a newer version: never written over by a normal change.
+            if (reading.state === 'unreadable') { end.undo({ status: 'failed' }); return }
+            const saved = reading.state === 'readable' ? reading.revision : 0
+            if (saved !== baseRevision) {
+              end.undo({ status: 'conflict', latest: reading.state === 'readable' ? { progress: reading.progress, revision: reading.revision } : null })
+              return
+            }
+            const revision = baseRevision + 1
+            when(meta.put(makeGuideRecord(spaceId, progress, revision, now()), key), () => end.done({ status: 'saved', revision }))
+          })
+        })
+      })
+    } catch {
+      return { status: 'failed' }
+    }
+    if (result.status === 'saved') notify({ kind: 'progress-saved', spaceId, revision: result.revision })
+    return result
+  }
+
+  async function restore(data: FinanceData, baseRevision: number, guide: GuideRestore): Promise<SaveResult> {
+    const db = await database()
+    if (!db || !writable(data) || (guide.kind === 'replace' && !checkProgress(guide.progress).ok)) return { status: 'failed' }
+    const id = data.space.id
+    const key = guideKey(id)
+    // Read before the transaction (localStorage is not part of it): only used when the space has no saved progress yet.
+    const legacy = guide.kind === 'keep' && !isErasedMarked(storage) ? readLegacyGuide(storage, id) : null
+    let result: { saved: SaveResult; guideRevision: number | null }
+    try {
+      result = await transact<{ saved: SaveResult; guideRevision: number | null }>(db, [SPACES, META, QUARANTINE], 'readwrite', (tx, end) => {
+        const spaces = tx.objectStore(SPACES)
+        const meta = tx.objectStore(META)
+        when(meta.get(CURRENT), current => {
+          if (current === undefined) { end.undo({ saved: { status: 'conflict', latest: null }, guideRevision: null }); return }
+          when(spaces.get(current), rawSpace => {
+            const reading = readEnvelope(rawSpace)
+            const latest = reading.ok ? reading.value : null
+            if (current !== id || !latest || latest.revision !== baseRevision) { end.undo({ saved: { status: 'conflict', latest }, guideRevision: null }); return }
+            when(meta.get(key), rawGuide => {
+              const saved = readGuideRecord(rawGuide, id)
+              // What the space's progress becomes: null keeps what is saved.
+              let next: GuideProgress | null
+              if (guide.kind === 'replace') next = guide.progress
+              else if (saved.state === 'readable') next = null
+              else if (saved.state === 'unreadable' && saved.reason === 'newer-version') next = null
+              else if (saved.state === 'none' && legacy?.state === 'readable') next = legacy.progress
+              else next = NEW_PROGRESS
+              const write = () => {
+                const revision = baseRevision + 1
+                spaces.put(makeEnvelope(data, revision, now()), id)
+                const guideRevision = next ? (saved.state === 'none' ? 0 : saved.revision) + 1 : null
+                if (next && guideRevision) meta.put(makeGuideRecord(id, next, guideRevision, now()), key)
+                // Both in this one transaction: the records and the progress are restored together, or neither is.
+                end.done({ saved: { status: 'saved', revision }, guideRevision })
+              }
+              // Progress that cannot be used is set aside, never deleted, before the backup's takes its place.
+              if (next && saved.state === 'unreadable') when(tx.objectStore(QUARANTINE).add({ movedAt: now(), spaceId: id, guideProgress: rawGuide }), write)
+              else write()
+            })
+          })
+        })
+      })
+    } catch {
+      return { status: 'failed' }
+    }
+    if (result.saved.status === 'saved') {
+      notify({ kind: 'saved', spaceId: id, revision: result.saved.revision })
+      if (result.guideRevision) notify({ kind: 'progress-saved', spaceId: id, revision: result.guideRevision })
+    }
+    return result.saved
+  }
+
   async function exportCopies(): Promise<RecoveryCopies> {
     let olderCopy: string | null = null
     let olderCopyError: string | undefined
@@ -394,7 +559,9 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     } catch {
       olderCopyError = 'This browser does not allow reading the older copy.'
     }
-    const copies: RecoveryCopies = { database: null, olderCopy, ...(olderCopyError && { olderCopyError }), erasedMark: isErasedMarked(storage) }
+    let olderGuideProgress: string | null = null
+    try { olderGuideProgress = storage ? storage.getItem(LEGACY_GUIDE_KEY) : null } catch { /* Not readable: left out. */ }
+    const copies: RecoveryCopies = { database: null, olderCopy, ...(olderCopyError && { olderCopyError }), olderGuideProgress, erasedMark: isErasedMarked(storage) }
     const db = await database()
     if (!db) return { ...copies, databaseError: 'This browser cannot open its database here.' }
     try {
@@ -405,11 +572,13 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
         const quarantine = tx.objectStore(QUARANTINE)
         when(meta.get(CURRENT), currentSpace => when(meta.get(LEGACY), legacy => when(meta.get(LAST_REVISION), lastRevision =>
           when(spaces.getAllKeys(), spaceKeys => when(spaces.getAll(), spaceValues =>
-            when(quarantine.getAllKeys(), quarantineKeys => when(quarantine.getAll(), quarantineValues => end.done({
-              currentSpace, legacy, lastRevision,
-              spaces: spaceKeys.map((key, index) => ({ id: String(key), stored: spaceValues[index] })),
-              quarantine: quarantineKeys.map((key, index) => ({ key: String(key), stored: quarantineValues[index] })),
-            }))))))))
+            when(quarantine.getAllKeys(), quarantineKeys => when(quarantine.getAll(), quarantineValues =>
+              when(meta.getAllKeys(), metaKeys => when(meta.getAll(), metaValues => end.done({
+                currentSpace, legacy, lastRevision,
+                spaces: spaceKeys.map((key, index) => ({ id: String(key), stored: spaceValues[index] })),
+                quarantine: quarantineKeys.map((key, index) => ({ key: String(key), stored: quarantineValues[index] })),
+                guideProgress: metaKeys.flatMap((key, index) => (isGuideKey(key) ? [{ key, stored: metaValues[index] }] : [])),
+              }))))))))))
       })
       return { ...copies, database: stored }
     } catch {
@@ -448,5 +617,5 @@ export function createIndexedDbStore(options: IndexedDbStoreOptions): IndexedDbS
     opening = null
   }
 
-  return { load, create, save, erase, useOlderCopy, exportCopies, watch, close }
+  return { load, create, save, restore, erase, useOlderCopy, exportCopies, loadProgress, saveProgress, watch, close }
 }

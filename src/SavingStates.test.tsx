@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { browserSpaceStore } from './app/useSpace'
 import type { SpaceStore } from './data/spaceStore'
+import { NEW_PROGRESS } from './features/home/gettingStarted'
 import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { classicHome, memoryStorage } from './test/memoryStorage'
@@ -91,6 +92,9 @@ describe('read-only', () => {
     erase: vi.fn(async () => ({ status: 'failed' as const })),
     useOlderCopy: vi.fn(async () => ({ status: 'failed' as const })),
     exportCopies: async () => ({ database: null, olderCopy: null, erasedMark: false }),
+    restore: vi.fn(async () => ({ status: 'failed' as const })),
+    loadProgress: async () => ({ status: 'unavailable' as const, progress: NEW_PROGRESS }),
+    saveProgress: vi.fn(async () => ({ status: 'failed' as const })),
     watch: () => () => {},
   })
 

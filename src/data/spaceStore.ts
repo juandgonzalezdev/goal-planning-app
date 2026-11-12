@@ -1,4 +1,6 @@
 import type { FinanceData } from '../domain/finance/types'
+import type { GuideProgress } from '../features/home/gettingStarted'
+import type { GuideUnreadable } from './guideProgress'
 
 /**
  * What any store of the own space must do: the browser's database today
@@ -12,7 +14,9 @@ import type { FinanceData } from '../domain/finance/types'
  * - All or nothing: a save leaves the old revision whole or the new one
  *   whole.
  * - Everything read is checked (`readFinanceData`) before it is used.
- * - The revision lives outside the records: backups stay plain FinanceData.
+ * - The revision lives outside the records: a backup holds plain FinanceData.
+ * - Getting Started progress is kept apart from the records, with its own
+ *   revision (GS-6A.1): changing it never changes the space's revision.
  * - Data that cannot be read is never overwritten without the user's choice.
  */
 
@@ -73,6 +77,45 @@ export type EraseResult =
  * no longer read or save anything until it is reloaded.
  */
 export type StoreChange = { kind: 'saved'; spaceId: string; revision: number } | { kind: 'erased' } | { kind: 'older-copy-changed' } | { kind: 'closed' }
+  /** GS-6A.1: Getting Started progress of that space was saved (its own revision). The space's records did not change. */
+  | { kind: 'progress-saved'; spaceId: string; revision: number }
+
+/**
+ * Getting Started progress of one space, as `loadProgress` finds it (GS-6A.1).
+ * `revision` is the progress's own revision, never the space's: 0 means nothing
+ * is saved for it yet (the progress shown is then a new guide, or the one
+ * brought from localStorage when that could not be saved yet).
+ */
+export type ProgressLoad =
+  | { status: 'loaded'; progress: GuideProgress; revision: number }
+  /**
+   * Something is saved but cannot be used safely (damaged, or written by a newer version of the app).
+   * It is kept as it is and never written over by a normal change; `progress` is a new guide, not finished.
+   */
+  | { status: 'locked'; progress: GuideProgress; revision: number; reason: GuideUnreadable }
+  /** This browser cannot use its database: `progress` is what localStorage had for this space, to show only. */
+  | { status: 'unavailable'; progress: GuideProgress }
+  /** The space is not the one this device opens (erased or replaced elsewhere), or the database failed. Nothing was written. */
+  | { status: 'failed' }
+
+export type ProgressSaveResult =
+  /** The whole change is stored: the transaction finished. */
+  | { status: 'saved'; revision: number }
+  /**
+   * Something else changed it first (another tab, a restore), or the space is no longer the one open.
+   * Nothing was written. `latest`: what is saved now, when it can be read.
+   */
+  | { status: 'conflict'; latest: { progress: GuideProgress; revision: number } | null }
+  /** The store refused or failed, or what is saved cannot be written over safely. Nothing was written. */
+  | { status: 'failed' }
+
+/**
+ * What Restore Backup does with Getting Started progress (GS-6A.1, D-GS6-18):
+ * - `replace`: the backup has progress; it becomes the space's progress.
+ * - `keep`: an older backup without progress. The space keeps its own valid
+ *   progress; with none, it gets a guide that is not finished. Never invented.
+ */
+export type GuideRestore = { kind: 'replace'; progress: GuideProgress } | { kind: 'keep' }
 
 /**
  * Every copy this device keeps, exactly as it is stored, for "Download Both Copies": the current
@@ -88,11 +131,15 @@ export interface RecoveryCopies {
     lastRevision: unknown
     spaces: { id: string; stored: unknown }[]
     quarantine: { key: string; stored: unknown }[]
+    /** GS-6A.1: every Getting Started progress record, as stored. */
+    guideProgress?: { key: string; stored: unknown }[]
   } | null
   databaseError?: string
   /** The older copy in localStorage, as text, untouched (null: none). */
   olderCopy: string | null
   olderCopyError?: string
+  /** GS-6A.1: the Getting Started progress versions before it kept in localStorage, as text, untouched (null: none). */
+  olderGuideProgress?: string | null
   /** This device has the mark that the own space was erased. */
   erasedMark: boolean
 }
@@ -116,6 +163,25 @@ export interface SpaceStore {
   useOlderCopy(): Promise<SaveResult>
   /** Reads every copy as it is stored, in a read-only transaction: nothing is ever changed. */
   exportCopies(): Promise<RecoveryCopies>
+  /**
+   * Restore Backup: replaces the space's records and its Getting Started
+   * progress in ONE transaction, only if the space is still at
+   * `baseRevision`. Both are written or neither is.
+   */
+  restore(data: FinanceData, baseRevision: number, guide: GuideRestore): Promise<SaveResult>
+  /**
+   * Getting Started progress of the space open now (GS-6A.1). The first time,
+   * when nothing is saved yet, the progress versions before it kept in
+   * localStorage for this space is brought in, only if nothing was saved
+   * meanwhile (another tab, a restore). Safe to repeat.
+   */
+  loadProgress(spaceId: string): Promise<ProgressLoad>
+  /**
+   * Saves Getting Started progress only if what is saved is still at
+   * `baseRevision` (0: nothing saved yet). It never changes the space's
+   * records or their revision.
+   */
+  saveProgress(spaceId: string, progress: GuideProgress, baseRevision: number): Promise<ProgressSaveResult>
   /** Calls `onChange` when another tab changes the space. Returns a function that stops it. */
   watch(onChange: (change: StoreChange) => void): () => void
 }

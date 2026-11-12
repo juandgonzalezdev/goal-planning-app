@@ -25,8 +25,10 @@ type Props = StageProps & {
   onSkip: (step: GuideStep) => void
   /** "I don't have regular income" / "I don't have any debts": the stage is complete, nothing is added. */
   onNone: (step: NoneStep) => void
-  /** Done on the last stage: the guide ends (GS-1 `finished`), and the screen closes. */
+  /** Done on the last stage: the guide ends (GS-1 `finished`); the app closes the screen once that is saved (GS-6A.1). */
   onFinish: () => void
+  /** Why the last Getting Started change was not saved (GS-6A.1). Nothing is shown as done until it is. */
+  notice?: string | null
   /** Close: back to where the guide was opened from, with the progress kept. */
   onClose: () => void
   /** Create Emergency Fund from the Goals stage: the same save as the Emergency Fund screen. */
@@ -43,7 +45,7 @@ type Props = StageProps & {
  * records, a "none" answer or Done on Finish do (GS-1).
  */
 export function GuideScreen(props: Props) {
-  const { data, progress, stage, isDemo, onStage, onSkip, onNone, onFinish, onClose } = props
+  const { data, progress, stage, isDemo, onStage, onSkip, onNone, onFinish, onClose, notice = null } = props
   const states = stepStates(data, progress)
   const index = GUIDE_STEPS.indexOf(stage)
   const state = states[stage]
@@ -96,6 +98,7 @@ export function GuideScreen(props: Props) {
         <StageContent {...props} states={states} />
       </section>
 
+      {notice && <p className="field-error" role="alert">{notice}</p>}
       <div className="gs-footer">
         {back && <button type="button" className="button-small gs-back" onClick={() => onStage(back)}><Icon name="arrowLeft" size={16} /> Back</button>}
         <span className="gs-forward">

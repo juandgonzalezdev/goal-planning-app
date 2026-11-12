@@ -7,7 +7,7 @@ import type { SpaceStore } from './data/spaceStore'
 import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage, storedKeys } from './test/memoryStorage'
-import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData } from './test/space'
+import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData, storedProgress } from './test/space'
 
 freshDatabaseForEachTest()
 
@@ -30,7 +30,8 @@ const stageStates = () => stages().getAllByRole('button').map(item => (item.getA
 const title = () => screen.getByRole('heading', { level: 1 }).textContent
 const question = () => screen.queryByRole('alertdialog')
 const shownScreen = () => document.querySelector('[data-screen]')?.getAttribute('data-screen')
-const savedProgress = (storage: Storage) => JSON.parse(storage.getItem(PROGRESS_KEY) ?? 'null')?.progress
+// GS-6A.1: the progress is saved in the database, with its own revision (no longer in localStorage).
+const savedProgress = () => storedProgress()
 const main = () => text(screen.getByRole('main'))
 const listItems = (name: string) => within(screen.getByRole('list', { name })).getAllByRole('listitem').map(item => text(item))
 const moves = () => act(async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setTimeout(resolve, 5)) })
@@ -316,7 +317,9 @@ describe('Moving between stages with Goals', () => {
     expect(title()).toBe('Goals')
     await fire.click(button('Skip for now'))
     expect(title()).toBe('Finish')
-    expect(savedProgress(storage)).toMatchObject({ skipped: ['accounts', 'income', 'debts', 'bills', 'goals'], none: [] })
+    expect(await savedProgress()).toMatchObject({ skipped: ['accounts', 'income', 'debts', 'bills', 'goals'], none: [] })
+    // GS-6A.1: the own space no longer writes progress to localStorage.
+    expect(storage.getItem(PROGRESS_KEY)).toBeNull()
     expect(listItems('Your setup')[4]).toBe('GoalsSkipped')
     expect((await storedData())!.goals).toEqual([])
     // Skipped, then done: the records decide, with nothing else saved.

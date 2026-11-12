@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { guideKept, type GuideOutcome } from '../../app/useSpace'
+import { progressNotSaved } from '../guide/guideText'
 import { Icon } from '../../components/Icon'
 import { GUIDE, GUIDE_CHAPTERS, type GuideChapter } from './guideContent'
 
@@ -8,7 +10,8 @@ type Props = {
   chapter: GuideChapter | null
   /** Whether Getting Started shows on Home now. */
   guideOnHome: boolean
-  onShowGuide: () => void
+  /** Shows Getting Started on Home again; the answer says whether that was saved (GS-6A.1). */
+  onShowGuide: () => Promise<GuideOutcome>
   /** Opens the Getting Started screens (GS-3), on the stage to do now. */
   onOpenSetup: () => void
   onBack: () => void
@@ -23,6 +26,7 @@ type Props = {
 export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSetup, onBack }: Props) {
   const [open, setOpen] = useState<ReadonlySet<GuideChapter>>(() => new Set(chapter ? [chapter] : []))
   const [shown, setShown] = useState(false)
+  const [notSaved, setNotSaved] = useState('')
   const toggle = (id: GuideChapter) => {
     const next = new Set(open)
     if (next.has(id)) next.delete(id)
@@ -41,7 +45,10 @@ export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSe
         <button type="button" className="button-secondary align-start" onClick={onOpenSetup}>Open Getting Started</button>
         {guideOnHome
           ? <p className="field-help">{shown ? 'Getting Started is on Home again.' : 'Getting Started is on Home, at the top.'}</p>
-          : <button type="button" className="button-secondary align-start" onClick={() => { onShowGuide(); setShown(true) }}>Show Getting Started on Home</button>}
+          : <button type="button" className="button-secondary align-start" onClick={() => void onShowGuide().then(outcome => {
+            if (guideKept(outcome)) { setShown(true); setNotSaved('') } else setNotSaved(outcome === 'stale' ? '' : progressNotSaved(outcome))
+          })}>Show Getting Started on Home</button>}
+        {notSaved && <p className="field-error" role="alert">{notSaved}</p>}
       </section>
 
       <section className="block help-chapters" aria-label="Guide">

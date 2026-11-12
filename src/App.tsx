@@ -2,7 +2,7 @@ import { BillCelebrationContext, createBillCelebrationChannel } from './app/writ
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useId } from 'react'
 import { isSpaceScreen, isTab, shownScreen, useNavigation, type Screen, type Tab } from './app/navigation'
 import { newId } from './app/newId'
-import { alexDemo, browserSpaceStore, useSpace, type DemoFixture, type EraseOutcome } from './app/useSpace'
+import { alexDemo, browserSpaceStore, guideKept, useSpace, type DemoFixture, type EraseOutcome, type GuideOutcome } from './app/useSpace'
 import { WriteStatusContext } from './app/writeStatus'
 import { describeTyped, LeaveGuardContext, UnsavedChangesContext, useUnsavedRegistry, type LeaveGuard, type UnsavedForm } from './app/unsavedChanges'
 import { ConfirmDiscard, LeaveDialog, UnsavedForms } from './components/UnsavedForms'
@@ -16,7 +16,7 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { DemoBanner } from './components/DemoBanner'
 import { browserStorage } from './data/localStore'
 import type { SpaceStore } from './data/spaceStore'
-import { readHomeRings, writeHomeRings, clearGuideProgress, readGuideProgress, writeGuideProgress, readDeviceLanguage, readLanguagePreview, writeDeviceLanguage } from './data/uiPrefs'
+import { readHomeRings, writeHomeRings, clearGuideProgress, readDeviceLanguage, readLanguagePreview, writeDeviceLanguage } from './data/uiPrefs'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
 import { createSpaceData } from './domain/finance/space'
@@ -39,7 +39,8 @@ import type { GuideChapter } from './features/help/guideContent'
 import { GuideContext } from './features/help/tips'
 import { GettingStartedCard } from './features/home/GettingStartedCard'
 import { GuideScreen } from './features/guide/GuideScreen'
-import { declareNone, DEMO_PROGRESS, finishGuide, guideShown, nextStep, openingStep, readProgress, resumeGuide, skipStep, visitStep, type GuideProgress, type GuideStep, type NoneStep } from './features/home/gettingStarted'
+import { declareNone, DEMO_PROGRESS, finishGuide, guideShown, NEW_PROGRESS, nextStep, openingStep, resumeGuide, skipStep, visitStep, type GuideProgress, type GuideStep, type NoneStep } from './features/home/gettingStarted'
+import { progressNotSaved } from './features/guide/guideText'
 import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/history/historyView'
 import { NO_FILTER } from './domain/finance/history'
 import { monthIncome } from './domain/finance/income'
@@ -72,6 +73,8 @@ const MODE_NAMES = { individual: 'mode.individual', duo: 'mode.duo', group: 'mod
 
 /** Moving to another screen closes every form on screen (a kept draft and a form kept after a problem stay). */
 const ANY_FORM = () => true
+/** The own space's Getting Started progress before it is read: off Home, never shown as finished. */
+const UNKNOWN_GUIDE: GuideProgress = { ...NEW_PROGRESS, hidden: true }
 
 /**
  * A change inside the app that would close forms with changes, waiting for an answer to "Leave without saving?"
@@ -208,9 +211,10 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
   // How Home is arranged. The own space's layout is remembered on this device for that space;
   // the demo's lasts while the demo is open and goes back to the first layout with Reset Demo.
   const [demoLayout, setDemoLayout] = useState<HomeLayout>(DEFAULT_LAYOUT)
-  // Getting Started: the own space's progress is remembered on this device for that space; the demo's lasts while it is open.
+  // Getting Started: the own space's progress is saved in the store with the space (GS-6A.1, `space.guide`); the demo's lasts while it is open.
   const [demoGuide, setDemoGuide] = useState<GuideProgress>(DEMO_PROGRESS)
-  const [ownGuide, setOwnGuide] = useState<{ spaceId: string; progress: GuideProgress } | null>(null)
+  // Why the last Getting Started change was not saved (GS-6A.1), shown where it was made; cleared by the next one that is.
+  const [guideNote, setGuideNote] = useState<string | null>(null)
   // The Getting Started stage on screen (GS-3). In memory only: the progress keeps the last stage visited (`last`).
   const [guideStage, setGuideStage] = useState<GuideStep | null>(null)
   // The chapter Help & Guide opens on ("Read more in the guide").
@@ -555,14 +559,21 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     changeHomeLayout({ ...layout, celebratedBillMonths: [...(layout.celebratedBillMonths ?? []), event.month] })
     return true
   }))
+  // The own space's progress as the store confirmed it. Not read yet (another space just opened in another tab): off Home until it is.
   const guideProgress = !open ? DEMO_PROGRESS
     : open.kind === 'demo' ? demoGuide
-      : ownGuide?.spaceId === open.data.space.id ? ownGuide.progress : readProgress(readGuideProgress(storage, open.data.space.id))
-  const changeGuide = (progress: GuideProgress) => {
-    if (!open || progress === guideProgress) return
-    if (open.kind === 'demo') { setDemoGuide(progress); return }
-    setOwnGuide({ spaceId: open.data.space.id, progress })
-    writeGuideProgress(storage, open.data.space.id, progress)
+      : space.guide?.spaceId === open.data.space.id ? space.guide.progress : UNKNOWN_GUIDE
+  /**
+   * Changes Getting Started progress (GS-6A.1). The own space's change shows only once the store saved it; the answer
+   * says what happened, and one not saved is said on screen. The demo keeps it in memory.
+   */
+  const changeGuide = async (change: (progress: GuideProgress) => GuideProgress): Promise<GuideOutcome> => {
+    if (!open) return 'not-saved'
+    if (open.kind === 'demo') { setDemoGuide(change); return 'demo' }
+    const outcome = await space.changeGuide(change)
+    if (guideKept(outcome)) setGuideNote(null)
+    else if (outcome !== 'stale') setGuideNote(progressNotSaved(outcome))
+    return outcome
   }
   /** Help & Guide, on a chapter when given (the keyboard goes to its title). */
   const openGuide = (chapter?: GuideChapter) => confirmLeave(ANY_FORM, () => {
@@ -728,7 +739,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    */
   const erase = async (): Promise<EraseOutcome> => {
     const outcome = await space.eraseOwnSpace()
-    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); clearGuideProgress(storage); setOwnGuide(null); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
+    if (outcome === 'erased' || outcome === 'partly-erased') { setSetupDraft(EMPTY_SETUP); resetGoals(); clearHomeLayout(storage); clearGuideProgress(storage); setGuideNote(null); setOwnLayout(null); setOwnShowAllBills(null); setOwnMoneyView(null); setOwnGoalsFilter(null); setOwnHistoryView(null); setChosenMonth(null); replace('welcome') }
     return outcome
   }
   // Each opens another screen; the open… versions ask first when forms would close, the show… ones are the move itself.
@@ -833,31 +844,36 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
    * Only the stage visited is remembered (`last`); nothing is completed by moving.
    */
   const shownStage: GuideStep = guideStage ?? (open ? openingStep(open.data, guideProgress) : 'accounts')
+  // GS-6A.1: moving to a stage opens it at once and remembers it (`last`) in the background; if that is not saved, the
+  // screen says so. Skip for now and "none" are answers: the next stage opens only once the answer is saved, so an
+  // answer that was not saved is never shown as given, and it can be given again.
   const openSetup = () => confirmLeave(ANY_FORM, () => {
     if (!open) return
     const stage = openingStep(open.data, guideProgress)
     setGuideStage(stage)
-    changeGuide(visitStep(guideProgress, stage))
+    setGuideNote(null)
+    void changeGuide(progress => visitStep(progress, stage))
     navigation.go('guide')
   })
-  const toStage = (stage: GuideStep) => confirmLeave(ANY_FORM, () => { setGuideStage(stage); changeGuide(visitStep(guideProgress, stage)) })
-  const skipStage = (stage: GuideStep) => confirmLeave(ANY_FORM, () => {
+  const toStage = (stage: GuideStep) => confirmLeave(ANY_FORM, () => { setGuideStage(stage); void changeGuide(progress => visitStep(progress, stage)) })
+  const answerStage = (stage: GuideStep, answer: (progress: GuideProgress) => GuideProgress) => confirmLeave(ANY_FORM, () => {
     const next = nextStep(stage) ?? stage
-    setGuideStage(next)
-    changeGuide(visitStep(skipStep(guideProgress, stage), next))
+    void changeGuide(progress => visitStep(answer(progress), next)).then(outcome => { if (guideKept(outcome)) setGuideStage(next) })
   })
-  const noneStage = (stage: NoneStep) => confirmLeave(ANY_FORM, () => {
-    const next = nextStep(stage) ?? stage
-    setGuideStage(next)
-    changeGuide(visitStep(declareNone(guideProgress, stage), next))
-  })
+  const skipStage = (stage: GuideStep) => answerStage(stage, progress => skipStep(progress, stage))
+  const noneStage = (stage: NoneStep) => answerStage(stage, progress => declareNone(progress, stage))
   /** Close (and Done): back to where the guide was opened from; opened as the first step (a reload), Home. */
   const leaveSetup = () => confirmLeave(ANY_FORM, discarded => {
     if (navigation.current().idx === 0) navigation.replace('home')
     else if (discarded) navigation.backAllowed()
     else navigation.back()
   }, true)
-  const finishSetupGuide = () => { changeGuide(finishGuide(guideProgress)); leaveSetup() }
+  /** Done on Finish (D-GS6-19): the screen closes only once the store confirmed the guide as finished; otherwise it says why. */
+  const finishSetupGuide = async (): Promise<GuideOutcome> => {
+    const outcome = await changeGuide(finishGuide)
+    if (guideKept(outcome)) leaveSetup()
+    return outcome
+  }
   /** The form + Add opened was cancelled: back to Home, where it was. Nothing was typed that Cancel did not already drop. */
   const cancelAdd = () => navigation.backAllowed()
   /** History opens a bill, a goal or an account: Back finds History scrolled where it was, with the focus on that record. */
@@ -1096,7 +1112,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAddBill={() => addFrom('bill')}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 guide={guideShown(open.data, guideProgress) && <GettingStartedCard data={open.data} progress={guideProgress} isDemo={open.kind === 'demo'}
-                  onOpen={openSetup} onHide={() => changeGuide({ ...guideProgress, hidden: true })} />} />
+                  onOpen={openSetup} notice={guideNote} onHide={() => void changeGuide(progress => ({ ...progress, hidden: true }))} />} />
             </AmountVisibilityProvider>
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
@@ -1167,19 +1183,19 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('help') && <div className="screen" data-screen="help">
             <HelpScreen key={guideChapter ?? 'all'} isDemo={open.kind === 'demo'} chapter={guideChapter} guideOnHome={guideShown(open.data, guideProgress)}
-              onShowGuide={() => changeGuide(resumeGuide(guideProgress))} onOpenSetup={openSetup} onBack={back} />
+              onShowGuide={() => changeGuide(resumeGuide)} onOpenSetup={openSetup} onBack={back} />
           </div>}
           {shows('guide') && <div className="screen" data-screen="guide">
             {/* Hide amounts covers the stages' balances and income, as in Bills and History (the same state, the header's eye). */}
             <AmountVisibilityProvider value={visibility}>
             <GuideScreen data={open.data} progress={guideProgress} stage={shownStage} isDemo={open.kind === 'demo'} today={space.today} owner={newGoalOwner} newId={newId} onChange={space.update}
-              onStage={toStage} onSkip={skipStage} onNone={noneStage} onFinish={finishSetupGuide} onClose={leaveSetup}
+              onStage={toStage} onSkip={skipStage} onNone={noneStage} onFinish={finishSetupGuide} onClose={leaveSetup} notice={guideNote}
               onSaveEmergency={saveEmergency} />
             </AmountVisibilityProvider>
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen showRings={showRings} onShowRingsChange={shown => { setShowRings(shown); writeHomeRings(storage, shown) }} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}
-              onReplace={space.replaceData} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onOpenHelp={() => openGuide()} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
+              onReplace={(backup, base) => space.replaceData(backup.data, base, backup.guide)} onBackup={space.backupText} onDownloadCopies={space.problem?.kind === 'read-only' ? downloadCopies : undefined} onBack={back} onOpenHelp={() => openGuide()} onExitDemo={() => exitDemo('exit-demo-settings')} onResetDemo={resetDemo} onErase={erase}
               onExploreDemo={requestDemo} demoQuestion={confirming === 'open-demo' ? <>
                 <UnsavedForms forms={unsaved.forms} typedText={unsaved.typedText} />
                 <ConfirmDiscard question={t('demo.openQuestion')} confirm={t('demo.openConfirm')} onConfirm={openDemoDiscarding} onCancel={() => setConfirming(null)} />

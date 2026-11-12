@@ -82,6 +82,37 @@ export async function storedSpace(): Promise<StoredSpace | null> {
   }
 }
 
+/**
+ * GS-6A.1: Getting Started progress of the own space as the database keeps it now: the record
+ * (`{ format, spaceId, revision, savedAt, progress }`) in `meta`, or null when nothing is saved.
+ */
+export async function storedGuideRecord(): Promise<Record<string, unknown> | null> {
+  const factory = (globalThis as { indexedDB: IDBFactory }).indexedDB
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = factory.open(DATABASE_NAME)
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+  try {
+    if (!db.objectStoreNames.contains('meta')) return null
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(['meta'], 'readonly')
+      const current = tx.objectStore('meta').get('current-space')
+      current.onsuccess = () => {
+        if (typeof current.result !== 'string') { resolve(null); return }
+        const record = tx.objectStore('meta').get(`guide-progress:${current.result}`)
+        record.onsuccess = () => resolve((record.result as Record<string, unknown> | undefined) ?? null)
+      }
+      tx.onerror = () => reject(tx.error)
+    })
+  } finally {
+    db.close()
+  }
+}
+
+/** The progress in that record (undefined: nothing saved). */
+export const storedProgress = async () => (await storedGuideRecord())?.progress as Record<string, unknown> | undefined
+
 /** The records of the own space as saved now (null: none). */
 export async function storedData(): Promise<FinanceData | null> {
   return (await storedSpace())?.data ?? null
@@ -105,6 +136,9 @@ export function heldStore(inner: SpaceStore = browserSpaceStore(memoryStorage())
     load: () => later('load', () => inner.load()),
     create: data => later('create', () => inner.create(data)),
     save: (data, base) => later('save', () => inner.save(data, base)),
+    restore: (data, base, guide) => later('restore', () => inner.restore(data, base, guide)),
+    loadProgress: spaceId => later('loadProgress', () => inner.loadProgress(spaceId)),
+    saveProgress: (spaceId, progress, base) => later('saveProgress', () => inner.saveProgress(spaceId, progress, base)),
     erase: () => later('erase', () => inner.erase()),
     useOlderCopy: () => later('useOlderCopy', () => inner.useOlderCopy()),
     exportCopies: () => inner.exportCopies(),

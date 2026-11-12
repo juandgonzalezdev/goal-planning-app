@@ -8,7 +8,7 @@ import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage, storedKeys } from './test/memoryStorage'
 import { openMoneyBlock } from './test/money'
-import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData } from './test/space'
+import { fire, freshDatabaseForEachTest, heldStore, refuseWrites, settle, storedData, storedProgress } from './test/space'
 
 freshDatabaseForEachTest()
 
@@ -31,7 +31,8 @@ const stageStates = () => stages().getAllByRole('button').map(item => (item.getA
 const title = () => screen.getByRole('heading', { level: 1 }).textContent
 const question = () => screen.queryByRole('alertdialog')
 const shownScreen = () => document.querySelector('[data-screen]')?.getAttribute('data-screen')
-const savedProgress = (storage: Storage) => JSON.parse(storage.getItem(PROGRESS_KEY) ?? 'null')?.progress
+// GS-6A.1: the progress is saved in the database, with its own revision (no longer in localStorage).
+const savedProgress = () => storedProgress()
 const main = () => text(screen.getByRole('main'))
 const listItems = (name: string) => within(screen.getByRole('list', { name })).getAllByRole('listitem').map(item => text(item))
 const moves = () => act(async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setTimeout(resolve, 5)) })
@@ -159,12 +160,14 @@ describe('Debts stage', () => {
     const storage = await ownSpace()
     await openStage('Debts')
     await fire.click(button('Skip for now'))
-    expect(savedProgress(storage)).toMatchObject({ skipped: ['accounts', 'income', 'debts'], none: [] })
+    expect(await savedProgress()).toMatchObject({ skipped: ['accounts', 'income', 'debts'], none: [] })
+    // GS-6A.1: the own space no longer writes progress to localStorage.
+    expect(storage.getItem(PROGRESS_KEY)).toBeNull()
     expect(stageStates()[2]).toBe('Debts: Skipped')
     await fire.click(stage('Debts'))
     await fire.click(button('I don’t have any debts'))
     expect(title()).toBe('Bills & Subscriptions')
-    expect(savedProgress(storage)).toMatchObject({ skipped: ['accounts', 'income'], none: ['debts'] })
+    expect(await savedProgress()).toMatchObject({ skipped: ['accounts', 'income'], none: ['debts'] })
     expect(stageStates()[2]).toBe('Debts: Completed (none)')
     expect((await storedData())!.debts).toEqual([])
     // Kept after Close and a new start.
@@ -181,7 +184,7 @@ describe('Debts stage', () => {
     await fire.click(button('Add'))
     expect(stageStates()[2]).toBe('Debts: Completed, current')
     expect((await storedData())!.debts.map(debt => debt.name)).toEqual(['Family loan'])
-    expect(savedProgress(storage).none).toEqual(['debts'])
+    expect((await savedProgress())?.none).toEqual(['debts'])
   })
 
   it('in a Duo, a new debt is shared, as in Money', async () => {

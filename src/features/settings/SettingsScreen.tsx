@@ -12,6 +12,7 @@ import { LanguageSelect, PrivacyFacts, ThemeSelect } from '../welcome/WelcomeSet
 import { HelpTip } from '../../components/HelpTip'
 import type { YearMonth } from '../../domain/calendar'
 import type { CalendarDate } from '../../domain/goalTime'
+import type { Backup } from '../../data/exchange'
 import { ExchangeSection } from './ExchangeSection'
 import { ReportSection } from './ReportSection'
 
@@ -27,7 +28,9 @@ type Props = {
   month: YearMonth
   today: CalendarDate
   /** Restore Backup: replaces the whole space (asks first). */
-  onReplace: (data: FinanceData, base?: number) => Promise<SaveOutcome>
+  onReplace: (backup: Backup, base?: number) => Promise<SaveOutcome>
+  /** The backup file with Getting Started progress as saved (GS-6A.1). */
+  onBackup?: () => Promise<{ text: string; guideLeftOut: boolean }>
   /** While the space can only be shown: "Download Both Copies". */
   onDownloadCopies?: () => Promise<boolean>
   onBack: () => void
@@ -56,7 +59,7 @@ const ERASE_TEXT: Partial<Record<EraseOutcome, MessageKey>> = {
   'busy': 'erase.busyLast',
 }
 
-export function SettingsScreen({ showRings = false, onShowRingsChange, data, isDemo, months, month, today, onReplace, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null, language = 'en', onLanguageChange, languagePreview = false }: Props) {
+export function SettingsScreen({ showRings = false, onShowRingsChange, data, isDemo, months, month, today, onReplace, onBackup, onDownloadCopies, onBack, onOpenHelp, onThemeChange, onErase, onExitDemo, onResetDemo, canErase = true, onExploreDemo, demoQuestion = null, language = 'en', onLanguageChange, languagePreview = false }: Props) {
   const { t } = useT()
   const [languageText, setLanguageText] = useState('')
   const changeLanguage = async (next: Language) => {
@@ -154,7 +157,7 @@ export function SettingsScreen({ showRings = false, onShowRingsChange, data, isD
       <section className="block" id="settings-reports" aria-labelledby="settings-reports-title" tabIndex={-1}>
         <h2 id="settings-reports-title" className="section-title">{t('settings.reports')}</h2>
         <ReportSection data={data} isDemo={isDemo} months={months} month={month} today={today} />
-        <ExchangeSection data={data} isDemo={isDemo} onReplace={onReplace} onDownloadCopies={onDownloadCopies} />
+        <ExchangeSection data={data} isDemo={isDemo} onReplace={onReplace} onBackup={onBackup} onDownloadCopies={onDownloadCopies} />
         <div className="help-tips"><HelpTip topic="backup" label /></div>
       </section>
 

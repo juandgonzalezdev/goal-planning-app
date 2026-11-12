@@ -7,6 +7,7 @@ import { importFinanceData } from './data/exchange'
 import { createIndexedDbStore } from './data/indexedDbStore'
 import { recoveryFile } from './data/recovery'
 import type { SpaceStore, StoreChange } from './data/spaceStore'
+import { NEW_PROGRESS } from './features/home/gettingStarted'
 import { createSpaceData } from './domain/finance/space'
 import type { FinanceData } from './domain/finance/types'
 import { memoryStorage } from './test/memoryStorage'
@@ -360,6 +361,9 @@ describe('read-only', () => {
       load: async () => ({ status: 'read-only', space: { data: createAlexDemo(), revision: 0 }, mayBeOutdated: true }),
       create, save, erase, useOlderCopy,
       exportCopies: async () => ({ database: null, olderCopy: null, erasedMark: false }),
+      restore: vi.fn(async () => ({ status: 'failed' as const })),
+      loadProgress: async () => ({ status: 'unavailable' as const, progress: NEW_PROGRESS }),
+      saveProgress: vi.fn(async () => ({ status: 'failed' as const })),
       watch: () => () => {},
     }
     await openTab(store)
