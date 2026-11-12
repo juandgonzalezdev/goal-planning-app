@@ -191,7 +191,7 @@ describe('Alex demo: Home', () => {
     await openAlex()
     const savings = text(screen.getByRole('group', { name: 'Savings by purpose' }))
     for (const part of ['Trip to Japan1800,00 zł', 'New Bike200,00 zł', 'Emergency Fund900,00 zł', 'Savings2900,00 zł']) expect(savings).toContain(part)
-    expect(savings).not.toContain('Christmas Gifts')
+    expect(savings).toContain('Christmas Gifts')
   })
 
   it('shows goals with and without a target, and the emergency fund cover', async () => {

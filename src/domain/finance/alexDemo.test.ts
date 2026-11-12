@@ -198,7 +198,7 @@ describe('Alex year: acceptance', () => {
     }
     const end = savingsSummary(data)
     expect(end).toMatchObject({ total: 290_000, assigned: 290_000, unassigned: 0 })
-    expect(end.purposes.map(p => [p.goal.id, p.saved])).toEqual([['trip-to-japan', 180_000], ['bike', 20_000], ['emergency-fund', 90_000]])
+    expect(end.purposes.map(p => [p.goal.id, p.saved])).toEqual([['trip-to-japan', 180_000], ['bike', 20_000], ['christmas-gifts', 0], ['emergency-fund', 90_000]])
     // A goal with no target counts what it holds, with no percentage.
     expect(goalProgress(data.goals.find(g => g.id === 'bike')!, data.goalMovements, TODAY)).toMatchObject({ saved: 20_000, hasTarget: false, percent: 0 })
   })

@@ -28,7 +28,7 @@ export interface SavingsSummary {
   missingBalanceCount: number
   /** null when there is no savings account, or a balance is missing: then Savings is not known. */
   total: MoneyAmount | null
-  /** Active goals first, in the order they were added, then the emergency fund. */
+  /** All goals, active or archived, in insertion order, then the emergency fund. */
   purposes: SavingsPurpose[]
   /** What the purposes hold, together. */
   assigned: MoneyAmount
@@ -49,8 +49,8 @@ export function savingsSummary(data: Pick<FinanceData, 'moneyAccounts' | 'balanc
   const knownTotal = sumMinor(accounts.flatMap(item => (item.balance === null ? [] : [item.balance])))
   const missingBalanceCount = accounts.filter(item => item.balance === null).length
   const total = accounts.length > 0 && missingBalanceCount === 0 ? knownTotal : null
-  const active = data.goals.filter(goal => goal.status === 'active' && (asOf === undefined || goal.createdOn <= asOf))
-  const ordered = [...active.filter(goal => goal.kind === 'goal'), ...active.filter(goal => goal.kind === 'emergency')]
+  const reserved = data.goals.filter(goal => asOf === undefined || goal.createdOn <= asOf)
+  const ordered = [...reserved.filter(goal => goal.kind === 'goal'), ...reserved.filter(goal => goal.kind === 'emergency')]
   const purposes = ordered.map(goal => ({ goal, saved: goalSaved(goal, data.goalMovements, asOf) }))
   const assigned = sumMinor(purposes.map(purpose => purpose.saved))
   return { accounts, knownTotal, missingBalanceCount, total, purposes, assigned, unassigned: total === null ? null : total - assigned }
