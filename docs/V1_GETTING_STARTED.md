@@ -119,9 +119,8 @@ se deriva de los registros y del progreso v2 de GS-1.
 - La etapa en pantalla vive en memoria (`guideStage` en `App.tsx`); al cambiar de etapa
   se guarda `last` con `visitStep`. Al volver se abre `openingStep`: la última etapa
   visitada si sigue pendiente; si no, la primera pendiente.
-- **Goals** (provisional hasta GS-5) muestra lo que ya hay y abre la pantalla existente
-  (`Add a Goal` → `new-goal`). Su Back/Cancel vuelve a la etapa. Desde GS-4, Debts y
-  Bills tienen su formulario dentro de la etapa (ver abajo).
+- Desde GS-4, Debts y Bills tienen su formulario dentro de la etapa, y desde GS-5 también
+  Goals (ver abajo). En GS-3, Goals abría la pantalla `new-goal`; ya no.
 
 ### D-GS9 (implementada): regla de acceso elegida
 
@@ -249,25 +248,110 @@ Las listas de Debts y Bills usan `useAllAmounts` y `Amount.tsx` (GS-3). `Unknown
 - D-D2-INTEREST sigue pendiente: el interés es obligatorio, como antes.
 - El formulario de deuda no lleva el foco al primer error (ya era así en Money).
 
+## GS-5: Goals y Emergency Fund dentro de la guía (implementado)
+
+La etapa 5 aloja los formularios que ya existían, como las demás etapas. No hay un segundo
+formulario de metas, ni un segundo servicio de creación, ni un segundo Emergency Fund.
+
+| Pieza | Archivo |
+| --- | --- |
+| Etapa Goals: pregunta `What are you saving for?`, lista `Your goals` (Emergency Fund primero, luego las metas activas), `Add a Goal` / `Add Another Goal`, `Start an Emergency Fund` | `features/guide/GoalsStage.tsx` |
+| Formulario New Goal y su paso `Check Your Goal`; `inline` quita el enlace Back propio, usa h2 y añade Cancel en la confirmación | `NewGoalScreen` en `features/goals/NewGoalScreen.tsx` (campos `GoalFormFields`, reglas `readGoalDraft`) |
+| Guardado de Create Goal, compartido por la pantalla New Goal y la etapa | `saveNewGoal` en `features/goals/goalDraft.ts` (llama a `createGoal` del dominio, como antes `App.tsx`) |
+| Borrador del Emergency Fund; `inline` quita el Back propio, baja los títulos (h2/h3) y entrega el fondo guardado a la etapa (`onSaved`) | `EmergencyScreen` en `features/goals/EmergencyScreen.tsx` |
+| Guardado del Emergency Fund (también reinicia «Maybe Later» de Home, como antes) | `saveEmergency` en `App.tsx`, el mismo para la pantalla `emergency` y la etapa |
+
+### Metas con fecha y sin fecha
+
+- Con fecha (`With Date`): objetivo obligatorio y fecha posterior a hoy, como en New Goal. La
+  confirmación muestra el ritmo sugerido (`GoalPace`), sin compromiso.
+- Sin fecha (`Flexible`): se guarda `deadline: null`; no se pide ni se inventa una fecha. La
+  lista dice `Flexible · No deadline`. El objetivo es opcional (`No target`).
+- Toda meta nueva empieza en 0 (`openingBalance: 0`, sin movimientos). No cambian cálculos,
+  ritmo, progreso, fechas, historial ni esquema.
+
+### Emergency Fund (D-GS2)
+
+- Es un registro `Goal` con `kind: 'emergency'` (uno activo como máximo, `emergencyFund`).
+  No es una meta ordinaria y la etapa no crea ninguna junto a él.
+- Cuenta para completar Goals por sí solo (`stepDone`, sin cambios desde GS-1). Si no existe,
+  la etapa no se completa y no se crea nada.
+- Se lista una vez, como `Emergency Fund · For unexpected costs · No deadline`, con su objetivo
+  o `No target`. Con fondo, `Start an Emergency Fund` ya no se ofrece; la revisión sigue en Goals.
+- `Start an Emergency Fund` abre el mismo borrador de Goals: gastos esenciales × meses (sin
+  importe recomendado propio), `Create Emergency Fund` o `Create Without a Target`, y el importe
+  opcional ya apartado, limitado a la parte de Savings sin propósito (`assigned`). No crea
+  cuentas ni cambia saldos.
+
+### D-GS6 y D-GS9 en Goals
+
+Tras **Create Goal** o **Create Emergency Fund** confirmado: el formulario se cierra, el
+usuario sigue en Goals, el registro aparece, el estado se recalcula, el foco va a
+`Add Another Goal` (o `Add a Goal`) y el mensaje es `Goal added.` / `Emergency Fund added.`
+con el resultado del guardado (`Saved on this device.` o el de la demo). **Cancel** (en el
+formulario o en la confirmación) cierra sin guardar. Si el guardado no se confirma, la
+confirmación sigue como estaba y dice por qué. Fuera de la guía nada cambia: Goals › Add Goal
+sigue abriendo la meta creada y Start an Emergency Fund sigue mostrando «Your Emergency Fund is saved.».
+
+`Skip for now` guarda `skipped`; abrir el formulario o dejar un borrador no completa nada.
+No hay `I don't have any goals`: Goals sigue sin respuesta `none` (no está en `NONE_STEPS`).
+
+### Borradores
+
+La etapa guarda el borrador de New Goal y lo registra con `useUnsavedChanges('New Goal', …)`
+(no como borrador «kept»: salir pregunta). El borrador del Emergency Fund ya se registraba solo.
+Back, Continue, Skip for now, la lista de etapas, las pestañas, Close, el Back del navegador y
+Exit Demo preguntan «Leave without saving?»; un formulario sin cambios no pregunta; con un
+guardado en curso, el movimiento espera a la respuesta. El borrador «kept» de New Goal de la
+pestaña Goals (`app:new-goal` en `App.tsx`) es otro y no cambia.
+
+### Doble pulsación en Create Goal (cambio válido en toda la app)
+
+En la base, en la demo, dos pulsaciones seguidas de **Create Goal** creaban dos metas
+(reproducido en `e653e66` desde Goals › Add Goal). `NewGoalScreen` tiene ahora la misma
+protección local que `DebtForm` (GS-4): un `saving` ref. En el espacio propio el almacén ya
+respondía `busy`.
+
+### Hide amounts
+
+La lista usa `useAllAmounts` y `Amount.tsx`: lo guardado, el objetivo y lo que falta muestran
+`••••` y el lector oye «amount hidden». Nombre, tipo, fecha, `No deadline` y `No target` se
+mantienen. Los mensajes no llevan importes. Lo que el usuario escribe (y su confirmación) se ve.
+
+### Individual y Duo
+
+Sin cambios: una meta nueva pertenece a la persona en Individual y a `shared` en Duo, igual
+que New Goal en Goals. GS-5 no añade selector de propietario (GS-6).
+
+### Limitaciones y observaciones para GS-6
+
+- `stepDone('goals')` cuenta cualquier registro `goal`/`emergency`, también uno **archivado**,
+  que la lista (y Goals) no muestran: un espacio con solo una meta archivada ve Goals como
+  Completed y «No goals yet.». Ya era así en GS-1; no se cambia sin decisión.
+- Los importes de la confirmación `Check Your Goal` (y el ritmo sugerido) son los que el usuario
+  acaba de escribir y no se ocultan, igual que fuera de la guía.
+- El borrador del Emergency Fund es largo dentro de la etapa (es el mismo de Goals).
+
 ## Pendiente
 
 | Paso | Estado | Contenido |
 | --- | --- | --- |
 | GS-3 | **Implementado** | Lo descrito arriba, incluida D-GS9 y `I don't have regular income`. |
 | GS-4 | **Implementado** | Debts y Bills dentro de la etapa, D-GS6 en ambas, `I don't have any debts` (D-GS3), pagos ya vinculados sin duplicar. |
-| GS-5 | Pendiente | Goals: Emergency Fund y New Goal desde la etapa; no duplicar la invitación al fondo en Home. |
+| GS-5 | **Implementado** | Goals con New Goal y el borrador del Emergency Fund dentro de la etapa, metas con y sin fecha, D-GS6 en Goals, D-GS2 conservada. La invitación de Home desaparece en cuanto existe el fondo (sin cambios). |
 | GS-6 | Pendiente | Finish Setup con resumen y sin confirmación (D-GS7); `Whose income is this?` en Duo (D-GS5). |
 | GS-7 | Pendiente | Documentación final y recorridos manuales (Home y Help & Guide ya permiten retomar, D-GS8). |
 
 | Decisión | Estado |
 | --- | --- |
-| D-GS9 | Implementada en GS-3, conservada en GS-4 |
+| D-GS9 | Implementada en GS-3, conservada en GS-4 y GS-5 |
 | D-GS3 | Implementada (Income en GS-3, Debts en GS-4) |
-| D-GS6 | Implementada en Debts y Bills (GS-4); Goals pendiente (GS-5) |
+| D-GS6 | Implementada en Debts y Bills (GS-4) y en Goals (GS-5) |
+| D-GS2 | Implementada en GS-1, conservada en GS-5 (el Emergency Fund completa Goals) |
 | D-GS5 | Pendiente (GS-6) |
 | D-D2-INTEREST | Pendiente (mejora funcional del módulo Debts) |
 
-Getting Started v1.0 **no está completo**: faltan GS-5, GS-6 y GS-7.
+Getting Started v1.0 **no está completo**: faltan GS-6 y GS-7.
 
 ## Decisión registrada para la fase Debts
 

@@ -7,9 +7,12 @@ import {
 import { AccountsStage } from './AccountsStage'
 import { BillsStage } from './BillsStage'
 import { DebtsStage } from './DebtsStage'
+import { GoalsStage } from './GoalsStage'
 import { NONE_TEXT, STAGE_TEXT, STATE_WORDS } from './guideText'
 import { IncomeStage } from './IncomeStage'
 import type { StageProps } from './stageProps'
+import type { FinanceData } from '../../domain/finance/types'
+import type { SaveOutcome } from '../../ui/saveOutcome'
 
 type Props = StageProps & {
   progress: GuideProgress
@@ -26,8 +29,8 @@ type Props = StageProps & {
   onFinish: () => void
   /** Close: back to where the guide was opened from, with the progress kept. */
   onClose: () => void
-  /** New Goal, the screen that already exists (GS-5 brings it into the stage). Back there returns here. */
-  onAddGoal: () => void
+  /** Create Emergency Fund from the Goals stage: the same save as the Emergency Fund screen. */
+  onSaveEmergency: (data: FinanceData, base: number) => Promise<SaveOutcome>
 }
 
 /**
@@ -118,19 +121,14 @@ function stateWords(state: StepState, step: GuideStep): string {
   return STATE_WORDS[state]
 }
 
-/** What each stage shows: its form (Accounts, Income, Debts, Bills), or the records and the screen that already exists to add one (Goals). */
+/** What each stage shows: its records and its form (Accounts, Income, Debts, Bills, Goals), or the summary (Finish). */
 function StageContent(props: Props & { states: Record<GuideStep, StepState> }) {
-  const { data, stage, states } = props
+  const { stage, states } = props
   if (stage === 'accounts') return <AccountsStage key="accounts" {...props} />
   if (stage === 'income') return <IncomeStage key="income" {...props} />
   if (stage === 'debts') return <DebtsStage key="debts" {...props} />
   if (stage === 'bills') return <BillsStage key="bills" {...props} />
-  if (stage === 'goals') {
-    return (
-      <Records names={data.goals.filter(goal => goal.kind === 'goal' || goal.kind === 'emergency').map(goal => ({ id: goal.id, name: goal.name }))} label="Your goals" empty="No goals yet."
-        action="Add a Goal" onAction={props.onAddGoal} note="It opens New Goal. Back there brings you here." />
-    )
-  }
+  if (stage === 'goals') return <GoalsStage key="goals" {...props} />
   // Finish: where each stage stands, in words. Nothing here is marked complete for the user.
   return (
     <ul className="gs-list gs-summary" aria-label="Your setup">
@@ -141,21 +139,5 @@ function StageContent(props: Props & { states: Record<GuideStep, StepState> }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-function Records({ names, label, empty, action, onAction, note }: {
-  names: { id: string; name: string; detail?: string }[]; label: string; empty: string; action: string; onAction: () => void; note: string
-}) {
-  return (
-    <div className="gs-records">
-      {names.length === 0
-        ? <p className="muted-note">{empty}</p>
-        : <ul className="gs-list" aria-label={label}>
-          {names.map(item => <li key={item.id}><span className="item-name">{item.name}</span>{item.detail && <small>{item.detail}</small>}</li>)}
-        </ul>}
-      <button type="button" className="button-small align-start" onClick={onAction}><Icon name="plus" size={16} /> {action}</button>
-      <p className="field-help">{note}</p>
-    </div>
   )
 }

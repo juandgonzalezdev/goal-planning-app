@@ -2,9 +2,10 @@ import { isCalendarDate } from '../../domain/calendar'
 import { GOAL_NAME_MAX_LENGTH, characterCount } from '../../domain/goal'
 import type { CalendarDate } from '../../domain/goalTime'
 import type { MoneyAmount } from '../../domain/goalAmounts'
-import type { MovementKind } from '../../domain/finance/goals'
-import type { Goal, Owner } from '../../domain/finance/types'
+import { createGoal, type GoalFields, type MovementKind } from '../../domain/finance/goals'
+import type { FinanceData, Goal, Id, Owner } from '../../domain/finance/types'
 import { parseMoneyInput } from '../../ui/moneyInput'
+import type { ChangeSpace, SaveOutcome } from '../../ui/saveOutcome'
 
 /** What the goal form holds while the user types. */
 export interface GoalDraft {
@@ -69,6 +70,18 @@ export function readGoalDraft(draft: GoalDraft, { today, owner, currentDeadline 
   }
   if (errors.name || errors.target || errors.deadline) return { status: 'invalid', errors }
   return { status: 'valid', fields: { name, owner, target, deadline } }
+}
+
+/**
+ * Create Goal: the one way a new goal is saved, from the New Goal screen
+ * and (GS-5) from the Goals stage of Getting Started. The goal is the
+ * domain's `createGoal` (it starts at 0, no money moves); `base` is the
+ * revision the form was opened on. Says what happened to the save.
+ */
+export async function saveNewGoal(change: ChangeSpace, data: FinanceData, id: Id, fields: GoalFields, today: CalendarDate, base: number): Promise<SaveOutcome> {
+  const created = createGoal(data, id, fields, today)
+  if (created.status !== 'valid') return 'not-saved'
+  return change(() => created.data, base)
 }
 
 /** What the contribution / withdrawal form holds. */

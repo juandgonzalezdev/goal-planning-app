@@ -165,7 +165,7 @@ describe('Moving between stages (D-GS9)', () => {
     expect(stageStates().slice(0, 2)).toEqual(['Accounts: Skipped', 'Income: Skipped'])
   })
 
-  it('Debts and Bills open their forms on the stage (GS-4); Goals opens New Goal, and Back there comes back to the stage', async () => {
+  it('Debts, Bills (GS-4) and Goals (GS-5) open their forms on the stage, and Cancel there comes back to the stage', async () => {
     await ownSpace()
     await openGuide()
     await fire.click(button('Skip for now'))
@@ -188,10 +188,13 @@ describe('Moving between stages (D-GS9)', () => {
     expect(document.activeElement?.id).toBe('gs-add-bill')
     await fire.click(button('Skip for now'))
     await fire.click(button('Add a Goal'))
-    expect(shownScreen()).toBe('new-goal')
+    expect(shownScreen()).toBe('guide')
+    expect(screen.getByRole('group', { name: 'Add a Goal' })).toBeTruthy()
+    expect(document.activeElement?.id).toBe('new-goal-name')
     await fire.click(button('Cancel'))
     await moves()
     expect(title()).toBe('Goals')
+    expect(document.activeElement?.id).toBe('gs-add-goal')
     // Nothing was added by opening and cancelling those forms.
     const data = (await storedData())!
     expect([data.debts.length, data.bills.length, data.goals.filter(goal => goal.kind === 'goal').length]).toEqual([0, 0, 0])

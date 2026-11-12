@@ -19,9 +19,8 @@ import type { SpaceStore } from './data/spaceStore'
 import { readHomeRings, writeHomeRings, clearGuideProgress, readGuideProgress, writeGuideProgress, readDeviceLanguage, readLanguagePreview, writeDeviceLanguage } from './data/uiPrefs'
 import { clearHomeLayout, readChartView, readEmergencyLater, readHiddenBlocks, readHomeLayout, writeChartView, writeEmergencyLater, writeHiddenBlocks, writeHomeLayout, type BillsChartView } from './data/uiPrefs'
 import { addMonthsToYearMonth, monthsOfYear, yearMonthOf, type YearMonth } from './domain/calendar'
-import { createGoal } from './domain/finance/goals'
 import { createSpaceData } from './domain/finance/space'
-import type { Id, Language } from './domain/finance/types'
+import type { FinanceData, Id, Language } from './domain/finance/types'
 import type { CalendarDate } from './domain/goalTime'
 import { BillScreen } from './features/bills/BillScreen'
 import { BillsScreen } from './features/bills/BillsScreen'
@@ -31,7 +30,7 @@ import { MoneyScreen } from './features/money/MoneyScreen'
 import { INITIAL_MONEY_VIEW, setBlockOpen, type MoneyBlock, type MoneyView } from './features/money/moneyBlocks'
 import type { GoalFilter } from './domain/finance/goals'
 import { GoalDetailScreen } from './features/goals/GoalDetailScreen'
-import { EMPTY_NEW_GOAL, typedGoalDraft, type NewGoalState } from './features/goals/goalDraft'
+import { EMPTY_NEW_GOAL, saveNewGoal, typedGoalDraft, type NewGoalState } from './features/goals/goalDraft'
 import { GoalsScreen } from './features/goals/GoalsScreen'
 import { NewGoalScreen } from './features/goals/NewGoalScreen'
 import { HistoryScreen } from './features/history/HistoryScreen'
@@ -919,6 +918,12 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     setEmergencyLater(later)
     writeEmergencyLater(storage, later)
   }
+  /** Create Emergency Fund (or Save Review): the Emergency Fund screen and, since GS-5, the Goals stage of Getting Started save it the same way. */
+  const saveEmergency = async (data: FinanceData, base: number) => {
+    const outcome = await space.update(() => data, base)
+    if (isKept(outcome)) emergencyLaterChange(false)
+    return outcome
+  }
   const selectTab = (tab: Tab) => {
     if (tab === screen) {
       navTop.current = { tab, repeat: true }
@@ -1131,9 +1136,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <NewGoalScreen data={open.data} today={space.today} owner={newGoalOwner} state={newGoal} onStateChange={setNewGoal} onCancel={back}
               onCreate={async (fields, base) => {
                 const id = newId()
-                const created = createGoal(open.data, id, fields, space.today)
-                if (created.status !== 'valid') return 'not-saved'
-                const outcome = await space.update(() => created.data, base)
+                const outcome = await saveNewGoal(space.update, open.data, id, fields, space.today, base)
                 if (!isKept(outcome)) return outcome
                 setNewGoal(EMPTY_NEW_GOAL)
                 setGoalId(id)
@@ -1143,11 +1146,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('emergency') && <div className="screen" data-screen="emergency">
             <EmergencyScreen data={open.data} today={space.today} owner={newGoalOwner} newId={newId} onBack={back} onCancel={() => navigation.backAllowed()}
-              onSave={async (data, base) => {
-                const outcome = await space.update(() => data, base)
-                if (isKept(outcome)) emergencyLaterChange(false)
-                return outcome
-              }} onOpenGoal={id => { setGoalId(id); replace('goal') }} />
+              onSave={saveEmergency} onOpenGoal={id => { setGoalId(id); replace('goal') }} />
           </div>}
           {shows('history') && <div className="screen" data-screen="history">
             <AmountVisibilityProvider value={visibility}>
@@ -1175,7 +1174,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
             <AmountVisibilityProvider value={visibility}>
             <GuideScreen data={open.data} progress={guideProgress} stage={shownStage} isDemo={open.kind === 'demo'} today={space.today} owner={newGoalOwner} newId={newId} onChange={space.update}
               onStage={toStage} onSkip={skipStage} onNone={noneStage} onFinish={finishSetupGuide} onClose={leaveSetup}
-              onAddGoal={() => go('new-goal')} />
+              onSaveEmergency={saveEmergency} />
             </AmountVisibilityProvider>
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">

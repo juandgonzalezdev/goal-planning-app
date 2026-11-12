@@ -24,8 +24,8 @@ export const STAGE_TEXT: Record<GuideStep, { short: string; title: string; quest
     text: 'Add rent, phone, insurance and subscriptions. If you don’t know this month’s amount, leave it as unknown.',
   },
   goals: {
-    short: 'Goals', title: 'Goals', question: 'Want to give part of your savings a purpose?',
-    text: 'A goal doesn’t add money. It sets aside part of the savings you already have, or new money you save later. A target amount and a date are optional. This stage is optional.',
+    short: 'Goals', title: 'Goals', question: 'What are you saving for?',
+    text: 'A goal doesn’t add money. It sets aside part of the savings you already have, or new money you save later. A target amount and a date are optional. An Emergency Fund counts as a goal here. This stage is optional.',
   },
   finish: {
     short: 'Finish', title: 'Finish', question: 'Here is where your setup stands.',

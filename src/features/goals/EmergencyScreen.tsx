@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useUnsavedChanges } from '../../app/unsavedChanges'
 import { useEditBase, useSaver } from '../../app/writeStatus'
-import { isKept, type SaveOutcome } from '../../ui/saveOutcome'
+import { isKept, outcomeText, type SaveOutcome } from '../../ui/saveOutcome'
 import { Icon } from '../../components/Icon'
 import type { CalendarDate } from '../../domain/goalTime'
 import {
@@ -26,6 +26,15 @@ type Props = {
   /** Saves the fund; `base` is the revision the draft was opened on. Says what happened. */
   onSave: (data: FinanceData, base: number) => Promise<SaveOutcome>
   onOpenGoal: (id: Id) => void
+  /**
+   * Inside Getting Started (GS-5): the same draft, checks and save, without
+   * the screen's own Back link and with lower headings, because the stage
+   * around it already has its title and its Back. After a save the stage
+   * gets the new fund and the message (`onSaved`) instead of this screen's
+   * "Your Emergency Fund is saved." step.
+   */
+  inline?: boolean
+  onSaved?: (id: Id, message: string) => void
 }
 
 type LineState = { essential: boolean; text: string }
@@ -45,7 +54,7 @@ const SOURCES = [
  * assigned until Create Emergency Fund (or Save Review) is pressed.
  * Savings for other goals and investments are never counted in it.
  */
-export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = onBack, onSave, onOpenGoal }: Props) {
+export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = onBack, onSave, onOpenGoal, inline = false, onSaved }: Props) {
   const money = (minor: number) => formatAmount(minor, data.space.currency)
   const fund = emergencyFund(data.goals)
   const estimate = estimateEssentials(data, today)
@@ -71,8 +80,12 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = 
   const send = async (next: FinanceData, id: Id, withTarget: boolean) => {
     setSendingWith(withTarget)
     const outcome = await saver.save(() => onSave(next, base)).finally(() => setSendingWith(null))
-    if (isKept(outcome)) setDone(id)
+    if (!isKept(outcome)) return
+    if (inline && onSaved) onSaved(id, outcomeText('Emergency Fund added.', outcome))
+    else setDone(id)
   }
+  // Inside a stage the sections are one level lower: the stage has the h1 and this draft the h2.
+  const Section = inline ? 'h3' : 'h2'
 
   const confirmed = estimate.lines.map(line => ({ key: line.key, essential: lines[line.key].essential, monthly: parseMoneyInput(lines[line.key].text) }))
   const total = confirmedEssentials(confirmed)
@@ -132,9 +145,11 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = 
   ]
 
   return (
-    <div className="tab-screen">
-      <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>
-      <h1 className="tab-title">{fund ? 'Review My Emergency Fund' : 'Start an Emergency Fund'}</h1>
+    <div className={inline ? 'form-stack edit-box gs-form' : 'tab-screen'} role={inline ? 'group' : undefined} aria-labelledby={inline ? 'gs-form-title' : undefined}>
+      {!inline && <button type="button" className="back-link" onClick={onBack}><Icon name="arrowLeft" size={18} /> Back</button>}
+      {inline
+        ? <h2 id="gs-form-title" className="section-title" tabIndex={-1}>{fund ? 'Review My Emergency Fund' : 'Start an Emergency Fund'}</h2>
+        : <h1 className="tab-title">{fund ? 'Review My Emergency Fund' : 'Start an Emergency Fund'}</h1>}
       <p className="muted-note">
         Money kept for an unexpected cost or a month with less income, so you need to borrow less and the savings for your other goals stay where they are.
         This is a draft: nothing is created or changed until you confirm it below.
@@ -145,7 +160,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = 
       )}
 
       <section className="block" aria-labelledby="essentials-title">
-        <h2 id="essentials-title" className="section-title">1. Essential costs per month</h2>
+        <Section id="essentials-title" className="section-title">1. Essential costs per month</Section>
         <p className="field-help">
           Tick what you would still have to pay in a hard month: housing, basic food, utilities, the transport you need, health and the minimum debt payments.
           You decide: change any amount. Saving for your other goals is never an essential cost.
@@ -198,7 +213,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = 
       </section>
 
       <section className="block" aria-labelledby="months-title">
-        <h2 id="months-title" className="section-title">2. Months of cover</h2>
+        <Section id="months-title" className="section-title">2. Months of cover</Section>
         <div className="segmented" role="group" aria-label="Months of cover">
           {COVER_OPTIONS.map(option => (
             <button key={option} type="button" aria-pressed={months === String(option)} className={months === String(option) ? 'is-active' : ''}
@@ -216,7 +231,7 @@ export function EmergencyScreen({ data, today, owner, newId, onBack, onCancel = 
 
       {!fund && (
         <section className="block" aria-labelledby="aside-title">
-          <h2 id="aside-title" className="section-title">3. Money already set aside (optional)</h2>
+          <Section id="aside-title" className="section-title">3. Money already set aside (optional)</Section>
           <label className="form-field" htmlFor="already-aside">Part of your Savings to count in the fund ({data.space.currency})</label>
           <input id="already-aside" className="quick-input" inputMode="decimal" value={setAside} placeholder="0" onChange={event => setSetAside(event.target.value)} aria-describedby="already-aside-help" />
           <p id="already-aside-help" className="field-help">
