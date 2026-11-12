@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createAlexDemo } from '../../data/fixtures/demoAlex'
 import type { FinanceData } from '../../domain/finance/types'
 import {
-  clearNone, currentStep, declareNone, DEMO_PROGRESS, finishGuide, guideShown, NEW_PROGRESS, readProgress, resumeGuide, resumeStep,
-  skipStep, stepDone, stepStates, visitStep, type GuideProgress,
+  clearNone, currentStep, declareNone, DEMO_PROGRESS, finishGuide, guideShown, guideStarted, NEW_PROGRESS, nextStep, openingStep, previousStep, readProgress,
+  resumeGuide, resumeStep, skipStep, stepDone, stepReachable, stepStates, visitStep, type GuideProgress,
 } from './gettingStarted'
 
 // Getting Started (GS-1): the order, what makes a stage done, none and skipped, the saved progress (v2) and reading older values safely.
@@ -147,5 +147,43 @@ describe('Getting Started: saved progress', () => {
   it('reads a newer version by the fields it knows', () => {
     expect(readProgress({ version: 7, hidden: false, skipped: ['bills'], none: ['income'], finished: false, last: 'bills', later: { anything: true } }))
       .toEqual({ version: 2, hidden: false, skipped: ['bills'], none: ['income'], finished: false, last: 'bills' })
+  })
+})
+
+describe('Getting Started: stage screens (GS-3, D-GS9)', () => {
+  it('opens where the user left off, and once the guide is over on the first stage still waiting', () => {
+    expect(openingStep(empty, NEW_PROGRESS)).toBe('accounts')
+    expect(openingStep(empty, visitStep(skipStep(NEW_PROGRESS, 'accounts'), 'income'))).toBe('income')
+    // A skipped stage visited stays where the user was; visiting never changes what is complete.
+    const back = visitStep(skipStep(skipStep(NEW_PROGRESS, 'accounts'), 'income'), 'accounts')
+    expect(openingStep(empty, back)).toBe('accounts')
+    expect(stepStates(empty, back).accounts).toBe('skipped')
+    expect(openingStep(empty, finishGuide(skipStep(NEW_PROGRESS, 'accounts')))).toBe('accounts')
+    expect(openingStep(alex, finishGuide(NEW_PROGRESS))).toBe('accounts')
+  })
+
+  it('says whether the guide was started', () => {
+    expect(guideStarted(empty, NEW_PROGRESS)).toBe(false)
+    expect(guideStarted(empty, visitStep(NEW_PROGRESS, 'accounts'))).toBe(true)
+    expect(guideStarted(empty, skipStep(NEW_PROGRESS, 'accounts'))).toBe(true)
+    expect(guideStarted({ ...empty, moneyAccounts: alex.moneyAccounts }, NEW_PROGRESS)).toBe(true)
+  })
+
+  it('stages reached open from the list; later ones only in order', () => {
+    const progress = skipStep(skipStep(NEW_PROGRESS, 'accounts'), 'income')
+    const reachable = (shown: Parameters<typeof stepReachable>[3]) =>
+      (['accounts', 'income', 'debts', 'bills', 'goals', 'finish'] as const).filter(step => stepReachable(empty, progress, step, shown))
+    expect(reachable('debts')).toEqual(['accounts', 'income', 'debts'])
+    // Back on Accounts, the next stage waiting (Debts) is still reachable.
+    expect(reachable('accounts')).toEqual(['accounts', 'income', 'debts'])
+    expect(reachable('goals')).toEqual(['accounts', 'income', 'debts', 'bills', 'goals'])
+    expect((['bills', 'finish'] as const).every(step => stepReachable(empty, finishGuide(progress), step, 'accounts'))).toBe(true)
+    // Records count as reached.
+    expect(stepReachable({ ...empty, bills: alex.bills.filter(bill => !bill.debtId) }, NEW_PROGRESS, 'bills', 'accounts')).toBe(true)
+  })
+
+  it('knows the stage before and after', () => {
+    expect([previousStep('accounts'), nextStep('accounts')]).toEqual([null, 'income'])
+    expect([previousStep('finish'), nextStep('finish')]).toEqual(['goals', null])
   })
 })

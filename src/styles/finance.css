@@ -1040,24 +1040,85 @@ button.block-toggle:hover .block-name { text-decoration: underline; text-underli
 .help-tips .help-tip { display: contents; }
 .help-tips .help-tip-panel:not([hidden]) { flex-basis: 100%; }
 
-.getting-started {
-  display: grid; gap: 8px; padding: 14px; border-radius: var(--radius-card);
-  background: var(--color-surface); border: 1px solid var(--color-selected-border); min-width: 0;
+/* Getting Started (GS-3): the compact card on Home and the stage screen. */
+.gs-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start;
+  padding: 12px 14px; border-radius: var(--radius-card); background: var(--color-surface);
+  border: 1px solid var(--color-selected-border); min-width: 0;
 }
-.getting-started-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.getting-started-head small { color: var(--color-text-muted); }
-.getting-started-question { margin: 0; font-size: 1.05rem; }
-.getting-started p { margin: 0; }
-.getting-started > .text-button { justify-self: start; min-height: 44px; }
-.guide-steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
-.guide-steps li > span[aria-hidden] {
-  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  font-size: 12px; background: var(--color-track); color: var(--color-text-muted);
+.gs-card-icon {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--color-selected); color: var(--color-selected-text);
 }
-.guide-steps li.is-done > span[aria-hidden],
-.guide-steps li.is-none > span[aria-hidden] { background: var(--color-positive-soft); color: var(--color-positive); }
-.guide-steps li.is-skipped > span[aria-hidden] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-track-strong); }
-.guide-steps li.is-current > span[aria-hidden] { background: var(--color-primary); color: var(--color-on-primary); }
+.gs-card-text { display: grid; gap: 4px; min-width: 0; }
+.gs-card-text .section-title { margin: 0; }
+.gs-card-step { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+.gs-card-bar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; max-width: 220px; margin-top: 2px; }
+.gs-card-bar > span { height: 5px; border-radius: 3px; background: var(--color-track); }
+.gs-card-bar > .is-complete { background: var(--color-primary); }
+.gs-card-bar > .is-skipped { background: transparent; box-shadow: inset 0 0 0 1px var(--color-track-strong); }
+.gs-card-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 6px; }
+.gs-card-actions .button-small { min-height: 44px; }
+.gs-card-actions .text-button { min-height: 44px; }
+@media (min-width: 560px) {
+  .gs-card { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+  .gs-card-actions { grid-column: auto; margin-top: 0; justify-content: flex-end; }
+}
+
+.gs-screen { gap: 12px; }
+.gs-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gs-eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 650; color: var(--color-selected-text); }
+.gs-close { margin: 0; padding: 8px 4px 8px 12px; }
+.gs-stepper { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; list-style: none; margin: 0; padding: 0; }
+.gs-stepper li { min-width: 0; display: flex; justify-content: center; position: relative; }
+.gs-stepper li + li::before {
+  content: ''; position: absolute; top: 21px; right: calc(50% + 18px); width: calc(100% - 36px + 4px); height: 2px;
+  background: var(--color-track); z-index: 0;
+}
+.gs-stepper li.is-complete + li::before { background: var(--color-primary); }
+.gs-stepper button {
+  position: relative; z-index: 1; display: grid; justify-items: center; gap: 4px; min-width: 44px; min-height: 44px;
+  padding: 0 2px; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--color-text-muted);
+  font-size: 12px; font-weight: 600;
+}
+.gs-stepper button:disabled { cursor: default; opacity: .55; }
+.gs-dot {
+  display: grid; place-items: center; width: 36px; height: 36px; margin-top: 3px; border-radius: 50%;
+  background: var(--color-surface); box-shadow: inset 0 0 0 2px var(--color-track-strong); color: var(--color-text-muted); font-size: 14px; font-weight: 700;
+}
+.gs-stepper .is-complete .gs-dot { background: var(--color-primary); box-shadow: none; color: var(--color-on-primary); }
+.gs-stepper .is-skipped .gs-dot { box-shadow: none; outline: 2px dashed var(--color-track-strong); outline-offset: -2px; }
+.gs-stepper .is-current .gs-dot { box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-primary); }
+.gs-stepper .is-current:not(.is-complete) .gs-dot { background: var(--color-selected); color: var(--color-selected-text); outline: 0; }
+.gs-stepper .is-current button { color: var(--color-text-strong); }
+.gs-step-name { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 419px) {
+  /* Narrow screens: the names are in each button's label for screen readers; the stage title says where you are. */
+  .gs-step-name { display: none; }
+}
+.gs-stage { gap: 8px; }
+.gs-count { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; font-size: 13px; color: var(--color-text-muted); }
+.gs-state { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 650; background: var(--color-surface-muted); color: var(--color-text-muted); }
+.gs-state.is-complete { background: var(--color-positive-soft); color: var(--color-positive); }
+.gs-state.is-skipped { background: transparent; box-shadow: inset 0 0 0 1px var(--color-border-strong); }
+.gs-question { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--color-text-strong); }
+.gs-records { display: grid; gap: 10px; margin-top: 4px; min-width: 0; }
+.gs-records > .button-small, .gs-records .inline-actions .button-small { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.gs-records .muted-note:empty { display: none; }
+.gs-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--color-border); border-radius: var(--radius-small); }
+.gs-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; font-size: 14px; min-width: 0; }
+.gs-list li + li { border-top: 1px solid var(--color-border); }
+.gs-list li > span { display: grid; min-width: 0; }
+.gs-list .item-name { overflow-wrap: anywhere; }
+.gs-list small { color: var(--color-text-muted); font-size: 12px; }
+.gs-list b { flex-shrink: 0; text-align: right; }
+.gs-summary li.is-complete b { color: var(--color-positive); }
+.gs-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.gs-footer .button-small { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; }
+.gs-forward { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; justify-content: flex-end; }
+@media (prefers-reduced-motion: no-preference) {
+  .gs-dot { transition: background-color var(--motion-quick) ease, box-shadow var(--motion-quick) ease; }
+}
 
 .help-chapters { display: grid; gap: 0; padding-top: 4px; padding-bottom: 4px; }
 .help-chapter + .help-chapter { border-top: 1px solid var(--color-border); }

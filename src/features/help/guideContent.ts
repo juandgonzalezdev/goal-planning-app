@@ -34,10 +34,11 @@ export const GUIDE: Record<GuideChapter, GuideText> = {
   'getting-started': {
     title: 'Getting Started',
     body: [
-      'After you create your space, Getting Started on Home suggests an order: Accounts, Cash and Savings, then Income, then Cards and Loans, then Bills, then Goals (optional), then day to day.',
-      'Cards and loans come before bills: a card or loan with its monthly Payment adds that payment to your bills, so you never enter it twice.',
-      'Every step can be skipped with Skip for now. Hide this guide closes it. You can bring it back here, with Show Getting Started on Home. Nothing is filled in for you.',
-      'On Cards and loans, I Have None means you have none: that step is complete and doesn’t come back. A goal or your emergency fund completes Goals.',
+      'After you create your space, a small Getting Started card on Home opens a guided setup in six stages: Accounts & Savings, Income, Debts, Bills & Subscriptions, Goals (optional), then Finish.',
+      'Debts come before bills: a card or loan with its monthly Payment adds that payment to your bills, so you never enter it twice.',
+      'Each stage has Back, and Skip for now (or Continue once it is complete). Tap any stage you have already reached to go back to it: a skipped stage can be done later, and a completed one can get another record. Nothing is filled in for you, and moving between stages never deletes anything.',
+      'Close keeps your progress: Continue setup on Home opens the stage you were on. Hide for now takes the card off Home; Open Getting Started here opens the guide, and Show Getting Started on Home brings the card back.',
+      'On Income, I don’t have regular income, and on Debts, I Have None, mean you have none: that stage is complete. A goal or your emergency fund completes Goals.',
     ],
   },
   home: {

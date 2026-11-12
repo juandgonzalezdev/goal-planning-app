@@ -3,12 +3,13 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 /**
  * Every screen the app can show. The first four come before a space is
  * open; the five tabs, a goal, the New Goal and emergency fund drafts, one
- * card or loan, one bill, Settings and Help & Guide belong to an open space. `cards` and
+ * card or loan, one bill, Settings, Help & Guide and Getting Started (`guide`,
+ * a flow of its own, never a tab) belong to an open space. `cards` and
  * `data` are the tabs of earlier versions: a step of the browser history
  * saved before the update may still name them, so they are read (as Money)
  * but never created again.
  */
-export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'goals', 'money', 'history', 'goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'help', 'cards', 'data'] as const
+export const SCREENS = ['welcome', 'sign-up', 'log-in', 'setup', 'home', 'bills', 'goals', 'money', 'history', 'goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'help', 'guide', 'cards', 'data'] as const
 export type Screen = (typeof SCREENS)[number]
 
 /** The five main tabs, in the approved order. */
@@ -23,7 +24,7 @@ export const isOldScreen = (screen: Screen): screen is OldScreen => screen in OL
 export const shownScreen = (screen: Screen): Exclude<Screen, OldScreen> => (isOldScreen(screen) ? OLD_SCREENS[screen] : screen)
 
 /** Screens that only make sense inside an open space (own or demo). */
-const SPACE_ONLY: readonly Screen[] = ['goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'help', 'cards', 'data']
+const SPACE_ONLY: readonly Screen[] = ['goal', 'new-goal', 'emergency', 'debt', 'bill', 'settings', 'help', 'guide', 'cards', 'data']
 export const isSpaceScreen = (screen: Screen) => (TABS as readonly Screen[]).includes(screen) || SPACE_ONLY.includes(screen)
 export const isTab = (screen: Screen): screen is Tab => (TABS as readonly Screen[]).includes(screen)
 

@@ -9,6 +9,8 @@ type Props = {
   /** Whether Getting Started shows on Home now. */
   guideOnHome: boolean
   onShowGuide: () => void
+  /** Opens the Getting Started screens (GS-3), on the stage to do now. */
+  onOpenSetup: () => void
   onBack: () => void
 }
 
@@ -18,7 +20,7 @@ type Props = {
  * Started (shown on Home again from here) and the Monthly Check-in. A
  * chapter asked for opens, and the app puts the keyboard on its title.
  */
-export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onBack }: Props) {
+export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onOpenSetup, onBack }: Props) {
   const [open, setOpen] = useState<ReadonlySet<GuideChapter>>(() => new Set(chapter ? [chapter] : []))
   const [shown, setShown] = useState(false)
   const toggle = (id: GuideChapter) => {
@@ -35,12 +37,11 @@ export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onBack }
 
       <section className="block" aria-labelledby="help-getting-started">
         <h2 id="help-getting-started" className="section-title">Getting Started</h2>
+        <p className="field-help">A guided setup in six stages: Accounts, Income, Debts, Bills, Goals and Finish. You can skip a stage, go back to any stage you reached, and come back later. Nothing you added is lost.</p>
+        <button type="button" className="button-secondary align-start" onClick={onOpenSetup}>Open Getting Started</button>
         {guideOnHome
           ? <p className="field-help">{shown ? 'Getting Started is on Home again.' : 'Getting Started is on Home, at the top.'}</p>
-          : <>
-            <p className="field-help">A short guide on Home, one step at a time: Accounts, Income, Cards and Loans, Bills, Goals (optional), then day to day. Skipped steps come back; an “I Have None” answer stays.</p>
-            <button type="button" className="button-secondary align-start" onClick={() => { onShowGuide(); setShown(true) }}>Show Getting Started on Home</button>
-          </>}
+          : <button type="button" className="button-secondary align-start" onClick={() => { onShowGuide(); setShown(true) }}>Show Getting Started on Home</button>}
       </section>
 
       <section className="block help-chapters" aria-label="Guide">

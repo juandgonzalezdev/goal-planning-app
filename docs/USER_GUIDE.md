@@ -114,13 +114,17 @@ A strip at the top says **Demo · Invented data**. It has:
 
 ## 5. Getting Started
 
-After **Create My Space**, **Getting Started** appears at the top of Home. It shows one step at a time, in the order below, and a row with the six steps (done, none, skipped or still to do). The order is: Accounts, cash and savings · Income · Cards and loans · Bills and subscriptions · Goals · Day to day.
+After **Create My Space**, a small **Getting Started** card appears at the top of Home. It says which step comes next (for example **Step 2 of 6 · Income**) and has **Start setup** (or **Continue setup**) and **Hide for now**. The guide opens on its own screen, outside the five tabs, with six stages: Accounts & Savings · Income · Debts · Bills & Subscriptions · Goals · Finish.
 
-- Each step has a button that opens the form that already exists (for example **Add Income** opens Money › Income with a new income), and **Skip for now** (step 5 has **Not Now**). Step 3 also has **I Have None**: it says you have no cards or loans, so the step is complete and doesn't come back. **Skip for now** only leaves a step for later. After a skip, the keyboard goes to the next step's question.
-- A step is done when your space has what it asks for. Nothing is filled in for you. Your emergency fund completes the Goals step, just like a goal. If you add a card or loan after answering **I Have None**, the step is simply done.
-- Step 4 lists the payments your cards and loans already added (**Already in your bills: …**), so you don't add them twice.
-- Step 6 ends with **Show Me Add** (it takes you to **+ Add**) and **Done**.
-- **Hide this guide** takes it off Home. **Settings › Help & Guide › Show Getting Started on Home** brings it back; skipped steps come back too, and an **I Have None** answer stays.
+- At the top, the stage list shows each stage as **Completed** (✓), **Skipped** (dashed circle) or **Not started**, and which one you are on. Tap any stage you have already reached to open it: a skipped stage can be done later, and a completed one can get another record. Stages you haven't reached yet open in order.
+- Each stage has **Back** and **Skip for now**; once a stage is complete, **Continue** takes you to the next one. **Skip for now** only leaves a stage for later: it is never marked as completed. Moving between stages never deletes anything.
+- **Accounts & Savings** and **Income** use the same forms as Money. After **Save** you stay on the stage, see what you added, and can add another.
+- **Income** also has **I don't have regular income**, and **Debts** has **I Have None**: the stage is complete and nothing is added.
+- **Debts**, **Bills** and **Goals** show what your space already has and open the forms that already exist (**Add Card or Loan**, **Add Bill**, **Add a Goal**). **Back** there brings you back to the stage. **Bills** lists the payments your cards and loans already added, so you don't add them twice.
+- **Finish** shows where each stage stands. **Done** ends the guide and takes the card off Home; skipped stages stay skipped.
+- If you have typed something and not saved it, **Back**, **Skip for now**, the stage list, the tabs and **Close** ask **Leave without saving?** first.
+- With **Hide amounts** (the eye in the header), the balances and income listed in the stages show as ••••, as in Bills and History.
+- **Close** keeps your progress: **Continue setup** opens the stage you were on. **Hide for now** takes the card off Home. **Settings › Help & Guide** has **Open Getting Started**, and **Show Getting Started on Home** brings the card back (skipped stages come back too, and a "none" answer stays).
 - Your progress is kept on this device, for this space only. It isn't part of your space or its backup. In the demo it starts hidden, lasts only while the demo is open, and Reset Demo or Exit Demo forget it.
 
 Add things in this order, and skip anything that doesn't apply to you. You can come back to any step later.

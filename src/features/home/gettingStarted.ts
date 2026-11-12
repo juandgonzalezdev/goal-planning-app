@@ -85,8 +85,8 @@ export function currentStep(data: FinanceData, progress: GuideProgress): GuideSt
 
 /**
  * The stage to open when the user comes back: the last one visited if it is
- * still waiting (to do or skipped), otherwise the stage shown now. For the
- * stage screens (GS-3); Home's panel shows `currentStep`.
+ * still waiting (to do or skipped), otherwise the stage shown now. The
+ * stage screens (GS-3) open there; Home's card says which step it is.
  */
 export function resumeStep(data: FinanceData, progress: GuideProgress): GuideStep | null {
   if (progress.finished) return null
@@ -94,6 +94,45 @@ export function resumeStep(data: FinanceData, progress: GuideProgress): GuideSte
   if (progress.last && progress.last !== 'finish' && !isComplete(states[progress.last])) return progress.last
   return currentStep(data, progress)
 }
+
+/**
+ * The stage the guide screen opens on (GS-3): where the user left off
+ * (`resumeStep`), or, once the guide is over, the first stage that is still
+ * waiting, else the first one. Opening it never changes the progress.
+ */
+export function openingStep(data: FinanceData, progress: GuideProgress): GuideStep {
+  const resume = resumeStep(data, progress)
+  if (resume) return resume
+  const states = stepStates(data, progress)
+  return GUIDE_STEPS.find(step => !isComplete(states[step])) ?? GUIDE_STEPS[0]
+}
+
+/** Whether the guide was started: something is complete or skipped, or a stage was visited. */
+export function guideStarted(data: FinanceData, progress: GuideProgress): boolean {
+  if (progress.last !== null || progress.finished) return true
+  const states = stepStates(data, progress)
+  return GUIDE_STEPS.some(step => states[step] !== 'to-do')
+}
+
+/**
+ * D-GS9 (GS-3): which stages can be opened directly from the stage list.
+ * Every stage already reached: one that is complete or skipped, the first
+ * one still waiting (`currentStep`), and every stage up to the one on
+ * screen. A later stage that was never reached opens with Continue or Skip
+ * for now, in order. Once the guide is over, every stage can be opened.
+ * Derived from the records and the saved progress only: nothing new is saved.
+ */
+export function stepReachable(data: FinanceData, progress: GuideProgress, step: GuideStep, shown: GuideStep): boolean {
+  if (progress.finished) return true
+  const states = stepStates(data, progress)
+  if (states[step] !== 'to-do') return true
+  if (step === currentStep(data, progress)) return true
+  return GUIDE_STEPS.indexOf(step) <= GUIDE_STEPS.indexOf(shown)
+}
+
+/** The stage before and after `step` in the fixed order (null at either end). */
+export const previousStep = (step: GuideStep): GuideStep | null => GUIDE_STEPS[GUIDE_STEPS.indexOf(step) - 1] ?? null
+export const nextStep = (step: GuideStep): GuideStep | null => GUIDE_STEPS[GUIDE_STEPS.indexOf(step) + 1] ?? null
 
 /** Whether Home shows the guide. */
 export const guideShown = (data: FinanceData, progress: GuideProgress) => !progress.hidden && currentStep(data, progress) !== null
