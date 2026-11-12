@@ -114,13 +114,13 @@ A strip at the top says **Demo · Invented data**. It has:
 
 ## 5. Getting Started
 
-After **Create My Space**, **Getting Started** appears at the top of Home. It shows one step at a time, in the order below, and a row with the six steps (done, skipped or still to do).
+After **Create My Space**, **Getting Started** appears at the top of Home. It shows one step at a time, in the order below, and a row with the six steps (done, none, skipped or still to do). The order is: Accounts, cash and savings · Income · Cards and loans · Bills and subscriptions · Goals · Day to day.
 
-- Each step has a button that opens the form that already exists (for example **Add Income** opens Money › Income with a new income), and **Skip for now** (step 3 also has **I Have None**, step 5 **Not Now**). After a skip, the keyboard goes to the next step's question.
-- A step is done when your space has what it asks for. Nothing is filled in for you.
+- Each step has a button that opens the form that already exists (for example **Add Income** opens Money › Income with a new income), and **Skip for now** (step 5 has **Not Now**). Step 3 also has **I Have None**: it says you have no cards or loans, so the step is complete and doesn't come back. **Skip for now** only leaves a step for later. After a skip, the keyboard goes to the next step's question.
+- A step is done when your space has what it asks for. Nothing is filled in for you. Your emergency fund completes the Goals step, just like a goal. If you add a card or loan after answering **I Have None**, the step is simply done.
 - Step 4 lists the payments your cards and loans already added (**Already in your bills: …**), so you don't add them twice.
 - Step 6 ends with **Show Me Add** (it takes you to **+ Add**) and **Done**.
-- **Hide this guide** takes it off Home. **Settings › Help & Guide › Show Getting Started on Home** brings it back; skipped steps come back too.
+- **Hide this guide** takes it off Home. **Settings › Help & Guide › Show Getting Started on Home** brings it back; skipped steps come back too, and an **I Have None** answer stays.
 - Your progress is kept on this device, for this space only. It isn't part of your space or its backup. In the demo it starts hidden, lasts only while the demo is open, and Reset Demo or Exit Demo forget it.
 
 Add things in this order, and skip anything that doesn't apply to you. You can come back to any step later.

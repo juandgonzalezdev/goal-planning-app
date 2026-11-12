@@ -1,19 +1,19 @@
 import { useEffect, useRef } from 'react'
 import { Icon } from '../../components/Icon'
 import type { FinanceData } from '../../domain/finance/types'
-import { currentStep, GUIDE_STEPS, stepStates, type GuideProgress, type GuideStep } from './gettingStarted'
+import { canDeclareNone, currentStep, GUIDE_STEPS, isComplete, stepStates, type GuideProgress, type GuideStep, type NoneStep, type StepState } from './gettingStarted'
 
-/** What each step says and offers (Rumbo de diseño §8, tutorial script). */
+/** What each step says and offers (Rumbo de diseño §8, tutorial script), in the v1.0 order (GS-1). Labels change with the stage screens (GS-3). */
 const STEP_TEXT: Record<GuideStep, { name: string; question: string; text: string; action: string; skip: string; extraSkip?: string }> = {
-  income: {
-    name: 'Income', question: 'What money comes in?',
-    text: 'Add what you usually receive each month, such as a salary. Later, you’ll record what actually arrives.',
-    action: 'Add Income', skip: 'Skip for now',
-  },
   accounts: {
     name: 'Accounts, cash and savings', question: 'Where is your money now?',
     text: 'Add the account you spend from, any cash and your savings. Enter today’s balance from your bank app. If you don’t know it, leave it empty. It will show as “Not entered”, not as 0.',
     action: 'Add Account', skip: 'Skip for now',
+  },
+  income: {
+    name: 'Income', question: 'What money comes in?',
+    text: 'Add what you usually receive each month, such as a salary. Later, you’ll record what actually arrives.',
+    action: 'Add Income', skip: 'Skip for now',
   },
   debts: {
     name: 'Cards and loans', question: 'Do you owe anything?',
@@ -30,11 +30,16 @@ const STEP_TEXT: Record<GuideStep, { name: string; question: string; text: strin
     text: 'A goal doesn’t add money. It sets aside part of the savings you already have, or new money you save later. A target amount and a date are optional.',
     action: 'Add a Goal', skip: 'Not Now',
   },
-  'day-to-day': {
+  finish: {
     name: 'Day to day', question: 'You’re set up',
     text: 'When you spend, pay a bill or receive income, record it with + Add at the top. Once a month, update your balances. Home shows how your month is going.',
     action: 'Show Me Add', skip: 'Done',
   },
+}
+
+/** What a screen reader hears for each step's state. */
+const STATE_TEXT: Record<StepState, (now: boolean) => string> = {
+  done: () => 'done', none: () => 'none', skipped: () => 'skipped', 'to-do': now => (now ? 'now' : 'to do'),
 }
 
 type Props = {
@@ -43,6 +48,8 @@ type Props = {
   isDemo: boolean
   onAction: (step: GuideStep) => void
   onSkip: (step: GuideStep) => void
+  /** "I Have None" on Debts: the stage is complete, nothing is added (GS-1). */
+  onNone: (step: NoneStep) => void
   onHide: () => void
 }
 
@@ -52,7 +59,7 @@ type Props = {
  * itself: each action opens the form that already exists. After a skip,
  * the keyboard goes to the next step's question.
  */
-export function GettingStarted({ data, progress, isDemo, onAction, onSkip, onHide }: Props) {
+export function GettingStarted({ data, progress, isDemo, onAction, onSkip, onNone, onHide }: Props) {
   const step = currentStep(data, progress)
   const states = stepStates(data, progress)
   const questionRef = useRef<HTMLHeadingElement>(null)
@@ -67,6 +74,7 @@ export function GettingStarted({ data, progress, isDemo, onAction, onSkip, onHid
   // The payments cards and loans added: listed so they aren't added again as bills.
   const linked = step === 'bills' ? data.bills.filter(bill => bill.debtId) : []
   const skip = (chosen: GuideStep) => { moved.current = true; onSkip(chosen) }
+  const none = (chosen: GuideStep) => { moved.current = true; if (canDeclareNone(chosen)) onNone(chosen); else onSkip(chosen) }
   return (
     <section className="getting-started" aria-labelledby="getting-started-title">
       <div className="getting-started-head">
@@ -76,8 +84,8 @@ export function GettingStarted({ data, progress, isDemo, onAction, onSkip, onHid
       <ol className="guide-steps" aria-label="Steps">
         {GUIDE_STEPS.map(item => (
           <li key={item} className={`is-${states[item]}${item === step ? ' is-current' : ''}`} aria-current={item === step ? 'step' : undefined}>
-            <span aria-hidden="true">{states[item] === 'done' ? <Icon name="check" size={14} /> : GUIDE_STEPS.indexOf(item) + 1}</span>
-            <span className="visually-hidden">{STEP_TEXT[item].name}: {states[item] === 'done' ? 'done' : states[item] === 'skipped' ? 'skipped' : item === step ? 'now' : 'to do'}</span>
+            <span aria-hidden="true">{isComplete(states[item]) ? <Icon name="check" size={14} /> : GUIDE_STEPS.indexOf(item) + 1}</span>
+            <span className="visually-hidden">{STEP_TEXT[item].name}: {STATE_TEXT[states[item]](item === step)}</span>
           </li>
         ))}
       </ol>
@@ -87,7 +95,7 @@ export function GettingStarted({ data, progress, isDemo, onAction, onSkip, onHid
       {isDemo && <p className="field-help">In the demo, Alex’s information is invented.</p>}
       <div className="inline-actions">
         <button type="button" className="button-small button-small-primary" onClick={() => onAction(step)}>{text.action}</button>
-        {text.extraSkip && <button type="button" className="button-small" onClick={() => skip(step)}>{text.extraSkip}</button>}
+        {text.extraSkip && <button type="button" className="button-small" onClick={() => none(step)}>{text.extraSkip}</button>}
         <button type="button" className="button-small" onClick={() => skip(step)}>{text.skip}</button>
       </div>
       <button type="button" className="text-button" onClick={onHide}>Hide this guide</button>

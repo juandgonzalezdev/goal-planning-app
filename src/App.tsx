@@ -39,7 +39,7 @@ import { HelpScreen } from './features/help/HelpScreen'
 import type { GuideChapter } from './features/help/guideContent'
 import { GuideContext } from './features/help/tips'
 import { GettingStarted } from './features/home/GettingStartedPanel'
-import { DEMO_PROGRESS, guideShown, readProgress, resumeGuide, skipStep, type GuideProgress, type GuideStep } from './features/home/gettingStarted'
+import { declareNone, DEMO_PROGRESS, guideShown, readProgress, resumeGuide, skipStep, type GuideProgress, type GuideStep } from './features/home/gettingStarted'
 import { firstFilter, INITIAL_HISTORY_VIEW, type HistoryView } from './features/history/historyView'
 import { NO_FILTER } from './domain/finance/history'
 import { monthIncome } from './domain/finance/income'
@@ -833,7 +833,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
     if (step === 'income') addFrom('income')
     else if (step === 'bills') addFrom('bill')
     else if (step === 'goals') addFrom('goal')
-    else if (step === 'day-to-day') {
+    else if (step === 'finish') {
       window.scrollTo?.(0, 0)
       document.querySelector<HTMLElement>('.shell-add > .menu-root > button')?.focus({ preventScroll: true })
     } else confirmLeave(ANY_FORM, () => {
@@ -1077,7 +1077,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
                 onOpenExpense={(id, spot) => fromHome(spot, () => showExpense(id))} onAddBill={() => addFrom('bill')}
                 emergencyLater={shownEmergencyLater} onEmergencyLater={() => emergencyLaterChange(true)}
                 guide={guideShown(open.data, guideProgress) && <GettingStarted data={open.data} progress={guideProgress} isDemo={open.kind === 'demo'}
-                  onAction={guideAction} onSkip={step => changeGuide(skipStep(guideProgress, step))} onHide={() => changeGuide({ ...guideProgress, hidden: true })} />} />
+                  onAction={guideAction} onSkip={step => changeGuide(skipStep(guideProgress, step))} onNone={step => changeGuide(declareNone(guideProgress, step))} onHide={() => changeGuide({ ...guideProgress, hidden: true })} />} />
             </AmountVisibilityProvider>
           </div>}
           {shows('bills') && <div className="screen" data-screen="bills">
@@ -1154,7 +1154,7 @@ function App({ getToday = todayString, storage = browserStorage(), createDemo = 
           </div>}
           {shows('help') && <div className="screen" data-screen="help">
             <HelpScreen key={guideChapter ?? 'all'} isDemo={open.kind === 'demo'} chapter={guideChapter} guideOnHome={guideShown(open.data, guideProgress)}
-              onShowGuide={() => changeGuide(resumeGuide())} onBack={back} />
+              onShowGuide={() => changeGuide(resumeGuide(guideProgress))} onBack={back} />
           </div>}
           {shows('settings') && <div className="screen" data-screen="settings">
             <SettingsScreen showRings={showRings} onShowRingsChange={shown => { setShowRings(shown); writeHomeRings(storage, shown) }} data={open.data} isDemo={open.kind === 'demo'} months={months} month={month} today={space.today}

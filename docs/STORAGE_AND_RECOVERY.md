@@ -48,7 +48,7 @@ conservan `my-space`.
   abiertos los bloques cuyo nombre coincide con una parte abierta; This Month y
   Left to Pay aparecen cerrados. Es solo la vista: ningún dato se pierde.
 - Reset Layout solo cambia `home-layout`; nunca toca `hidden-amounts`.
-- `getting-started` se guarda como `{ spaceId, progress: { hidden, skipped, finished } }`. Un valor ilegible vuelve a una guía nueva (nunca la oculta para siempre). Erase All Data lo borra.
+- `getting-started` se guarda como `{ spaceId, progress: { version: 2, hidden, skipped, none, finished, last } }` (GS-1, ver `docs/V1_GETTING_STARTED.md`). El valor anterior `{ hidden, skipped, finished }` se sigue leyendo sin pérdidas y solo se reescribe tras un cambio del usuario. Un valor ilegible vuelve a una guía nueva (nunca la oculta para siempre). Nunca contiene datos financieros. Erase All Data lo borra.
 - La demo no lee ni escribe ninguna de estas claves.
 
 ## 2. Migración desde la copia antigua

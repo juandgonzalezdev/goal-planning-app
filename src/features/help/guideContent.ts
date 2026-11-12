@@ -34,9 +34,10 @@ export const GUIDE: Record<GuideChapter, GuideText> = {
   'getting-started': {
     title: 'Getting Started',
     body: [
-      'After you create your space, Getting Started on Home suggests an order: Income, then Accounts, Cash and Savings, then Cards and Loans, then Bills, then Goals (optional), then day to day.',
+      'After you create your space, Getting Started on Home suggests an order: Accounts, Cash and Savings, then Income, then Cards and Loans, then Bills, then Goals (optional), then day to day.',
       'Cards and loans come before bills: a card or loan with its monthly Payment adds that payment to your bills, so you never enter it twice.',
       'Every step can be skipped with Skip for now. Hide this guide closes it. You can bring it back here, with Show Getting Started on Home. Nothing is filled in for you.',
+      'On Cards and loans, I Have None means you have none: that step is complete and doesn’t come back. A goal or your emergency fund completes Goals.',
     ],
   },
   home: {

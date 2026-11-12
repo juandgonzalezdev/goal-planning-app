@@ -127,17 +127,21 @@ describe('Getting Started', () => {
   it('follows the order, skips, comes back on this device for this space, and is hidden or shown again', async () => {
     const storage = await createOwnSpace()
     expect(steps()).toEqual(['to-do*', 'to-do', 'to-do', 'to-do', 'to-do', 'to-do'])
-    expect(text(guide())).toContain('What money comes in?')
-    await fire.click(within(guide()!).getByRole('button', { name: 'Skip for now' }))
     expect(text(guide())).toContain('Where is your money now?')
-    expect(document.activeElement?.textContent).toBe('Where is your money now?')
     await fire.click(within(guide()!).getByRole('button', { name: 'Skip for now' }))
-    // Cards and loans come before bills, and "I Have None" also moves on.
+    expect(text(guide())).toContain('What money comes in?')
+    expect(document.activeElement?.textContent).toBe('What money comes in?')
+    await fire.click(within(guide()!).getByRole('button', { name: 'Skip for now' }))
+    // Debts come before bills, and "I Have None" says there are none: complete, not skipped (GS-1).
     expect(text(guide())).toContain('Do you owe anything?')
     await fire.click(within(guide()!).getByRole('button', { name: 'I Have None' }))
     expect(text(guide())).toContain('What do you pay regularly?')
-    expect(steps()).toEqual(['skipped', 'skipped', 'skipped', 'to-do*', 'to-do', 'to-do'])
-    // The progress is kept on this device for this space, never in the space's data.
+    expect(document.activeElement?.textContent).toBe('What do you pay regularly?')
+    expect(steps()).toEqual(['skipped', 'skipped', 'none', 'to-do*', 'to-do', 'to-do'])
+    expect(text(guide()?.querySelector('.guide-steps') ?? null)).toContain('Cards and loans: none')
+    // The progress is kept on this device for this space (v2), never in the space's data.
+    const saved = JSON.parse(storage.getItem('goal-planning-app.getting-started') ?? 'null')
+    expect(saved.progress).toEqual({ version: 2, hidden: false, skipped: ['accounts', 'income'], none: ['debts'], finished: false, last: null })
     cleanup()
     render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
     await settle()
@@ -150,12 +154,40 @@ describe('Getting Started', () => {
     expect(text(screen.getByRole('main'))).toContain('Getting Started is on Home again.')
     await fire.click(button('Back'))
     await fire.click(button('Back'))
-    // Skipped steps come back.
-    expect(text(guide())).toContain('What money comes in?')
+    // Skipped steps come back; the "none" answer stays.
+    expect(text(guide())).toContain('Where is your money now?')
+    expect(steps()).toEqual(['to-do*', 'to-do', 'none', 'to-do', 'to-do', 'to-do'])
+  })
+
+  it('reads progress saved before v1.0 for this space, in the new order, and writes it only after a change', async () => {
+    const storage = await createOwnSpace()
+    // Nothing is saved until the first change: a Skip saves this space's id with the progress.
+    expect(storage.getItem('goal-planning-app.getting-started')).toBeNull()
+    await fire.click(within(guide()!).getByRole('button', { name: 'Skip for now' }))
+    const spaceId = JSON.parse(storage.getItem('goal-planning-app.getting-started')!).spaceId
+    // As the old guide saved it: Income and Accounts skipped, Debts answered with the old "I Have None" (saved as skipped).
+    const old = JSON.stringify({ spaceId, progress: { hidden: false, skipped: ['income', 'accounts', 'debts'], finished: false } })
+    storage.setItem('goal-planning-app.getting-started', old)
+    cleanup()
+    render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
+    await settle()
+    expect(steps()).toEqual(['skipped', 'skipped', 'skipped', 'to-do*', 'to-do', 'to-do'])
+    // Reading it wrote nothing.
+    expect(storage.getItem('goal-planning-app.getting-started')).toBe(old)
+    // Another space's progress is not this space's.
+    storage.setItem('goal-planning-app.getting-started', JSON.stringify({ spaceId: 'another-space', progress: { hidden: true, skipped: [], finished: true } }))
+    cleanup()
+    render(<App getToday={() => '2026-10-25'} storage={classicHome(storage)} />)
+    await settle()
+    expect(steps()).toEqual(['to-do*', 'to-do', 'to-do', 'to-do', 'to-do', 'to-do'])
   })
 
   it('each step opens what already exists, and a step is done once the space has it', async () => {
     await createOwnSpace()
+    await fire.click(within(guide()!).getByRole('button', { name: 'Add Account' }))
+    expect(document.activeElement?.textContent).toContain('Add Account')
+    await fire.click(tab('Home'))
+    await fire.click(within(guide()!).getByRole('button', { name: 'Skip for now' }))
     await fire.click(within(guide()!).getByRole('button', { name: 'Add Income' }))
     expect(document.activeElement?.id).toBe('income-name')
     await fire.change(screen.getByLabelText('Name'), { target: { value: 'Salary' } })
@@ -163,9 +195,8 @@ describe('Getting Started', () => {
     await fire.change(screen.getByLabelText(/^Pay Day/), { target: { value: '10' } })
     await fire.click(button('Save Income'))
     await fire.click(tab('Home'))
-    expect(steps()[0]).toBe('done')
-    await fire.click(within(guide()!).getByRole('button', { name: 'Add Account' }))
-    expect(document.activeElement?.textContent).toContain('Add Account')
+    expect(steps().slice(0, 2)).toEqual(['skipped', 'done'])
+    expect(text(guide())).toContain('Do you owe anything?')
   })
 
   it('in the demo it starts hidden, lives in memory only, and Done ends it', async () => {

@@ -38,7 +38,7 @@ export function HelpScreen({ isDemo, chapter, guideOnHome, onShowGuide, onBack }
         {guideOnHome
           ? <p className="field-help">{shown ? 'Getting Started is on Home again.' : 'Getting Started is on Home, at the top.'}</p>
           : <>
-            <p className="field-help">A short guide on Home, one step at a time: Income, Accounts, Cards and Loans, Bills, Goals (optional), then day to day. Skipped steps come back.</p>
+            <p className="field-help">A short guide on Home, one step at a time: Accounts, Income, Cards and Loans, Bills, Goals (optional), then day to day. Skipped steps come back; an “I Have None” answer stays.</p>
             <button type="button" className="button-secondary align-start" onClick={() => { onShowGuide(); setShown(true) }}>Show Getting Started on Home</button>
           </>}
       </section>
