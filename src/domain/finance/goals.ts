@@ -80,9 +80,29 @@ export interface GoalsSummary {
 /** The goals the user is saving for: active, and not the emergency fund. */
 export const activeGoals = (goals: readonly Goal[]): Goal[] => goals.filter(goal => goal.status === 'active' && goal.kind === 'goal')
 
-/** The emergency fund, if the space has one. */
-export const emergencyFund = (goals: readonly Goal[]): Goal | null =>
-  goals.find(goal => goal.kind === 'emergency' && goal.status === 'active') ?? null
+export type EmergencyFundLookup =
+  | { status: 'none' }
+  | { status: 'active' | 'archived'; fund: Goal }
+  | { status: 'ambiguous' }
+  | { status: 'invalid' }
+
+/** Canonical existence check: archived funds still exist. Never chooses a duplicate. */
+export function inspectEmergencyFund(goals: readonly Goal[]): EmergencyFundLookup {
+  const funds = goals.filter(goal => goal.kind === 'emergency')
+  if (funds.length === 0) return { status: 'none' }
+  if (funds.length > 1) return { status: 'ambiguous' }
+  const fund = funds[0]
+  if (typeof fund.id !== 'string' || !fund.id.trim()
+    || goals.filter(goal => goal.id === fund.id).length !== 1
+    || (fund.status !== 'active' && fund.status !== 'archived')) return { status: 'invalid' }
+  return { status: fund.status, fund }
+}
+
+/** Active fund for existing presentation/completion rules; use inspectEmergencyFund for existence. */
+export const emergencyFund = (goals: readonly Goal[]): Goal | null => {
+  const found = inspectEmergencyFund(goals)
+  return found.status === 'active' ? found.fund : null
+}
 
 export function summarizeGoals(data: Pick<FinanceData, 'goals' | 'goalMovements'>): GoalsSummary {
   const active = activeGoals(data.goals)

@@ -1,3 +1,4 @@
+import { validateFinanceData } from '../../data/validate'
 import { addMonthsToYearMonth, yearMonthOf, type YearMonth } from '../calendar'
 import type { CalendarDate } from '../goalTime'
 import type { MoneyAmount } from '../goalAmounts'
@@ -5,7 +6,7 @@ import { sumMinor } from '../money'
 import { isWithinBillDates, usualAmountFor } from './bills'
 import { latestBalance } from './balances'
 import { linkedBill } from './debts'
-import { addGoalMovement, emergencyFund, goalSaved } from './goals'
+import { addGoalMovement, emergencyFund, goalSaved, inspectEmergencyFund } from './goals'
 import { BILL_SPENDING_CATEGORY, monthEnd, monthSpending, type SpendingItem } from './spending'
 import type { EmergencyBasis, FinanceData, Goal, Id, Owner, SpendingCategory } from './types'
 
@@ -178,7 +179,7 @@ export interface EmergencyDraft {
 
 export type EmergencyResult =
   | { status: 'ok'; data: FinanceData; goalId: Id }
-  | { status: 'rejected'; error: 'fund-exists' | 'invalid-target' | 'invalid-amount' | 'more-than-unassigned' }
+  | { status: 'rejected'; error: 'fund-exists' | 'ambiguous-fund' | 'invalid-fund' | 'invalid-data' | 'invalid-target' | 'invalid-amount' | 'more-than-unassigned' }
 
 /**
  * Creates the emergency fund from a confirmed draft. Only one fund can
@@ -187,7 +188,11 @@ export type EmergencyResult =
  * it is never counted twice.
  */
 export function createEmergencyFundFromDraft(data: FinanceData, ids: { goalId: Id; movementId: Id }, owner: Owner, today: CalendarDate, draft: EmergencyDraft): EmergencyResult {
-  if (emergencyFund(data.goals)) return { status: 'rejected', error: 'fund-exists' }
+  const found = inspectEmergencyFund(data.goals)
+  if (found.status === 'ambiguous') return { status: 'rejected', error: 'ambiguous-fund' }
+  if (found.status === 'invalid') return { status: 'rejected', error: 'invalid-fund' }
+  if (found.status !== 'none') return { status: 'rejected', error: 'fund-exists' }
+  if (validateFinanceData(data).status !== 'valid') return { status: 'rejected', error: 'invalid-data' }
   if (draft.target !== null && (!Number.isSafeInteger(draft.target) || draft.target <= 0)) return { status: 'rejected', error: 'invalid-target' }
   if (!Number.isSafeInteger(draft.alreadySetAside) || draft.alreadySetAside < 0) return { status: 'rejected', error: 'invalid-amount' }
   const goal: Goal = {
@@ -195,15 +200,19 @@ export function createEmergencyFundFromDraft(data: FinanceData, ids: { goalId: I
     deadline: null, openingBalance: 0, createdOn: today, status: 'active', ...(draft.basis ? { emergencyBasis: draft.basis } : {}),
   }
   const created = { ...data, goals: [...data.goals, goal] }
+  if (validateFinanceData(created).status !== 'valid') return { status: 'rejected', error: 'invalid-data' }
   if (draft.alreadySetAside === 0) return { status: 'ok', data: created, goalId: goal.id }
   const moved = addGoalMovement(created, { id: ids.movementId, goalId: goal.id, effect: 'assigned', amount: draft.alreadySetAside, date: today, note: 'Already set aside' })
   if (moved.status === 'rejected') return { status: 'rejected', error: moved.error === 'more-than-unassigned' ? 'more-than-unassigned' : 'invalid-amount' }
+  if (validateFinanceData(moved.data).status !== 'valid') return { status: 'rejected', error: 'invalid-data' }
   return { status: 'ok', data: moved.data, goalId: goal.id }
 }
 
 /** Sets the fund's target (or none) after a review. What it holds and its history stay as they are. */
 export function reviewEmergencyFund(data: FinanceData, goalId: Id, target: MoneyAmount | null, basis: EmergencyBasis | null): FinanceData | null {
-  const fund = data.goals.find(goal => goal.id === goalId && goal.kind === 'emergency')
+  const found = inspectEmergencyFund(data.goals)
+  const fund = found.status === 'active' || found.status === 'archived' ? found.fund : null
+  if (fund?.id !== goalId) return null
   if (!fund || (target !== null && (!Number.isSafeInteger(target) || target <= 0))) return null
   return {
     ...data,
@@ -235,4 +244,22 @@ export function emergencyCover(data: FinanceData, asOf?: CalendarDate): Emergenc
   const saved = goalSaved(fund, data.goalMovements, asOf)
   const monthly = fund.emergencyBasis?.monthlyEssentials ?? null
   return { fund, saved, monthlyEssentials: monthly, months: coverMonths(saved, monthly) }
+}
+
+export type EmergencyRestoreResult =
+  | { status: 'ok'; data: FinanceData; goalId: Id }
+  | { status: 'rejected'; error: 'fund-not-found' | 'ambiguous-fund' | 'invalid-fund' | 'invalid-data' }
+
+/** Organizational operation only. Repeat calls on an active fund return the same data. */
+export function restoreEmergencyFund(data: FinanceData): EmergencyRestoreResult {
+  const found = inspectEmergencyFund(data.goals)
+  if (found.status === 'none') return { status: 'rejected', error: 'fund-not-found' }
+  if (found.status === 'ambiguous') return { status: 'rejected', error: 'ambiguous-fund' }
+  if (found.status === 'invalid') return { status: 'rejected', error: 'invalid-fund' }
+  if (validateFinanceData(data).status !== 'valid') return { status: 'rejected', error: 'invalid-data' }
+  if (found.status === 'active') return { status: 'ok', data, goalId: found.fund.id }
+  return {
+    status: 'ok', goalId: found.fund.id,
+    data: { ...data, goals: data.goals.map(goal => goal.id === found.fund.id ? { ...goal, status: 'active' } : goal) },
+  }
 }
