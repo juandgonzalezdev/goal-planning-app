@@ -1,59 +1,81 @@
 # Coordinación de Goal Planning App
 
-Estas reglas son comunes a Codex y Claude. Lee también `docs/WORK_STATUS.md`
-antes de continuar una tarea y consulta la documentación pertinente de `docs/`.
-El procedimiento de entrega y revisión está en [docs/WORKFLOW.md](docs/WORKFLOW.md).
-AGENTS.md es la fuente de reglas comunes; CLAUDE.md remite a ella sin duplicarlas.
+Reglas comunes para colaboradores y asistentes. Dirección (Juan) define el
+alcance y autoriza decisiones. Lee [docs/STATUS.md](docs/STATUS.md) para el
+estado vigente y la documentación pertinente antes de editar.
+[docs/WORK_STATUS.md](docs/WORK_STATUS.md) conserva el historial fechado:
+sus autorizaciones, rutas y pendientes antiguos no son instrucciones actuales.
+El procedimiento está en [docs/WORKFLOW.md](docs/WORKFLOW.md); la organización
+y las decisiones preparatorias, en [docs/ORGANIZATION.md](docs/ORGANIZATION.md).
 
-## Idioma y términos
+## Roles y acceso real
 
-- Explica el trabajo a Juan en español. La interfaz usa inglés sencillo.
-- Conserva los términos `Remaining Balance`, `Contribution` y `payment`.
+- Codex es el editor habitual; Claude realiza revisión independiente cuando se
+  le asigna. Otros colaboradores pueden participar con permisos específicos.
+  Una asignación expresa puede cambiar el editor; las herramientas no fijan el rol.
+- Un solo editor por conjunto de archivos. Ningún revisor modifica implementación,
+  pruebas, documentación común, entregas ajenas o índice sin autorización.
+  Su informe se escribe únicamente en la ubicación acordada.
+- Comprueba las capacidades de cada sesión. No presupongas acceso compartido al
+  disco, Git, archivos, conversaciones o comandos. Leer HEAD no verifica el
+  árbol de trabajo ni el índice. Un acceso confirmado antes no acredita el actual.
+- Si falta acceso, informa del límite y usa una copia de base verificable o
+  material recibido, identificando su procedencia. Nunca inventes un repositorio,
+  resultados ni cambios en el ordenador de Dirección.
+- Dirección comunica las entregas y revisiones. No automatices intercambios entre
+  asistentes ni envíes mensajes a terceros sin una autorización específica.
 
-## Git y coordinación
+## Git y protección del trabajo
 
-- Si tienes acceso para ejecutar Git, comprueba directamente `git status --short`,
-  `git branch --show-current` y `git log -3 --oneline` antes de trabajar.
-  Si no puedes, indícalo y usa el estado y el diff proporcionados por el editor,
-  identificándolos como información recibida, no comprobada localmente.
-- Las comprobaciones del índice corresponden al editor con acceso a Git.
-- Preserva los cambios existentes, incluidos los archivos sin seguimiento.
-  No los sobrescribas, descartes ni incluyas en otra tarea por iniciativa propia.
-- Un solo asistente edita el código por tarea: Codex implementa y corrige;
-  Claude revisa. Claude solo puede escribir su informe en la ubicación acordada
-  en `review-deliveries/`; no modifica código, documentación común, pruebas,
-  entregas del editor ni el índice de Git.
-- Claude confirmó lectura y escritura local en
-  [review-deliveries/claude-local-access.md](review-deliveries/claude-local-access.md),
-  sin ejecución de comandos. Codex proporciona el estado de Git y las
-  comprobaciones; Claude los identifica como información recibida. Leer
-  `.git/HEAD` no equivale a comprobar el estado, el índice o los commits con Git.
-- Con acceso local confirmado, usar directamente las entregas fijas por commit
-  y los informes en `review-deliveries/`, según `docs/WORKFLOW.md`, sin exigir
-  ZIP ni adjuntos. No presumir acceso a conversaciones o a otras carpetas.
-  Juan comunica cuándo está lista cada entrega o revisión.
-- Si Juan pausa una tarea, conserva sus archivos y su contenido preparado.
-  No cambies el índice ni reanudes esa tarea sin indicación de Juan. Los cambios
-  de otra tarea quedan separados y sin preparar si ese es el alcance autorizado.
-- Respeta el alcance indicado por Juan. No hagas commit, push, merge a main
-  ni despliegue sin su autorización.
+- Con acceso a Git, antes de trabajar comprueba rama, HEAD, estado con archivos
+  sin seguimiento, diff sin preparar y diff preparado: `git branch --show-current`,
+  `git rev-parse HEAD`, `git status --short --branch`, `git diff` y
+  `git diff --cached`. Limita consultas con `GIT_OPTIONAL_LOCKS=0` cuando
+  corresponda; distingue consultas locales de información recibida.
+- Trabaja exclusivamente en la rama o copia autorizada. Conserva cambios ajenos,
+  archivos ignorados y sin seguimiento; no sobrescribas, muevas, borres ni incluyas
+  material ajeno. No recrees carpetas eliminadas por un procedimiento antiguo.
+- Preserva el índice existente. Separa lo preparado, lo no preparado y los archivos
+  nuevos. Cuando se exige preservación exacta, captura el diff preparado binario
+  completo y su SHA-256 antes y después; una lista de nombres no basta.
+  Detente ante una discrepancia crítica con el estado autorizado.
+- No uses `git add .`, `git add -A`, operaciones destructivas, limpieza masiva,
+  descarte de cambios ni reescritura del historial por iniciativa propia.
+- No hagas commit, merge, push, despliegue o publicación sin autorización expresa
+  para cada operación. Una entrega revisable puede existir sin commit.
+  Aplicar un parche tampoco equivale a integrarlo ni a publicarlo.
+- Si Dirección pausa una tarea, conserva archivos e índice y no la reanudes sin
+  indicación. No amplíes el alcance para resolver mejoras vecinas.
 
-## Datos y comprobaciones
+## Datos, seguridad y dominio
 
-- No añadas datos financieros personales al repositorio. Usa únicamente datos
-  inventados en ejemplos, pruebas, capturas y documentación.
-- El editor con acceso al entorno ejecuta las comprobaciones necesarias según
-  el cambio y las instrucciones de Juan; consulta `docs/DEVELOPMENT.md` para
-  el procedimiento del proyecto. El revisor distingue la inspección del material
-  recibido de la ejecución de pruebas.
-- Reutiliza los resultados vigentes del mismo contenido y entorno. No repitas
-  la suite completa por un relevo o una revisión: repítela si hay cambios,
-  fallos, riesgos de regresión o una petición de Juan que lo justifiquen.
-  Explica el motivo y el alcance de las nuevas comprobaciones.
-- Distingue los resultados que has comprobado tú de los comunicados por Juan
-  o recogidos en entregas anteriores. Indica qué ejecutaste y qué no.
-- No marques una prueba manual como confirmada sin una confirmación expresa
-  de Juan para ese recorrido. No deduzcas la causa de una incidencia sin investigarla.
-- Al entregar, resume los cambios, las comprobaciones y lo pendiente. Mantén
-  `docs/WORK_STATUS.md` actualizado cuando el alcance autorizado lo incluya.
-  Usa el formato de entrega de `docs/WORKFLOW.md`.
+- Usa exclusivamente datos ficticios en repositorio, pruebas, ejemplos, capturas
+  y entregas compartidas. No incorpores información financiera personal.
+- No almacenes secretos, tokens, contraseñas o claves privadas, tampoco en logs.
+- Mantén aislados datos y preferencias Demo del espacio propio. Respeta
+  [docs/FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md) y
+  [docs/STORAGE_AND_RECOVERY.md](docs/STORAGE_AND_RECOVERY.md).
+  No alteres cálculos, persistencia, migraciones ni formatos sin alcance específico.
+- Ocultar importes no equivale a cifrar o controlar acceso. No envíes datos
+  financieros a servicios externos sin autorización específica.
+
+## Idioma y comprobaciones
+
+- Explica decisiones, trabajo técnico e informes a Dirección en español.
+  La interfaz sigue las decisiones EN/ES/PL y su disponibilidad real; consulta
+  STATUS. Conserva `Remaining Balance`, `Contribution` y `payment` y sus
+  traducciones aprobadas. No cambies traducciones fuera del alcance.
+- El editor ejecuta verificaciones proporcionales al cambio. WORKFLOW define
+  cuándo se requieren; [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) aporta comandos
+  técnicos y recorridos, algunos históricos.
+- Identifica fecha, versión, responsable y entorno de cada resultado.
+  Separa ejecución propia, informe de otro asistente y confirmación de Dirección.
+  Reutiliza resultados del mismo contenido y entorno; repite si un cambio, fallo,
+  riesgo o instrucción lo justifica. No repitas toda la suite por un relevo.
+- Una prueba manual solo está confirmada cuando Dirección lo expresa para ese
+  recorrido y versión; no extiendas la confirmación a otros dispositivos o temas.
+- Entrega diff completo, informe, verificaciones y pendientes según WORKFLOW.
+  Hasta una decisión posterior de Dirección, STATUS es la referencia del estado
+  operativo vigente; los informes de cada incremento conservan el detalle de
+  pruebas y decisiones. WORK_STATUS permanece como historial y solo se amplía
+  con autorización expresa de Dirección.

@@ -1,109 +1,119 @@
-# Flujo de trabajo entre Juan, Codex y Claude
+# Desarrollo, entrega y revisión
 
-Las reglas comunes están en [AGENTS.md](../AGENTS.md). Este documento describe
-cómo llevarlas a la práctica. [WORK_STATUS.md](WORK_STATUS.md) conserva el estado,
-las confirmaciones y los pendientes; no se duplican aquí.
-[DEVELOPMENT.md](DEVELOPMENT.md) describe las herramientas y los recorridos técnicos.
+[AGENTS.md](../AGENTS.md) establece las reglas comunes;
+[STATUS.md](STATUS.md) resume el estado vigente y
+[WORK_STATUS.md](WORK_STATUS.md) conserva las evidencias históricas fechadas.
+[ORGANIZATION.md](ORGANIZATION.md) define responsabilidades y fuentes documentales.
+[DEVELOPMENT.md](DEVELOPMENT.md) contiene comandos y guiones técnicos: el alcance
+y este flujo determinan qué comprobaciones corresponden, sin exigir siempre las
+cuatro comprobaciones de su sección histórica.
 
-## Secuencia de una tarea
+## Preparar el encargo
 
-1. **Alcance de Juan.** Identificar el resultado esperado, archivos permitidos,
-   exclusiones y criterios de aceptación. Consultar WORK_STATUS.md y el estado
-   de Git según el acceso real, siguiendo AGENTS.md.
-2. **Implementación y pruebas de Codex.** Codex actúa como editor en el flujo
-   habitual. Implementa el alcance y entrega
-   un diff identificable junto con las comprobaciones necesarias.
-3. **Revisión de Claude.** Tras el aviso de Juan, Claude lee la entrega fija,
-   en el rol y con las limitaciones de acceso definidos en AGENTS.md.
-   Señala errores y riesgos con
-   referencias a archivos y líneas, efecto observable y reproducción propuesta.
-   Distingue hallazgos de inspección, hipótesis y resultados recibidos del editor.
-   Escribe únicamente el informe acordado; Juan avisa a Codex cuando está listo.
-4. **Correcciones.** El mismo editor resuelve los hallazgos y comunica para cada
-   uno la corrección y su evidencia, o el motivo por el que sigue pendiente.
-   El revisor inspecciona el diff actualizado recibido. Un cambio de alcance
-   vuelve a Juan antes de implementar trabajo que no esté autorizado.
-5. **Prueba manual breve de Juan.** Entregar un recorrido corto y concreto con
-   datos ficticios, pasos y resultado esperado, centrado en el cambio y sus
-   riesgos. Registrar el resultado con las reglas de atribución de AGENTS.md.
-6. **Integración autorizada.** Entregar el resultado revisado y las limitaciones
-   antes de la decisión de Juan. El editor ejecuta solo las operaciones
-   autorizadas conforme a AGENTS.md, con la lista de archivos revisada,
-   y comunica el estado final de Git.
+Dirección define objetivo, base, archivos permitidos, exclusiones, criterios de
+aceptación, editor, revisor, ubicación del informe y permisos Git. Las decisiones
+nuevas o ampliaciones vuelven a Dirección. El editor verifica acceso, rama, HEAD, estado e índice antes
+de editar; conserva los cambios ajenos. Si falta una condición crítica, lo comunica.
 
-## Entrega entre asistentes
+No se presume entorno compartido. Acuerda una ubicación accesible o adjuntos;
+no es obligatorio crear `review-deliveries/` ni usar ninguna ruta única.
+No se depende de antiguos informes locales para arrancar una tarea.
+No recrees directorios eliminados para satisfacer documentación histórica.
 
-Cada entrega debe ser autosuficiente y contener:
+## Modalidad A: rama de trabajo
 
-| Dato | Contenido mínimo |
+1. Dirección autoriza el alcance.
+2. El editor utiliza la rama aislada indicada, o crea una si está autorizado.
+3. Implementa únicamente los cambios permitidos y preserva el índice existente.
+4. Ejecuta verificaciones pertinentes y distingue resultados propios de recibidos.
+5. Entrega el diff completo, incluidos archivos nuevos, y el informe.
+6. El revisor independiente inspecciona esa entrega identificada; no edita la
+   implementación. Registra hallazgos, riesgos y límites en el informe acordado.
+7. Dirección acepta, solicita correcciones o rechaza. El editor responde a cada
+   hallazgo y entrega otra versión identificada si cambia el contenido.
+8. Solo con autorización expresa se prepara contenido nuevo para commit y se
+   ejecutan commit, merge o push. Despliegue y publicación requieren su permiso
+   correspondiente; un push puede activar el despliegue automático documentado.
+
+La auditoría puede preceder al commit. Una entrega sin commit se fija mediante
+base exacta, parche acumulado, manifiesto y huellas SHA-256. Nunca atribuyas los
+cambios sin commit al HEAD que solo contiene la base. Si ya existe commit
+autorizado, identifica base y extremo completos.
+
+## Modalidad B: copia verificable y parche
+
+1. Establece la base exacta y su procedencia: commit y árbol/blobs verificados,
+   archivo Git exportado o snapshot cuya identidad pueda comprobarse.
+2. Implementa en una copia independiente. Identifica si es snapshot sin Git;
+   no declares una rama ni un índice local que no has inspeccionado.
+3. Genera un parche completo de todos los cambios propios respecto de esa base,
+   incluidos archivos nuevos. Separa cambios previos de Dirección.
+4. Comprueba `git apply --check` sobre una copia limpia compatible. Prueba también
+   el estado previo requerido por el encargo cuando difiera de la base limpia.
+   No fuerces la aplicación con `--reject` ni ignores diferencias.
+5. Entrega parche, SHA-256, manifiesto, informe, verificaciones, límites y riesgos.
+   Si no compartes entorno con el revisor, adjunta los archivos necesarios.
+6. La revisión independiente precede a la aplicación o integración posterior.
+   Dirección autoriza expresamente esas operaciones; entregar un parche no las
+   autoriza ni modifica el ordenador del destinatario.
+
+Conserva versiones anteriores de entrega fuera de los commits de producción.
+Una corrección genera nueva versión y huellas; no sustituye silenciosamente
+la evidencia que ya se revisó.
+
+## Contenido mínimo de la entrega
+
+| Campo | Contenido |
 | --- | --- |
-| Tarea y alcance | Identificador, objetivo, editor, revisor y exclusiones. |
-| Rama y base | Nombre de rama y hash de la base: comprobados directamente si hay acceso a Git; si no, atribuidos al estado proporcionado por el editor. |
-| Contenido | Archivos y comportamiento cambiado; diff o commits exactos. Distinguir cambios preparados, sin preparar y archivos nuevos. |
-| Comprobaciones | Comandos o recorridos realmente ejecutados, resultado, fecha y contenido al que corresponden. Separar resultados propios, comunicados por Juan y procedentes de otras entregas. |
-| Limitaciones | Qué no se ejecutó, incidencias abiertas, riesgos y pruebas manuales pendientes. |
-| Siguiente paso | Quién debe actuar, qué revisar o probar y qué autorización falta. |
+| Identidad | Tarea, versión de entrega, fecha, editor, revisor previsto y objetivo. |
+| Base y acceso | Commit completo, rama real o snapshot, origen y límites de acceso. |
+| Cambios | Lista exacta; distinguir preparados previamente, no preparados y nuevos. Diff acumulado completo. |
+| Evidencia | Comandos o recorridos ejecutados, resultado, fecha, contenido y responsable; separar evidencia recibida. |
+| Preservación | Trabajo ajeno conservado y, cuando proceda, comparación del diff preparado binario y SHA-256. |
+| Límites | Qué no se probó, riesgos residuales, documentos protegidos y pendientes. |
+| Próximo paso | Qué revisa cada responsable y qué autorización falta. |
 
-Codex proporciona el estado de Git comprobado y fija cada entrega a un commit
-final completo, con su base exacta. Si todavía no hay commit, no se anuncia como
-entrega fija: el trabajo queda en curso hasta que Juan autorice guardarlo.
-Aplicar las reglas de alcance y datos de AGENTS.md.
+El revisor identifica la entrega revisada por hash y base, incluso sin commit.
+Cada hallazgo lleva prioridad, archivo o referencia, problema, efecto y
+comprobación propuesta. El editor relaciona cada hallazgo con su resolución
+o justificación. Dirección comunica cuándo está lista cada revisión.
 
-## Entregas e informes con acceso local
+## Verificación proporcional
 
-El acceso confirmado está documentado en
-[claude-local-access.md](../review-deliveries/claude-local-access.md).
-Se trabaja directamente en `review-deliveries/`, sin exigir ZIP ni adjuntos
-cuando ambos asistentes puedan acceder. Esta ubicación sustituye a
-`docs/reviews/` para las nuevas revisiones locales; los paquetes anteriores
-conservan su valor como entregas históricas.
+- **Solo documentación, sin configuración ni código:** inspección íntegra del diff,
+  enlaces/rutas, coherencia, alcance, documentos protegidos e índice.
+  Ejecutar `git diff --check` y `git diff --cached --check` si hay repositorio.
+  En snapshot sin Git, declarar esa limitación y usar diff sin índice y
+  `git apply --check --no-index` en la copia. Una simulación no sustituye ni se
+  presenta como el índice real de Windows.
+  No se exige suite completa, build o audit por una edición documental.
+- **Código o configuración:** pruebas dirigidas y comprobaciones adecuadas según
+  DEVELOPMENT y el encargo. Añadir suite completa, lint, build o audit cuando el
+  alcance o riesgo lo justifique. No elevar timeouts para ocultar fallos.
+- Cada resultado registra fecha, versión, responsable y entorno. No sumar
+  dirigidas y completas si se solapan. Las ejecuciones históricas conservan su
+  atribución; no se presentan como nuevas.
+- Los recorridos manuales se entregan con datos ficticios y resultado esperado.
+  Solo se consideran confirmados por aceptación expresa de Dirección, para
+  la versión, navegador, dispositivo y recorrido indicados.
 
-Para cada tarea, Codex crea `review-deliveries/<tarea>/<commit-final-completo>/`:
+## Índice y cierre
 
-- `DELIVERY.md`: la entrega autosuficiente de la tabla anterior y la ruta
-  exacta en la que Claude debe escribir su informe.
-- `GIT_STATUS.md`: estado, rama, HEAD, base y contenido preparado comprobados
-  por Codex, con fecha y límites de la consulta. Los cambios locales ajenos
-  a la entrega se identifican y no se incluyen en el snapshot revisado.
-- `changes.diff`: diff completo base..final, incluidos archivos nuevos.
-- `files/`: copias de los archivos cambiados obtenidas del commit final;
-  cualquier archivo adicional necesario se obtiene del mismo commit.
+Registrar el resumen operativo nuevo en STATUS y el detalle de pruebas y decisiones
+en el informe del incremento, conforme a AGENTS. WORK_STATUS solo se amplía con
+autorización expresa de Dirección; esta regla rige hasta una decisión posterior.
 
-Codex deja fijos los archivos de entrega. Si cambia el contenido, crea otra
-entrega con el nuevo commit final, sin sobrescribir la anterior. Claude revisa
-esas copias y ese diff, aunque el código de la carpeta de trabajo haya avanzado.
-No se incluye `review-deliveries/` en commits de la app por iniciativa propia.
+Cuando se exige preservación exacta, guardar antes y después el diff preparado
+binario completo con `git diff --cached --binary`, su SHA-256, lista preparada,
+estado y `git diff --cached --check`. Capturar bytes sin recodificación de la
+salida nativa de Git. Detenerse si el índice inicial difiere del autorizado o si
+la comparación final no coincide; no intentar corregirlo mediante reset o add.
 
-La única escritura de Claude para esa revisión es
-`review-deliveries/<tarea>/<commit-final-completo>/REVISION.md`. Codex no edita
-ese informe: resuelve los hallazgos en código y devuelve una nueva entrega.
-El informe identifica autor, fecha, alcance base..final y limitaciones.
-Cada hallazgo incluye prioridad, referencia, problema, efecto y comprobación
-propuesta. La entrega posterior relaciona cada hallazgo con su resolución.
+Los cambios nuevos quedan sin preparar cuando así se haya indicado. El informe
+del editor no sustituye a una comprobación local del índice del destinatario.
 
-Juan comunica que la entrega está lista indicando la ruta, y después que la
-revisión está lista indicando la ruta del informe. No se presupone que los
-asistentes compartan conversaciones ni se envían mensajes entre ellos por
-iniciativa propia. Antes de revisar, Claude comprueba que puede leer los archivos
-indicados. Si pierde acceso, lo comunica a Juan; un adjunto queda como alternativa,
-no como requisito del flujo local. Codex tampoco da por leído un informe que
-no haya abierto.
-
-## Comprobaciones sin repeticiones innecesarias
-
-Aplicar la regla de reutilización de resultados de AGENTS.md. El editor consulta
-DEVELOPMENT.md para los comandos y empieza por las pruebas afectadas cuando
-la corrección es localizada. Si procede una suite completa por el alcance o
-riesgo del cambio, usa `npm test -- --maxWorkers=2` y explica por qué.
-La entrega registra las comprobaciones pendientes y cualquier bloqueo, como
-un timeout del navegador. El informe del revisor analiza esa evidencia recibida.
-
-## Trabajo pausado y cambios separados
-
-Seguir la regla de pausa y preservación de AGENTS.md. El editor con acceso a Git
-verifica la separación usando consultas con `GIT_OPTIONAL_LOCKS=0`: compara
-antes y después la lista y el diff preparados y, cuando se exige conservar
-exactamente el índice, su huella. Entrega el diff sin preparar por separado,
-incluyendo los archivos nuevos. El revisor recibe esos resultados identificados
-como comprobaciones del editor; no se le encarga verificar el índice local.
-WORK_STATUS.md sigue siendo el registro de estado, sujeto al alcance autorizado.
+Integrar solo el contenido revisado y autorizado. Comprobar referencias y
+estado Git antes/después de cada operación permitida. Un push satisfactorio no
+acredita publicación; registrar el despliegue únicamente con evidencia propia
+o confirmación atribuida. La revisión independiente no autoriza por sí sola
+commit, integración ni publicación.

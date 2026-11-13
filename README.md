@@ -7,16 +7,18 @@ explicables y conectadas entre sí.
 - **Propósito:** entender tus finanzas, explorar opciones y decidir con
   información. Cada sugerencia explica sus datos, supuestos y límites, y nada
   cambia hasta que lo confirmas.
-- **Estado:** prototipo de aprendizaje. La prioridad actual es la demo
-  Individual de **Alex**: un año ficticio completo (2026), editable y
-  reproducible. El modo
-  Duo se muestra, pero su versión privada queda para más adelante.
+- **Estado:** prototipo web en evolución. Consulta el estado operativo, las
+  validaciones y los pendientes en [docs/STATUS.md](docs/STATUS.md).
+  La Demo Individual de **Alex** utiliza un año ficticio completo (2026).
+  El nombre comercial definitivo sigue pendiente.
 - **Sin servidor ni cuentas:** todo se calcula en el navegador. El espacio
   propio se guarda solo en este navegador (IndexedDB), **sin cifrar**; la demo
   no se guarda nunca. Si otra pestaña cambia o borra el espacio, lo escrito
   aquí no se pierde sin preguntar. Ver
   [docs/STORAGE_AND_RECOVERY.md](docs/STORAGE_AND_RECOVERY.md).
-- **Interfaz en inglés sencillo**; documentación en español.
+- **Interfaz:** inglés sencillo por defecto; español y polaco en preparación,
+  con acceso de preview según [docs/STATUS.md](docs/STATUS.md).
+  Documentación y comunicación técnica en español.
 - **Menú:** Home, Bills, Goals, Money y History. Money reúne Income,
   Accounts & Savings y Cards & Loans; Settings (engranaje de la cabecera)
   incluye Reports & Backup. La demo se abre
@@ -29,7 +31,9 @@ npm install
 npm run dev      # abre http://localhost:5173
 ```
 
-Comprobaciones antes de entregar un cambio:
+Comandos disponibles para comprobar cambios de código (seleccionar según alcance
+con [docs/WORKFLOW.md](docs/WORKFLOW.md); una edición solo documental no exige
+suite completa, build ni audit):
 
 ```bash
 npm test         # pruebas (Vitest)
@@ -42,6 +46,11 @@ npm audit        # dependencias con vulnerabilidades conocidas
 
 | Documento | Para qué sirve |
 | --- | --- |
+| [AGENTS.md](AGENTS.md) | Reglas comunes para colaboradores y asistentes, acceso real y preservación de Git. |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Ramas o copias con parche, revisión sin exigir commit y autorizaciones. |
+| [docs/ORGANIZATION.md](docs/ORGANIZATION.md) | Organización futura, identidad híbrida, fuentes documentales y pendientes de seguridad. |
+| [docs/WORK_STATUS.md](docs/WORK_STATUS.md) | Historial fechado; no es el estado operativo vigente ni una autorización actual. |
+| [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md) | Dirección de producto; sus planes no equivalen a funciones publicadas. |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Manual de uso en inglés sencillo: cómo usar la app tal como funciona hoy, con ejemplos inventados y sus límites actuales. |
 | [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) | Dónde vive cada cosa y qué archivos revisar para cambiar X. |
 | [docs/FINANCIAL_RULES.md](docs/FINANCIAL_RULES.md) | Las reglas financieras, cómo se relacionan las cifras y ejemplos. |
